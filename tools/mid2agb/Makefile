@@ -1,15 +1,30 @@
+ifeq ($(OS),Windows_NT)
+EXE := .exe
+else
+EXE :=
+endif
+
+TOOLS_DIR ?= ..
+MID2AGB_DIR := $(basename $(TOOLS_DIR)/mid2agb)
+MID ?= $(MID2AGB_DIR)/mid2agb$(EXE)
 CXX := g++
 
-CXXFLAGS := -std=c++11 -O2 -Wall -Wno-switch -Werror
+CXXFLAGS := -std=c++11 -O2 -s -Wall -Wno-switch -Werror
 
-SRCS := agb.cpp error.cpp main.cpp midi.cpp tables.cpp
+MID2AGB_SRCS := $(addprefix $(MID2AGB_DIR)/,agb.cpp error.cpp main.cpp midi.cpp tables.cpp)
+MID2AGB_OBJS := $(MID2AGB_SRCS:.cpp=.o)
 
-HEADERS := agb.h error.h main.h midi.h tables.h
+MID2AGB_HEADERS := $(addprefix $(MID2AGB_DIR)/,agb.h error.h main.h midi.h tables.h)
 
-.PHONY: clean
+.PHONY: mid2agb_all mid2agb_clean clean
 
-mid2agb: $(SRCS) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+mid2agb_all: $(MID)
 
-clean:
-	$(RM) mid2agb mid2agb.exe
+$(MID): $(MID2AGB_OBJS)
+	$(CXX) $(CXXFLAGS) $(MID2AGB_OBJS) -o $@ $(LDFLAGS)
+
+$(MID2AGB_OBJS): %.o: %.cpp $(MID2AGB_HEADERS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+clean: mid2agb_clean
+mid2agb_clean:
+	$(RM) $(MID2AGB_OBJS) $(MID)

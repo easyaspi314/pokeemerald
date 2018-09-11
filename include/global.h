@@ -14,7 +14,7 @@
 #define NAKED __attribute__((naked))
 
 // IDE support
-#if defined (__APPLE__) || defined (__CYGWIN__) || defined (_MSC_VER)
+#ifndef PREPROC
 #define _(x) x
 #define __(x) x
 #define INCBIN_U8 {0}

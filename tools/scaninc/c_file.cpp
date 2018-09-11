@@ -17,32 +17,56 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <vector>
+#include <algorithm>
+#include <cstring>
 
 #include "c_file.h"
 
-CFile::CFile(std::string path)
+CFile::CFile(std::string &path)
 {
     m_path = path;
 
-    FILE *fp = std::fopen(path.c_str(), "rb");
+        FILE *fp;
+        if (path.empty() || path == "-")
+        {
+            m_path = "<stdin>";
+            fp = stdin;
+        }
+        else
+        {
+            fp = std::fopen(path.c_str(), "rb");
+        }
 
-    if (fp == NULL)
-        FATAL_ERROR("Failed to open \"%s\" for reading.\n", path.c_str());
+        if (fp == NULL)
+            FATAL_ERROR("Failed to open \"%s\" for reading.\n", path.c_str());
 
-    std::fseek(fp, 0, SEEK_END);
+        m_size = 0;
+        std::vector<char> buf;
+        ssize_t count;
+        char tmp[1024];
+        while ((count = fread(tmp, 1, 1024, fp)) != 0)
+        {
+            if (ferror(fp))
+                FATAL_ERROR("Failed to read \"%s\".\n", path.c_str());
 
-    m_size = std::ftell(fp);
+            buf.insert(buf.end(), tmp, tmp + count);
 
-    m_buffer = new char[m_size + 1];
-    m_buffer[m_size] = 0;
+            m_size += count;
 
-    std::rewind(fp);
+            if (feof(fp))
+                break;
+        }
+        if (m_size == 0)
+            FATAL_ERROR("Empty input!");
+        m_buffer = new char[m_size + 1];
+        std::copy(buf.begin(), buf.end(), m_buffer);
+        m_buffer[m_size] = 0;
 
-    if (std::fread(m_buffer, m_size, 1, fp) != 1)
-        FATAL_ERROR("Failed to read \"%s\".\n", path.c_str());
-
-    std::fclose(fp);
-
+        if (fp != stdin)
+            fclose(fp);
     m_pos = 0;
     m_lineNum = 1;
 }
@@ -131,29 +155,32 @@ bool CFile::ConsumeNewline()
 
 bool CFile::ConsumeComment()
 {
-    if (m_buffer[m_pos] == '/' && m_buffer[m_pos + 1] == '*')
+    if (m_buffer[m_pos] == '/')
     {
-        m_pos += 2;
-        while (m_buffer[m_pos] != '*' && m_buffer[m_pos + 1] != '/')
+        if (m_buffer[m_pos + 1] == '*')
         {
-            if (m_buffer[m_pos] == 0)
-                return false;
-            if (!ConsumeNewline())
-                m_pos++;
+	        m_pos += 2;
+	        while (m_buffer[m_pos] != '*' && m_buffer[m_pos + 1] != '/')
+	        {
+	            if (m_buffer[m_pos] == 0)
+	                return false;
+	            if (!ConsumeNewline())
+	                m_pos++;
+	        }
+	        m_pos += 2;
+	        return true;
         }
-        m_pos += 2;
-        return true;
-    }
-    else if (m_buffer[m_pos] == '/' && m_buffer[m_pos + 1] == '/')
-    {
-        m_pos += 2;
-        while (!ConsumeNewline())
+        else if (m_buffer[m_pos + 1] == '/')
         {
-            if (m_buffer[m_pos] == 0)
-                return false;
-            m_pos++;
-        }
-        return true;
+	        m_pos += 2;
+	        while (!ConsumeNewline())
+	        {
+	            if (m_buffer[m_pos] == 0)
+	                return false;
+	            m_pos++;
+	        }
+	        return true;
+	    }
     }
 
     return false;
@@ -167,13 +194,7 @@ void CFile::SkipWhitespace()
 
 bool CFile::CheckIdentifier(const std::string& ident)
 {
-    unsigned int i;
-
-    for (i = 0; i < ident.length() && m_pos + i < (unsigned)m_size; i++)
-        if (ident[i] != m_buffer[m_pos + i])
-            return false;
-
-    return (i == ident.length());
+    return (std::strncmp(ident.c_str(), m_buffer + m_pos, ident.length()) == 0);
 }
 
 void CFile::CheckInclude()
@@ -181,7 +202,7 @@ void CFile::CheckInclude()
     if (m_buffer[m_pos] != '#')
         return;
 
-    std::string ident = "#include";
+    static const std::string ident = "#include";
 
     if (!CheckIdentifier(ident))
     {
@@ -195,25 +216,18 @@ void CFile::CheckInclude()
     std::string path = ReadPath();
 
     if (!path.empty()) {
-        m_includes.emplace(path);
+        m_includes.emplace(std::move(path));
     }
 }
 
 void CFile::CheckIncbin()
 {
-    // Optimization: assume most lines are not incbins
-    if (!(m_buffer[m_pos+0] == 'I'
-       && m_buffer[m_pos+1] == 'N'
-       && m_buffer[m_pos+2] == 'C'
-       && m_buffer[m_pos+3] == 'B'
-       && m_buffer[m_pos+4] == 'I'
-       && m_buffer[m_pos+5] == 'N'
-       && m_buffer[m_pos+6] == '_'))
+    if (std::strncmp(m_buffer + m_pos, "INCBIN_", 7) != 0)
     {
-            return;
+        return;
     }
 
-    std::string idents[6] = { "INCBIN_S8", "INCBIN_U8", "INCBIN_S16", "INCBIN_U16", "INCBIN_S32", "INCBIN_U32" };
+    static const std::string idents[6] = { "INCBIN_S8", "INCBIN_U8", "INCBIN_S16", "INCBIN_U16", "INCBIN_S32", "INCBIN_U32" };
     int incbinType = -1;
 
     for (int i = 0; i < 6; i++)
@@ -250,21 +264,19 @@ void CFile::CheckIncbin()
 
         std::string path = ReadPath();
 
-        SkipWhitespace();
+        m_incbins.emplace(std::move(path));
 
-        m_incbins.emplace(path);
+        SkipWhitespace();
 
         if (m_buffer[m_pos] != ',')
             break;
 
         m_pos++;
     }
-
     if (m_buffer[m_pos] != ')')
         FATAL_INPUT_ERROR("expected ')'");
 
     m_pos++;
-
 }
 
 std::string CFile::ReadPath()

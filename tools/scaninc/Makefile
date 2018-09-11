@@ -1,15 +1,32 @@
+ifeq ($(OS),Windows_NT)
+EXE := .exe
+else
+EXE :=
+endif
+
+TOOLS_DIR ?= ..
+SCANINC_DIR := $(basename $(TOOLS_DIR)/scaninc)
+SCANINC ?= scaninc$(EXE)
 CXX = g++
 
-CXXFLAGS = -Wall -Werror -std=c++11 -O2
+CXXFLAGS = -Wall -Werror -std=c++11 -fno-exceptions -fno-rtti -O2 -s
 
-SRCS = scaninc.cpp c_file.cpp asm_file.cpp
+SCANINC_SRCS := $(addprefix $(SCANINC_DIR)/,scaninc.cpp c_file.cpp asm_file.cpp formatter.cpp)
+SCANINC_OBJS := $(SCANINC_SRCS:.cpp=.o)
 
-HEADERS := scaninc.h asm_file.h c_file.h
+SCANINC_HEADERS := $(addprefix $(SCANINC_DIR)/,scaninc.h asm_file.h c_file.h formatter.h)
 
-.PHONY: clean
+.PHONY: scaninc_all clean scaninc_clean
 
-scaninc: $(SRCS) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+scaninc_all: $(SCANINC)
+	@:
 
-clean:
-	$(RM) scaninc scaninc.exe
+$(SCANINC_OBJS): %.o: %.cpp $(SCANINC_HEADERS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(SCANINC): $(SCANINC_OBJS)
+	$(CXX) $(CXXFLAGS) $(SCANINC_OBJS) -o $@ $(LDFLAGS)
+
+clean: scaninc_clean
+scaninc_clean:
+	$(RM) $(SCANINC) $(SCANINC_OBJS)

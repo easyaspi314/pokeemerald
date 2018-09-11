@@ -1,4 +1,4 @@
-// Copyright(c) 2016 YamaArashi
+// Copyright(c) 2015-2017 YamaArashi
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,17 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef UTF8_H
-#define UTF8_H
+#ifndef FORMATTER_H
+#define FORMATTER_H
 
-#include <stdint.h>
+#include <dirent.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sstream>
+#include <set>
+#include <string>
 
-typedef struct UnicodeChar
+class Formatter
 {
-    int32_t code;
-    int encodingLength;
-} UnicodeChar;
+private:
+    size_t line_len;
+    std::stringstream targetstream;
+    std::stringstream phonystream;
+   	void WriteFilename(const std::string &str);
+public:
+    Formatter() = default;
+    void WriteMakefile(const std::string &path, const std::set<std::string> &dependencies);
+};
 
-UnicodeChar DecodeUtf8(const char *s);
-
-#endif  // UTF8_H
+#endif

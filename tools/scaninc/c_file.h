@@ -29,7 +29,7 @@
 class CFile
 {
 public:
-    CFile(std::string path);
+    CFile(std::string &path);
     ~CFile();
     void FindIncbins();
     const std::set<std::string>& GetIncbins() { return m_incbins; }

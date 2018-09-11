@@ -1,0 +1,3 @@
+[submodule "tools/preproc/ucpp"]
+	path = tools/preproc/ucpp
+	url = https://github.com/easyaspi314/ucpp

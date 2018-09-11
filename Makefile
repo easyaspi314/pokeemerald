@@ -1,13 +1,15 @@
-include $(DEVKITARM)/base_tools
-export CPP := $(PREFIX)cpp
+PREFIX := $(CURDIR)/tools/binutils/bin/arm-none-eabi-
+export CPP := gcc -E -x c
+export AS  := $(PREFIX)as
 export LD := $(PREFIX)ld
+export OBJCOPY := $(PREFIX)objcopy
 
 TITLE       := POKEMON EMER
 GAME_CODE   := BPEE
 MAKER_CODE  := 01
 REVISION    := 0
 
-SHELL := /bin/bash -o pipefail
+SHELL := bash -o pipefail
 
 ROM := pokeemerald.gba
 OBJ_DIR := build/emerald
@@ -28,9 +30,9 @@ SONG_BUILDDIR = $(OBJ_DIR)/$(SONG_SUBDIR)
 ASFLAGS := -mcpu=arm7tdmi
 
 CC1             := tools/agbcc/bin/agbcc
-override CFLAGS += -mthumb-interwork -Wimplicit -Wparentheses -Werror -O2 -fhex-asm
+override CC1FLAGS += -mthumb-interwork -Wimplicit -Wparentheses -Werror -O2 -fhex-asm
 
-CPPFLAGS := -I tools/agbcc/include -I tools/agbcc -iquote include -nostdinc -undef
+CPPFLAGS := -I tools/agbcc/include -I tools/agbcc -I include
 
 LDFLAGS = -Map ../../$(MAP)
 
@@ -44,6 +46,20 @@ SCANINC := tools/scaninc/scaninc
 PREPROC := tools/preproc/preproc
 RAMSCRGEN := tools/ramscrgen/ramscrgen
 FIX := tools/gbafix/gbafix
+
+ALL_TOOLS := $(GFX) $(SCANINC) $(PREPROC) $(BIN2C) $(RSFONT) $(AIF) $(RAMSCRGEN) $(MID) $(FIX)
+ALL_TOOL_NAMES := gbagfx scaninc preproc bin2c rsfont aif2pcm ramscrgen
+
+# Check agbcc's version. The '' prevents old agbcc versions
+# from eating stdin, they will simply fail with "No such file
+# or directory" and exit non-zero. That is why we silence
+# stderr and report 0 if it fails.
+CC1_REQ_VER := 1
+CC1_VER     := $(shell $(CC1) -agbcc-version '' 2>/dev/null || echo 0)
+
+ifneq ($(CC1_REQ_VER),$(CC1_VER))
+    $(error Please update agbcc!)
+endif
 
 # Clear the default suffixes
 .SUFFIXES:
@@ -74,7 +90,35 @@ SONG_OBJS := $(patsubst $(SONG_SUBDIR)/%.s,$(SONG_BUILDDIR)/%.o,$(SONG_SRCS))
 OBJS := $(C_OBJS) $(ASM_OBJS) $(DATA_ASM_OBJS) $(SONG_OBJS)
 OBJS_REL := $(patsubst $(OBJ_DIR)/%,%,$(OBJS))
 
-rom: $(ROM)
+ifeq (,$(filter-out rom,$(MAKECMDGOALS)))
+TOOLS_DEP = tools
+else
+TOOLS_DEP :=
+NODEP := 1
+endif
+
+# TODO: make this configurable. scaninc is hardcoded to use .d.
+DEPDIR := .d
+
+# Disable dependency scanning when NODEP is used for quick building
+ifeq ($(NODEP),)
+  # Add the .d files to the dependencies.
+  $(C_BUILDDIR)/%.o: $(DEPDIR)/$(C_SUBDIR)/%*.d
+  $(ASM_BUILDDIR)/%.o: $(DEPDIR)/$(ASM_SUBDIR)/%*.d
+  $(DATA_ASM_BUILDDIR)/%.o: $(DEPDIR)/$(DATA_ASM_SUBDIR)/%*.d
+
+  # scaninc puts the deps files into .d/path/file.Td
+  C_DEPS        := $(addprefix $(DEPDIR)/, $(C_SRCS:%.c=%.d))
+  ASM_DEPS      := $(addprefix $(DEPDIR)/, $(ASM_SRCS:%.s=%.d))
+  DATA_DEPS := $(addprefix $(DEPDIR)/, $(DATA_ASM_SRCS:%.s=%.d))
+else
+  # Dummy things out.
+  C_DEPS       :=
+  ASM_DEPS     :=
+  DATA_DEPS :=
+endif
+
+rom: $(ALL_TOOLS) | $(ROM)
 
 # For contributors to make sure a change didn't affect the contents of the ROM.
 compare: $(ROM)
@@ -83,11 +127,33 @@ compare: $(ROM)
 clean: tidy
 	rm -f sound/direct_sound_samples/*.bin
 	rm -f $(SONG_OBJS)
+	rm -rf $(DEPDIR)
 	find . \( -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -exec rm {} +
-
 tidy:
 	rm -f $(ROM) $(ELF) $(MAP)
 	rm -r build/*
+
+tools: $(ALL_TOOLS)
+
+include tools.mk
+
+# Dependency scanning. The new scaninc creates similar output
+# to gcc -M and only does it when needed.
+# If NODEP is enabled, these rules will be orphaned.
+$(C_DEPS) $(ASM_DEPS) $(DATA_DEPS): $(SCANINC)
+$(DEPDIR)/%.d: %.c
+	@$(SCANINC) -I include $<
+
+$(DEPDIR)/%.d: %.s
+	@$(SCANINC) -I include $<
+
+.PRECIOUS: $(C_DEPS) $(ASM_DEPS) $(DATA_DEPS)
+#.PRECIOUS: $(C_DEPS) $(ASM_DEPS)
+
+# Include our dependencies. This will be empty on NODEP.
+-include $(C_DEPS)
+-include $(ASM_DEPS)
+-include $(DATA_DEPS)
 
 include graphics_file_rules.mk
 include event_obj_graphics_makefile_rules.mk
@@ -110,48 +176,28 @@ sound/songs/%.s: sound/songs/%.mid
 	cd $(@D) && ../../$(MID) $(<F)
 
 $(C_BUILDDIR)/libc.o: CC1 := tools/agbcc/bin/old_agbcc
-$(C_BUILDDIR)/libc.o: CFLAGS := -O2
+$(C_BUILDDIR)/libc.o: CC1FLAGS := -O2
 
-$(C_BUILDDIR)/siirtc.o: CFLAGS := -mthumb-interwork
+$(C_BUILDDIR)/siirtc.o: CC1FLAGS := -mthumb-interwork
 
-$(C_BUILDDIR)/agb_flash.o: CFLAGS := -O -mthumb-interwork
-$(C_BUILDDIR)/agb_flash_1m.o: CFLAGS := -O -mthumb-interwork
-$(C_BUILDDIR)/agb_flash_mx.o: CFLAGS := -O -mthumb-interwork
+$(C_BUILDDIR)/agb_flash.o: CC1FLAGS := -O -mthumb-interwork
+$(C_BUILDDIR)/agb_flash_1m.o: CC1FLAGS := -O -mthumb-interwork
+$(C_BUILDDIR)/agb_flash_mx.o: CC1FLAGS := -O -mthumb-interwork
 
 $(C_BUILDDIR)/m4a_2.o: CC1 := tools/agbcc/bin/old_agbcc
 $(C_BUILDDIR)/m4a_4.o: CC1 := tools/agbcc/bin/old_agbcc
 
-$(C_BUILDDIR)/record_mixing.o: CFLAGS += -ffreestanding
+$(C_BUILDDIR)/record_mixing.o: CC1FLAGS += -ffreestanding
 
-ifeq ($(NODEP),)
-$(C_BUILDDIR)/%.o: c_dep = $(shell $(SCANINC) -I include $(C_SUBDIR)/$*.c)
-else
-$(C_BUILDDIR)/%.o: c_dep :=
-endif
 
-$(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c $$(c_dep)
-	@$(CPP) $(CPPFLAGS) $< -o $(C_BUILDDIR)/$*.i
-	@$(PREPROC) $(C_BUILDDIR)/$*.i charmap.txt | $(CC1) $(CFLAGS) -o $(C_BUILDDIR)/$*.s
-	@echo -e ".text\n\t.align\t2, 0\n" >> $(C_BUILDDIR)/$*.s
-	$(AS) $(ASFLAGS) -o $@ $(C_BUILDDIR)/$*.s
+$(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c $(C_DEP)
+	$(PREPROC) $(CPPFLAGS) $< -c charmap.txt | $(CC1) $(CC1FLAGS) | $(AS) $(ASFLAGS) -o $@
 
-ifeq ($(NODEP),)
-$(ASM_BUILDDIR)/%.o: asm_dep = $(shell $(SCANINC) $(ASM_SUBDIR)/$*.s)
-else
-$(ASM_BUILDDIR)/%.o: asm_dep :=
-endif
-
-$(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s $$(asm_dep)
+$(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s $(ASM_DEP)
 	$(AS) $(ASFLAGS) -o $@ $<
 
-ifeq ($(NODEP),)
-$(DATA_ASM_BUILDDIR)/%.o: data_dep = $(shell $(SCANINC) $(DATA_ASM_SUBDIR)/$*.s)
-else
-$(DATA_ASM_BUILDDIR)/%.o: data_dep :=
-endif
-
-$(DATA_ASM_BUILDDIR)/%.o: $(DATA_ASM_SUBDIR)/%.s $$(data_dep)
-	$(PREPROC) $< charmap.txt | $(CPP) -I include | $(AS) $(ASFLAGS) -o $@
+$(DATA_ASM_BUILDDIR)/%.o: $(DATA_ASM_SUBDIR)/%.s $(DATA_DEP)
+	$(PREPROC) $< -n -c charmap.txt | $(CPP) -P -I include - | $(AS) $(ASFLAGS) -o $@
 
 $(SONG_BUILDDIR)/%.o: $(SONG_SUBDIR)/%.s
 	$(AS) $(ASFLAGS) -I sound -o $@ $<
@@ -174,4 +220,5 @@ $(ELF): $(OBJ_DIR)/ld_script.ld $(OBJS)
 $(ROM): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 	$(FIX) $@ -p -t"$(TITLE)" -c$(GAME_CODE) -m$(MAKER_CODE) -r$(REVISION) -silent
+
 
