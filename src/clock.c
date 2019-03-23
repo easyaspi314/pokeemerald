@@ -1,26 +1,19 @@
 #include "global.h"
-#include "rom6.h"
 #include "event_data.h"
 #include "rtc.h"
+#include "time_events.h"
+#include "field_specials.h"
 #include "lottery_corner.h"
 #include "dewford_trend.h"
 #include "tv.h"
-#include "field_screen.h"
+#include "field_weather.h"
 #include "berry.h"
 #include "main.h"
 #include "overworld.h"
 #include "wallclock.h"
 
-// static types
-
-// static declarations
-
 static void UpdatePerDay(struct Time *localTime);
 static void UpdatePerMinute(struct Time *localTime);
-
-// rodata
-
-// text
 
 static void InitTimeBasedEvents(void)
 {
@@ -48,7 +41,7 @@ static void UpdatePerDay(struct Time *localTime)
     if (*days != localTime->days && *days <= localTime->days)
     {
         daysSince = localTime->days - *days;
-        ClearUpperFlags();
+        ClearDailyFlags();
         UpdateDewfordTrendPerDay(daysSince);
         UpdateTVShowsPerDay(daysSince);
         UpdateWeatherPerDay(daysSince);

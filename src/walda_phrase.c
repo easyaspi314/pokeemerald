@@ -7,17 +7,10 @@
 #include "text.h"
 #include "new_game.h"
 #include "overworld.h"
+#include "pokemon_storage_system.h"
+#include "field_screen_effect.h"
 
 extern const u8 gText_Peekaboo[];
-
-extern u8 *GetWaldaPhrasePtr(void);
-extern bool32 IsWaldaPhraseEmpty(void);
-extern void sub_80AF168(void);
-extern void SetWaldaPhrase(const u8 *src);
-extern void SetWaldaWallpaperPatternId(u8 patternId);
-extern void SetWaldaWallpaperIconId(u8 iconId);
-extern void SetWaldaWallpaperColors(u16 backgroundColor, u16 foregroundColor);
-extern void SetWaldaWallpaperLockedOrUnlocked(bool32 unlocked);
 
 // this file's functions
 static void CB2_HandleGivenWaldaPhrase(void);
@@ -77,7 +70,7 @@ static void CB2_HandleGivenWaldaPhrase(void)
     }
 
     StringCopy(gStringVar1, GetWaldaPhrasePtr());
-    gFieldCallback = sub_80AF168;
+    gFieldCallback = FieldCallback_ReturnToEventScript2;
     SetMainCallback2(CB2_ReturnToField);
 }
 
@@ -95,7 +88,7 @@ u16 TryGetWallpaperWithWaldaPhrase(void)
 {
     u16 backgroundClr, foregroundClr;
     u8 patternId, iconId;
-    u16 trainerId = ReadUnalignedWord(gSaveBlock2Ptr->playerTrainerId);
+    u16 trainerId = GetTrainerId(gSaveBlock2Ptr->playerTrainerId);
     gSpecialVar_Result = TryCalculateWallpaper(&backgroundClr, &foregroundClr, &iconId, &patternId, trainerId, GetWaldaPhrasePtr());
 
     if (gSpecialVar_Result)

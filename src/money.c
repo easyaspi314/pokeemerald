@@ -1,17 +1,14 @@
 #include "global.h"
 #include "money.h"
+#include "graphics.h"
 #include "event_data.h"
 #include "string_util.h"
 #include "text.h"
 #include "menu.h"
 #include "window.h"
 #include "sprite.h"
+#include "strings.h"
 #include "decompress.h"
-
-extern const u8 gText_PokedollarVar1[];
-
-extern const u8 gMenuMoneyGfx[];
-extern const u8 gMenuMoneyPal[];
 
 #define MAX_MONEY 999999
 
@@ -27,10 +24,10 @@ static const struct OamData sOamData_MoneyLabel =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 1,
+    .shape = SPRITE_SHAPE(32x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 0,
@@ -157,7 +154,7 @@ void PrintMoneyAmount(u8 windowId, u8 x, u8 y, int amount, u8 speed)
 
 void PrintMoneyAmountInMoneyBoxWithBorder(u8 windowId, u16 tileStart, u8 pallete, int amount)
 {
-    SetWindowBorderStyle(windowId, FALSE, tileStart, pallete);
+    DrawStdFrameWithCustomTileAndPalette(windowId, FALSE, tileStart, pallete);
     PrintMoneyAmountInMoneyBox(windowId, amount, 0);
 }
 
@@ -172,7 +169,7 @@ void DrawMoneyBox(int amount, u8 x, u8 y)
 
     SetWindowTemplateFields(&template, 0, x + 1, y + 1, 10, 2, 15, 8);
     sMoneyBoxWindowId = AddWindow(&template);
-    FillWindowPixelBuffer(sMoneyBoxWindowId, 0);
+    FillWindowPixelBuffer(sMoneyBoxWindowId, PIXEL_FILL(0));
     PutWindowTilemap(sMoneyBoxWindowId);
     CopyWindowToVram(sMoneyBoxWindowId, 1);
     PrintMoneyAmountInMoneyBoxWithBorder(sMoneyBoxWindowId, 0x214, 14, amount);
@@ -182,15 +179,15 @@ void DrawMoneyBox(int amount, u8 x, u8 y)
 void HideMoneyBox(void)
 {
     RemoveMoneyLabelObject();
-    sub_8198070(sMoneyBoxWindowId, FALSE);
+    ClearStdWindowAndFrameToTransparent(sMoneyBoxWindowId, FALSE);
     CopyWindowToVram(sMoneyBoxWindowId, 2);
     RemoveWindow(sMoneyBoxWindowId);
 }
 
 void AddMoneyLabelObject(u16 x, u16 y)
 {
-    LoadCompressedObjectPic(&sSpriteSheet_MoneyLabel);
-    LoadCompressedObjectPalette(&sSpritePalette_MoneyLabel);
+    LoadCompressedSpriteSheet(&sSpriteSheet_MoneyLabel);
+    LoadCompressedSpritePalette(&sSpritePalette_MoneyLabel);
     sMoneyLabelSpriteId = CreateSprite(&sSpriteTemplate_MoneyLabel, x, y, 0);
 }
 

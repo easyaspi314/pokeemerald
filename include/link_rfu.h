@@ -1,6 +1,9 @@
 #ifndef GUARD_LINK_RFU_H
 #define GUARD_LINK_RFU_H
 
+#include "librfu.h"
+#include "link.h"
+
 // Exported type declarations
 
 struct UnkLinkRfuStruct_02022B2C
@@ -32,7 +35,8 @@ struct UnkLinkRfuStruct_02022B44
     u8 fill_84[0x58];
 };
 
-struct UnkRfuStruct_1 {
+struct UnkRfuStruct_1
+{
     /* 0x000 */ u8 unk_00;
     /* 0x001 */ u8 unk_01;
     /* 0x002 */ vu8 unk_02;
@@ -75,7 +79,8 @@ struct UnkRfuStruct_1 {
     /* 0xeb4 */ u8 filler_e64[12];
 };
 
-struct UnkRfuStruct_2_Sub_6c {
+struct UnkRfuStruct_2_Sub_6c
+{
     /* 0x00 */ u16 unk_00;
     /* 0x02 */ u16 unk_02;
     /* 0x04 */ const u8 *unk_04;
@@ -86,7 +91,8 @@ struct UnkRfuStruct_2_Sub_6c {
     /* 0x12 */ u8 unk_12;
 };
 
-struct UnkRfuStruct_2_Sub_124 {
+struct UnkRfuStruct_2_Sub_124
+{
     /* 0x000 */ u8 unk_00[32][70];
     /* 0x8c0 */ vu8 unk_8c0;
     /* 0x8c1 */ vu8 unk_8c1;
@@ -94,7 +100,8 @@ struct UnkRfuStruct_2_Sub_124 {
     /* 0x8c3 */ vu8 unk_8c3;
 };
 
-struct UnkRfuStruct_2_Sub_9e8 {
+struct UnkRfuStruct_2_Sub_9e8
+{
     /* 0x000 */ u8 unk_00[40][14];
     /* 0x230 */ vu8 unk_230;
     /* 0x231 */ vu8 unk_231;
@@ -102,14 +109,16 @@ struct UnkRfuStruct_2_Sub_9e8 {
     /* 0x233 */ vu8 unk_233;
 };
 
-struct UnkRfuStruct_2_Sub_c1c {
+struct UnkRfuStruct_2_Sub_c1c
+{
     /* 0x00 */ u8 unk_00[2][14];
     /* 0x1c */ vu8 unk_1c;
     /* 0x1d */ vu8 unk_1d;
     /* 0x1e */ vu8 unk_1e;
 };
 
-struct UnkRfuStruct_Sub_Unused {
+struct UnkRfuStruct_Sub_Unused
+{
     /* 0x000 */ u8 unk_00[2][256];
     /* 0x200 */ vu8 unk_200;
     /* 0x201 */ vu8 unk_201;
@@ -117,7 +126,8 @@ struct UnkRfuStruct_Sub_Unused {
     /* 0x203 */ vu8 unk_203;
 };
 
-struct UnkRfuStruct_2 {
+struct UnkRfuStruct_2
+{
     /* 0x000 */ void (*unk_00)(void);
     /* 0x004 */ u16 unk_04;
     /* 0x006 */ u8 filler_06[4];
@@ -149,7 +159,10 @@ struct UnkRfuStruct_2 {
     /* 0x0fe */ u16 unk_fe;
     /* 0x100 */ u16 unk_100;
     /* 0x102 */ u8 unk_102;
-    /* 0x103 */ u8 filler_103[0x21];
+    /* 0x103 */ u8 filler_103[0x10A - 0x103];
+    /* 0x10A */ struct UnkLinkRfuStruct_02022B14 unk_10A;
+    u8 filler_;
+    u8 playerName[PLAYER_NAME_LENGTH + 1];
     /* 0x124 */ struct UnkRfuStruct_2_Sub_124 unk_124;
     /* 0x9e8 */ struct UnkRfuStruct_2_Sub_9e8 unk_9e8;
     /* 0xc1c */ struct UnkRfuStruct_2_Sub_c1c unk_c1c;
@@ -184,7 +197,8 @@ struct UnkRfuStruct_2 {
     /* 0xcee */ u8 unk_cee[4];
 }; // size = 0xcf4
 
-struct UnkRfuStruct_8010A14 {
+struct UnkRfuStruct_8010A14
+{
     char unk_00[15];
     u8 unk_0f;
     u8 unk_10[4];
@@ -196,14 +210,16 @@ struct UnkRfuStruct_8010A14 {
 
 extern struct UnkRfuStruct_1 gUnknown_03004140;
 extern struct UnkRfuStruct_2 gUnknown_03005000;
+extern u8 gWirelessStatusIndicatorSpriteId;
 
 // Exported ROM declarations
+void WipeTrainerNameRecords(void);
 u32 sub_800BEC0(void);
 void sub_800E700(void);
 void sub_800EDD4(void);
 void sub_800F6FC(u8 who);
 void sub_800F728(u8 who);
-bool32 sub_800F7E4(void);
+bool32 IsSendingKeysToRfu(void);
 void sub_800F804(void);
 void sub_800F850(void);
 u8 sub_800FCD8(void);
@@ -222,8 +238,8 @@ void sub_800E6D0(void);
 bool32 sub_8010EC0(void);
 bool32 sub_8010F1C(void);
 bool32 sub_8011A80(void);
-bool32 sub_800F0B8(void);
-u32 sub_80124D4(void);
+bool32 IsRfuRecvQueueEmpty(void);
+u32 GetRfuRecvQueueLength(void);
 void RfuVSync(void);
 void sub_80111B0(bool32 a0);
 u8 sub_8011A74(void);
@@ -248,21 +264,25 @@ void sub_800E084(void);
 void sub_801103C(void);
 void sub_8011C5C(void);
 void sub_80106D4(void);
-void sub_800E3A8(void);
+void RecordMixTrainerNames(void);
 void sub_800ED10(void);
 void sub_800ED28(void);
 void sub_8011090(u8 a0, u32 a1, u32 a2);
-void sub_8011FC8(u8 *a0, u16 a1);
+void sub_8011FC8(const u8 *src, u16 trainerId);
 void sub_8010FA0(bool32 a0, bool32 a1);
 void sub_8010F60(void);
 void sub_8010FCC(u32 a0, u32 a1, u32 a2);
 void sub_8011C84(void);
-void sub_8012188(const u8 *a0, struct UnkLinkRfuStruct_02022B14 *arg1, u8 arg2);
+void sub_8012188(const u8 *name, struct UnkLinkRfuStruct_02022B14 *structPtr, u8 a2);
 bool32 sub_8011B90(void);
 void sub_800FE50(u16 *a0);
 bool32 sub_800E540(u16 id, u8 *name);
 void sub_8011DE0(u32 arg0);
 u8 sub_801100C(int a0);
 void sub_800EF7C(void);
+bool8 sub_800DE7C(struct UnkLinkRfuStruct_02022B14 *buff1, u8 *buff2, u8 idx);
+s32 sub_800E87C(u8 idx);
+void sub_8011BA4(void);
+void sub_8010198(void);
 
 #endif //GUARD_LINK_RFU_H

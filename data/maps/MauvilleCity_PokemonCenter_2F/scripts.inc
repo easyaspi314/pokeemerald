@@ -1,8 +1,8 @@
 MauvilleCity_PokemonCenter_2F_MapScripts:: @ 8211008
-	map_script 2, MauvilleCity_PokemonCenter_2F_MapScript2_276C3B
-	map_script 4, MauvilleCity_PokemonCenter_2F_MapScript2_276B6C
-	map_script 1, MauvilleCity_PokemonCenter_2F_MapScript1_276BBE
-	map_script 3, MauvilleCity_PokemonCenter_2F_MapScript1_276ACF
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, MauvilleCity_PokemonCenter_2F_MapScript2_276C3B
+	map_script MAP_SCRIPT_ON_WARP_INTO_MAP_TABLE, MauvilleCity_PokemonCenter_2F_MapScript2_276B6C
+	map_script MAP_SCRIPT_ON_LOAD, MauvilleCity_PokemonCenter_2F_MapScript1_276BBE
+	map_script MAP_SCRIPT_ON_TRANSITION, MauvilleCity_PokemonCenter_2F_MapScript1_276ACF
 	.byte 0
 
 MauvilleCity_PokemonCenter_2F_EventScript_21101D:: @ 821101D
@@ -18,7 +18,7 @@ MauvilleCity_PokemonCenter_2F_EventScript_211029:: @ 8211029
 	end
 
 MauvilleCity_PokemonCenter_2F_EventScript_21102F:: @ 821102F
-	msgbox MauvilleCity_PokemonCenter_2F_Text_211038, 2
+	msgbox MauvilleCity_PokemonCenter_2F_Text_211038, MSGBOX_NPC
 	end
 
 MauvilleCity_PokemonCenter_2F_Text_211038: @ 8211038
@@ -26,6 +26,6 @@ MauvilleCity_PokemonCenter_2F_Text_211038: @ 8211038
 	.string "at the COLOSSEUM here?\p"
 	.string "They put up your record on the wall\n"
 	.string "for everyone to see.\p"
-	.string "It’s embarrassing if you lose more\n"
+	.string "It's embarrassing if you lose more\n"
 	.string "often than you win…$"
 

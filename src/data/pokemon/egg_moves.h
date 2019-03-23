@@ -1,11 +1,6 @@
-#ifndef POKEEMERALD_DAYCARE_H
-#define POKEEMERALD_DAYCARE_H
-
 #define EGG_MOVES_SPECIES_OFFSET 20000
 #define EGG_MOVES_TERMINATOR 0xFFFF
 #define egg_moves(species, ...) (SPECIES_##species + EGG_MOVES_SPECIES_OFFSET), __VA_ARGS__
-
-#endif // POKEEMERALD_DAYCARE_H
 
 const u16 gEggMoves[] = {
     egg_moves(BULBASAUR,

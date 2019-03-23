@@ -2,28 +2,20 @@
 #include "save_location.h"
 #include "constants/maps.h"
 
-// specialSaveWarp flags
-#define POKECENTER_SAVEWARP (1 << 1)
-#define LOBBY_SAVEWARP (1 << 2)
-#define UNK_SPECIAL_SAVE_WARP_FLAG_3 (1 << 3)
-
 static bool32 IsCurMapInLocationList(const u16 *list)
 {
+    s32 i;
     u16 locSum = (gSaveBlock1Ptr->location.mapGroup << 8) + (gSaveBlock1Ptr->location.mapNum);
 
-    // im sure it was written a different way, but for the love of christ I cant figure out how to write it different where it still matches.
-    if (*list != 0xFFFF)
+    for (i = 0; list[i] != 0xFFFF; i++)
     {
-        u16 termValue = 0xFFFF;
-        const u16 *localList;
-        for (localList = list; *localList != termValue; localList++)
-            if (*localList == locSum)
-                return TRUE;
+        if (list[i] == locSum)
+            return TRUE;
     }
+
     return FALSE;
 }
 
-// TODO: Not require a packed u16 array for these lists
 static const u16 sSaveLocationPokeCenterList[] =
 {
     MAP_OLDALE_TOWN_POKEMON_CENTER_1F,
@@ -72,7 +64,7 @@ static bool32 IsCurMapPokeCenter(void)
     return IsCurMapInLocationList(sSaveLocationPokeCenterList);
 }
 
-static const u16 sSaveLocationReloadLocList[] = // there's only 1 location, and it's presumed its for the save reload feature for battle tower
+static const u16 sSaveLocationReloadLocList[] = // There's only 1 location, and it's presumed its for the save reload feature for battle tower.
 {
     MAP_BATTLE_FRONTIER_BATTLE_TOWER_LOBBY,
     0xFFFF,
@@ -83,13 +75,13 @@ static bool32 IsCurMapReloadLocation(void)
     return IsCurMapInLocationList(sSaveLocationReloadLocList);
 }
 
-// nulled out list. unknown what this would have been
+// Nulled out list. Unknown what this would have been.
 static const u16 sUnknown_0861440E[] =
 {
     0xFFFF,
 };
 
-bool32 sub_81AFCEC(void)
+static bool32 sub_81AFCEC(void)
 {
     return IsCurMapInLocationList(sUnknown_0861440E);
 }
@@ -97,26 +89,26 @@ bool32 sub_81AFCEC(void)
 static void TrySetPokeCenterWarpStatus(void)
 {
     if (IsCurMapPokeCenter() == FALSE)
-        gSaveBlock2Ptr->specialSaveWarp &= ~(POKECENTER_SAVEWARP);
+        gSaveBlock2Ptr->specialSaveWarpFlags &= ~(POKECENTER_SAVEWARP);
     else
-        gSaveBlock2Ptr->specialSaveWarp |= POKECENTER_SAVEWARP;
+        gSaveBlock2Ptr->specialSaveWarpFlags |= POKECENTER_SAVEWARP;
 }
 
 static void TrySetReloadWarpStatus(void)
 {
     if (!IsCurMapReloadLocation())
-        gSaveBlock2Ptr->specialSaveWarp &= ~(LOBBY_SAVEWARP);
+        gSaveBlock2Ptr->specialSaveWarpFlags &= ~(LOBBY_SAVEWARP);
     else
-        gSaveBlock2Ptr->specialSaveWarp |= LOBBY_SAVEWARP;
+        gSaveBlock2Ptr->specialSaveWarpFlags |= LOBBY_SAVEWARP;
 }
 
 // this function definitely sets a warp status, but because the list is empty, it's unknown what this does yet.
 static void sub_81AFD5C(void)
 {
     if (!sub_81AFCEC())
-        gSaveBlock2Ptr->specialSaveWarp &= ~(UNK_SPECIAL_SAVE_WARP_FLAG_3);
+        gSaveBlock2Ptr->specialSaveWarpFlags &= ~(UNK_SPECIAL_SAVE_WARP_FLAG_3);
     else
-        gSaveBlock2Ptr->specialSaveWarp |= UNK_SPECIAL_SAVE_WARP_FLAG_3;
+        gSaveBlock2Ptr->specialSaveWarpFlags |= UNK_SPECIAL_SAVE_WARP_FLAG_3;
 }
 
 void TrySetMapSaveWarpStatus(void)
@@ -139,5 +131,5 @@ void sub_81AFDA0(void)
 
 void sub_81AFDD0(void)
 {
-    gSaveBlock2Ptr->specialSaveWarp |= 0x80;
+    gSaveBlock2Ptr->specialSaveWarpFlags |= 0x80;
 }

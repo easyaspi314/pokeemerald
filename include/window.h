@@ -1,9 +1,11 @@
 #ifndef GUARD_WINDOW_H
 #define GUARD_WINDOW_H
 
+#define PIXEL_FILL(num) ((num) | ((num) << 4))
+
 enum
 {
-    WINDOW_PRIORITY,
+    WINDOW_BG,
     WINDOW_TILEMAP_LEFT,
     WINDOW_TILEMAP_TOP,
     WINDOW_WIDTH,
@@ -15,7 +17,7 @@ enum
 
 struct WindowTemplate
 {
-    u8 priority;
+    u8 bg;
     u8 tilemapLeft;
     u8 tilemapTop;
     u8 width;
@@ -55,16 +57,16 @@ void PutWindowRectTilemap(u8 windowId, u8 x, u8 y, u8 width, u8 height);
 void BlitBitmapToWindow(u8 windowId, const u8 *pixels, u16 x, u16 y, u16 width, u16 height);
 void BlitBitmapRectToWindow(u8 windowId, const u8 *pixels, u16 srcX, u16 srcY, u16 srcWidth, int srcHeight, u16 destX, u16 destY, u16 rectWidth, u16 rectHeight);
 void FillWindowPixelRect(u8 windowId, u8 fillValue, u16 x, u16 y, u16 width, u16 height);
-void CopyToWindowPixelBuffer(u8 windowId, const u8 *src, u16 size, u16 tileOffset);
+void CopyToWindowPixelBuffer(u8 windowId, const void *src, u16 size, u16 tileOffset);
 void FillWindowPixelBuffer(u8 windowId, u8 fillValue);
 void ScrollWindow(u8 windowId, u8 direction, u8 distance, u8 fillValue);
 void CallWindowFunction(u8 windowId, void ( *func)(u8, u8, u8, u8, u8, u8));
 bool8 SetWindowAttribute(u8 windowId, u8 attributeId, u32 value);
 u32 GetWindowAttribute(u8 windowId, u8 attributeId);
-u16 AddWindow8Bit(struct WindowTemplate *template);
-u16 AddWindow8Bit(struct WindowTemplate *template);
+u16 AddWindow8Bit(const struct WindowTemplate *template);
+void FillWindowPixelBuffer8Bit(u8 windowId, u8 fillValue);
 void FillWindowPixelRect8Bit(u8 windowId, u8 fillValue, u16 x, u16 y, u16 width, u16 height);
-void BlitBitmapRectToWindow4BitTo8Bit(u8 windowId, u8 *pixels, u16 srcX, u16 srcY, u16 srcWidth, int srcHeight, u16 destX, u16 destY, u16 rectWidth, u16 rectHeight, u8 paletteNum);
+void BlitBitmapRectToWindow4BitTo8Bit(u8 windowId, const u8 *pixels, u16 srcX, u16 srcY, u16 srcWidth, int srcHeight, u16 destX, u16 destY, u16 rectWidth, u16 rectHeight, u8 paletteNum);
 void CopyWindowToVram8Bit(u8 windowId, u8 mode);
 
 extern struct Window gWindows[];
@@ -72,7 +74,5 @@ extern void* gUnknown_03002F70[];
 extern u32 filler_03002F58;
 extern u32 filler_03002F5C;
 extern u32 filler_03002F64;
-
-extern u8 gUnknown_03002F60;
 
 #endif // GUARD_WINDOW_H

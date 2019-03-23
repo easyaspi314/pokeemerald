@@ -1,10 +1,11 @@
 #include "global.h"
-#include "pokemon_size_record.h"
 #include "event_data.h"
-#include "constants/species.h"
+#include "pokedex.h"
+#include "pokemon.h"
+#include "pokemon_size_record.h"
 #include "string_util.h"
 #include "text.h"
-#include "pokemon.h"
+#include "constants/species.h"
 
 #define DEFAULT_MAX_SIZE 0x8000 // was 0x8100 in Ruby/Sapphire
 
@@ -14,9 +15,6 @@ struct UnknownStruct
     u8 unk2;
     u16 unk4;
 };
-
-extern u16 GetPokedexHeightWeight(u16 dexNo, bool8 height);
-extern u16 SpeciesToNationalPokedexNum(u16 species);
 
 static const struct UnknownStruct sBigMonSizeTable[] =
 {
@@ -206,13 +204,13 @@ void GiveGiftRibbonToParty(u8 index, u8 ribbonId)
     if (index < 11 && ribbonId < 65)
     {
         gSaveBlock1Ptr->giftRibbons[index] = ribbonId;
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
-            struct Pokemon *pkmn = &gPlayerParty[i];
+            struct Pokemon *mon = &gPlayerParty[i];
 
-            if (GetMonData(pkmn, MON_DATA_SPECIES) != 0 && GetMonData(pkmn, MON_DATA_SANITY_BIT3) == 0)
+            if (GetMonData(mon, MON_DATA_SPECIES) != 0 && GetMonData(mon, MON_DATA_SANITY_IS_EGG) == 0)
             {
-                SetMonData(pkmn, array[index], &data);
+                SetMonData(mon, array[index], &data);
                 gotRibbon = TRUE;
             }
         }

@@ -1,29 +1,21 @@
 #include "global.h"
-#include "sprite.h"
+#include "berry.h"
 #include "decompress.h"
+#include "graphics.h"
+#include "item.h"
 #include "item_menu.h"
 #include "item_icon.h"
 #include "item_menu_icons.h"
-#include "window.h"
 #include "menu_helpers.h"
-#include "berry.h"
-#include "graphics.h"
+#include "sprite.h"
+#include "window.h"
 #include "constants/items.h"
-#include "item.h"
-#include "item_use.h"
-#include "constants/hold_effects.h"
 
 struct CompressedTilesPal
 {
-    const u8 *tiles;
-    const u8 *pal;
+    const u32 *tiles;
+    const u32 *pal;
 };
-
-extern void sub_80D5860(struct Sprite *sprite);
-extern void sub_80D58F8(struct Sprite *sprite);
-extern void sub_80D5968(struct Sprite *sprite);
-extern void sub_80D5A94(struct Sprite *sprite);
-extern void sub_80D5B48(struct Sprite *sprite);
 
 // this file's functions
 static void SpriteCB_BagVisualSwitchingPockets(struct Sprite *sprite);
@@ -44,10 +36,10 @@ static const struct OamData sOamData_857FAA4 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -154,10 +146,10 @@ static const struct OamData sOamData_857FB64 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(16x16),
     .x = 0,
     .matrixNum = 4,
-    .size = 1,
+    .size = SPRITE_SIZE(16x16),
     .tileNum = 0,
     .priority = 2,
     .paletteNum = 0,
@@ -207,7 +199,7 @@ static const struct SpritePalette gUnknown_0857FBA8 =
     gUnknown_0857F564, 101
 };
 
-static const struct SpriteTemplate gUnknown_0857FBB0 =
+static const struct SpriteTemplate gSpriteTemplate_RotatingBall =
 {
     .tileTag = 101,
     .paletteTag = 101,
@@ -225,10 +217,10 @@ static const struct OamData sOamData_857FBC8 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 7,
@@ -242,10 +234,10 @@ static const struct OamData sOamData_857FBD0 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 7,
@@ -382,10 +374,10 @@ static const struct OamData sOamData_857FDFC =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -414,68 +406,10 @@ static const struct SpriteTemplate gUnknown_0857FE10 =
     .callback = SpriteCallbackDummy,
 };
 
-const struct SpriteTemplate gUnknown_0857FE28 =
-{
-    .tileTag = 0,
-    .paletteTag = 0,
-    .oam = &gDummyOamData,
-    .anims = gDummySpriteAnimTable,
-    .images = NULL,
-    .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = sub_80D5860,
-};
-
-const struct SpriteTemplate gUnknown_0857FE40 =
-{
-    .tileTag = 0,
-    .paletteTag = 0,
-    .oam = &gDummyOamData,
-    .anims = gDummySpriteAnimTable,
-    .images = NULL,
-    .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = sub_80D58F8,
-};
-
-const struct SpriteTemplate gUnknown_0857FE58 =
-{
-    .tileTag = 0,
-    .paletteTag = 0,
-    .oam = &gDummyOamData,
-    .anims = gDummySpriteAnimTable,
-    .images = NULL,
-    .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = sub_80D5968,
-};
-
-const struct SpriteTemplate gUnknown_0857FE70 =
-{
-    .tileTag = 0,
-    .paletteTag = 0,
-    .oam = &gDummyOamData,
-    .anims = gDummySpriteAnimTable,
-    .images = NULL,
-    .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = sub_80D5A94,
-};
-
-const struct SpriteTemplate gUnknown_0857FE88 =
-{
-    .tileTag = 0,
-    .paletteTag = 0,
-    .oam = &gDummyOamData,
-    .anims = gDummySpriteAnimTable,
-    .images = NULL,
-    .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = sub_80D5B48,
-};
-
-#include "data/text/item_descriptions.h"
-#include "data/items.h"
-
 // code
 void RemoveBagSprite(u8 id)
 {
-    u8 *spriteId = &gUnknown_0203CE54->unk804[id];
+    u8 *spriteId = &gUnknown_0203CE54->spriteId[id];
     if (*spriteId != 0xFF)
     {
         FreeSpriteTilesByTag(id + 100);
@@ -488,14 +422,14 @@ void RemoveBagSprite(u8 id)
 
 void AddBagVisualSprite(u8 bagPocketId)
 {
-    u8 *spriteId = &gUnknown_0203CE54->unk804[0];
+    u8 *spriteId = &gUnknown_0203CE54->spriteId[0];
     *spriteId = CreateSprite(&gUnknown_0857FB4C, 68, 66, 0);
     SetBagVisualPocketId(bagPocketId, FALSE);
 }
 
 void SetBagVisualPocketId(u8 bagPocketId, bool8 isSwitchingPockets)
 {
-    struct Sprite *sprite = &gSprites[gUnknown_0203CE54->unk804[0]];
+    struct Sprite *sprite = &gSprites[gUnknown_0203CE54->spriteId[0]];
     if (isSwitchingPockets)
     {
         sprite->pos2.y = -5;
@@ -524,7 +458,7 @@ static void SpriteCB_BagVisualSwitchingPockets(struct Sprite *sprite)
 
 void ShakeBagVisual(void)
 {
-    struct Sprite *sprite = &gSprites[gUnknown_0203CE54->unk804[0]];
+    struct Sprite *sprite = &gSprites[gUnknown_0203CE54->spriteId[0]];
     if (sprite->affineAnimEnded)
     {
         StartSpriteAffineAnim(sprite, 1);
@@ -543,10 +477,10 @@ static void SpriteCB_ShakeBagVisual(struct Sprite *sprite)
 
 void AddSwitchPocketRotatingBallSprite(s16 rotationDirection)
 {
-    u8 *spriteId = &gUnknown_0203CE54->unk804[1];
+    u8 *spriteId = &gUnknown_0203CE54->spriteId[1];
     LoadSpriteSheet(&gUnknown_0857FBA0);
     LoadSpritePalette(&gUnknown_0857FBA8);
-    *spriteId = CreateSprite(&gUnknown_0857FBB0, 16, 16, 0);
+    *spriteId = CreateSprite(&gSpriteTemplate_RotatingBall, 16, 16, 0);
     gSprites[*spriteId].data[0] = rotationDirection;
 }
 
@@ -581,7 +515,7 @@ static void SpriteCB_SwitchPocketRotatingBallContinue(struct Sprite *sprite)
 
 void AddBagItemIconSprite(u16 itemId, u8 id)
 {
-    u8 *spriteId = &gUnknown_0203CE54->unk804[id + 2];
+    u8 *spriteId = &gUnknown_0203CE54->spriteId[id + 2];
     if (*spriteId == 0xFF)
     {
         u8 iconSpriteId;
@@ -605,17 +539,17 @@ void RemoveBagItemIconSprite(u8 id)
 
 void sub_80D4FAC(void)
 {
-    sub_8122344(&gUnknown_0203CE54->unk804[4], 8);
+    sub_8122344(&gUnknown_0203CE54->spriteId[4], 8);
 }
 
 void sub_80D4FC8(u8 arg0)
 {
-    sub_81223FC(&gUnknown_0203CE54->unk804[4], 8, arg0);
+    sub_81223FC(&gUnknown_0203CE54->spriteId[4], 8, arg0);
 }
 
 void sub_80D4FEC(u8 arg0)
 {
-    sub_8122448(&gUnknown_0203CE54->unk804[4], 136, 120, (arg0 + 1) * 16);
+    sub_8122448(&gUnknown_0203CE54->spriteId[4], 136, 120, (arg0 + 1) * 16);
 }
 
 static void sub_80D5018(void *mem0, void *mem1)
@@ -649,7 +583,7 @@ static void sub_80D5070(u8 berryId)
 
     pal.data = gBerryPicTable[berryId].pal;
     pal.tag = 0x7544;
-    LoadCompressedObjectPalette(&pal);
+    LoadCompressedSpritePalette(&pal);
     LZDecompressWram(gBerryPicTable[berryId].tiles, &gDecompressionBuffer[0x1000]);
     sub_80D5018(&gDecompressionBuffer[0x1000], &gDecompressionBuffer[0]);
 }

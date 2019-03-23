@@ -1,50 +1,45 @@
 OldaleTown_MapScripts:: @ 81E8EA2
-	map_script 3, OldaleTown_MapScript1_1E8EA8
+	map_script MAP_SCRIPT_ON_TRANSITION, OldaleTown_MapScript1_1E8EA8
 	.byte 0
 
 OldaleTown_MapScript1_1E8EA8: @ 81E8EA8
-	call OldaleTown_EventScript_271ED7
+	call Common_EventScript_SetupRivalGender
 	setflag FLAG_VISITED_OLDALE_TOWN
-	checkflag FLAG_0x074
-	call_if 0, OldaleTown_EventScript_1E8ED2
-	checkflag FLAG_0x084
-	call_if 0, OldaleTown_EventScript_1E8EDE
-	checkflag FLAG_0x074
-	call_if 1, OldaleTown_EventScript_1E8ECC
+	call_if_unset FLAG_ADVENTURE_STARTED, OldaleTown_EventScript_1E8ED2
+	call_if_unset FLAG_RECEIVED_POTION_OLDALE, OldaleTown_EventScript_1E8EDE
+	call_if_set FLAG_ADVENTURE_STARTED, OldaleTown_EventScript_1E8ECC
 	end
 
 OldaleTown_EventScript_1E8ECC:: @ 81E8ECC
-	setvar VAR_0x4051, 1
+	setvar VAR_ROUTE102_ACCESSIBLE, 1
 	return
 
 OldaleTown_EventScript_1E8ED2:: @ 81E8ED2
 	setobjectxyperm 3, 1, 11
-	setobjectmovementtype 3, 9
+	setobjectmovementtype 3, MOVEMENT_TYPE_FACE_LEFT
 	return
 
 OldaleTown_EventScript_1E8EDE:: @ 81E8EDE
 	setobjectxyperm 2, 13, 14
-	setobjectmovementtype 2, 8
+	setobjectmovementtype 2, MOVEMENT_TYPE_FACE_DOWN
 	return
 
 OldaleTown_EventScript_1E8EEA:: @ 81E8EEA
-	msgbox OldaleTown_Text_1E94DA, 3
+	msgbox OldaleTown_Text_1E94DA, MSGBOX_SIGN
 	end
 
 OldaleTown_EventScript_1E8EF3:: @ 81E8EF3
-	msgbox OldaleTown_Text_1E918E, 2
+	msgbox OldaleTown_Text_1E918E, MSGBOX_NPC
 	end
 
 OldaleTown_EventScript_1E8EFC:: @ 81E8EFC
 	lock
 	faceplayer
-	checkflag FLAG_0x084
-	goto_eq OldaleTown_EventScript_1E8FB9
-	checkflag FLAG_0x001
-	goto_eq OldaleTown_EventScript_1E8FB9
-	setflag FLAG_0x001
+	goto_if_set FLAG_RECEIVED_POTION_OLDALE, OldaleTown_EventScript_1E8FB9
+	goto_if_set FLAG_TEMP_1, OldaleTown_EventScript_1E8FB9
+	setflag FLAG_TEMP_1
 	playbgm MUS_TSURETEK, 0
-	msgbox OldaleTown_Text_1E91C0, 4
+	msgbox OldaleTown_Text_1E91C0, MSGBOX_DEFAULT
 	closemessage
 	switch VAR_FACING
 	case 1, OldaleTown_EventScript_1E8F47
@@ -54,43 +49,43 @@ OldaleTown_EventScript_1E8EFC:: @ 81E8EFC
 
 OldaleTown_EventScript_1E8F47:: @ 81E8F47
 	applymovement 2, OldaleTown_Movement_1E8FD7
-	applymovement 255, OldaleTown_Movement_1E9001
+	applymovement EVENT_OBJ_ID_PLAYER, OldaleTown_Movement_1E9001
 	waitmovement 0
 	goto OldaleTown_EventScript_1E8F8C
 	end
 
 OldaleTown_EventScript_1E8F5E:: @ 81E8F5E
 	applymovement 2, OldaleTown_Movement_1E8FE2
-	applymovement 255, OldaleTown_Movement_1E900B
+	applymovement EVENT_OBJ_ID_PLAYER, OldaleTown_Movement_1E900B
 	waitmovement 0
 	goto OldaleTown_EventScript_1E8F8C
 	end
 
 OldaleTown_EventScript_1E8F75:: @ 81E8F75
-	applymovement 255, OldaleTown_Movement_1E8FF9
+	applymovement EVENT_OBJ_ID_PLAYER, OldaleTown_Movement_1E8FF9
 	applymovement 2, OldaleTown_Movement_1E8FCE
 	waitmovement 0
 	goto OldaleTown_EventScript_1E8F8C
 	end
 
 OldaleTown_EventScript_1E8F8C:: @ 81E8F8C
-	msgbox OldaleTown_Text_1E91FD, 4
+	msgbox OldaleTown_Text_1E91FD, MSGBOX_DEFAULT
 	giveitem_std ITEM_POTION
 	compare VAR_RESULT, 0
-	goto_eq OldaleTown_EventScript_1E8FC3
-	msgbox OldaleTown_Text_1E92AF, 4
-	setflag FLAG_0x084
+	goto_if_eq OldaleTown_EventScript_1E8FC3
+	msgbox OldaleTown_Text_1E92AF, MSGBOX_DEFAULT
+	setflag FLAG_RECEIVED_POTION_OLDALE
 	fadedefaultbgm
 	release
 	end
 
 OldaleTown_EventScript_1E8FB9:: @ 81E8FB9
-	msgbox OldaleTown_Text_1E92AF, 4
+	msgbox OldaleTown_Text_1E92AF, MSGBOX_DEFAULT
 	release
 	end
 
 OldaleTown_EventScript_1E8FC3:: @ 81E8FC3
-	msgbox gUnknown_08272AD0, 4
+	msgbox gText_TooBadBagIsFull, MSGBOX_DEFAULT
 	fadedefaultbgm
 	release
 	end
@@ -195,21 +190,20 @@ OldaleTown_Movement_1E9013: @ 81E9013
 OldaleTown_EventScript_1E901F:: @ 81E901F
 	lock
 	faceplayer
-	checkflag FLAG_0x074
-	goto_eq OldaleTown_EventScript_1E9066
-	msgbox OldaleTown_Text_1E939A, 4
+	goto_if_set FLAG_ADVENTURE_STARTED, OldaleTown_EventScript_1E9066
+	msgbox OldaleTown_Text_1E939A, MSGBOX_DEFAULT
 	closemessage
-	applymovement 3, OldaleTown_Movement_2725A2
+	applymovement 3, Common_Movement_FaceOriginalDirection
 	waitmovement 0
 	release
 	end
 
 OldaleTown_EventScript_1E903F:: @ 81E903F
 	lockall
-	applymovement 255, OldaleTown_Movement_1E9182
+	applymovement EVENT_OBJ_ID_PLAYER, OldaleTown_Movement_1E9182
 	applymovement 3, OldaleTown_Movement_1E9185
 	waitmovement 0
-	msgbox OldaleTown_Text_1E9313, 4
+	msgbox OldaleTown_Text_1E9313, MSGBOX_DEFAULT
 	closemessage
 	applymovement 3, OldaleTown_Movement_1E918B
 	waitmovement 0
@@ -217,13 +211,13 @@ OldaleTown_EventScript_1E903F:: @ 81E903F
 	end
 
 OldaleTown_EventScript_1E9066:: @ 81E9066
-	msgbox OldaleTown_Text_1E93F8, 4
+	msgbox OldaleTown_Text_1E93F8, MSGBOX_DEFAULT
 	release
 	end
 
 OldaleTown_EventScript_1E9070:: @ 81E9070
 	lockall
-	applymovement 4, OldaleTown_Movement_27259E
+	applymovement 4, Common_Movement_FacePlayer
 	waitmovement 0
 	setvar VAR_0x8009, 0
 	goto OldaleTown_EventScript_1E90E6
@@ -233,7 +227,7 @@ OldaleTown_EventScript_1E9086:: @ 81E9086
 	lockall
 	applymovement 4, OldaleTown_Movement_1E9170
 	waitmovement 0
-	applymovement 255, OldaleTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	setvar VAR_0x8009, 1
 	goto OldaleTown_EventScript_1E90E6
@@ -243,7 +237,7 @@ OldaleTown_EventScript_1E90A6:: @ 81E90A6
 	lockall
 	applymovement 4, OldaleTown_Movement_1E9173
 	waitmovement 0
-	applymovement 255, OldaleTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	setvar VAR_0x8009, 1
 	goto OldaleTown_EventScript_1E90E6
@@ -253,7 +247,7 @@ OldaleTown_EventScript_1E90C6:: @ 81E90C6
 	lockall
 	applymovement 4, OldaleTown_Movement_1E9175
 	waitmovement 0
-	applymovement 255, OldaleTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	setvar VAR_0x8009, 1
 	goto OldaleTown_EventScript_1E90E6
@@ -261,45 +255,45 @@ OldaleTown_EventScript_1E90C6:: @ 81E90C6
 
 OldaleTown_EventScript_1E90E6:: @ 81E90E6
 	checkplayergender
-	compare VAR_RESULT, 0
-	goto_eq OldaleTown_EventScript_1E90FE
-	compare VAR_RESULT, 1
-	goto_eq OldaleTown_EventScript_1E910C
+	compare VAR_RESULT, MALE
+	goto_if_eq OldaleTown_EventScript_1E90FE
+	compare VAR_RESULT, FEMALE
+	goto_if_eq OldaleTown_EventScript_1E910C
 	end
 
 OldaleTown_EventScript_1E90FE:: @ 81E90FE
-	msgbox OldaleTown_Text_1E9462, 4
+	msgbox OldaleTown_Text_1E9462, MSGBOX_DEFAULT
 	goto OldaleTown_EventScript_1E911A
 	end
 
 OldaleTown_EventScript_1E910C:: @ 81E910C
-	msgbox OldaleTown_Text_1E948A, 4
+	msgbox OldaleTown_Text_1E948A, MSGBOX_DEFAULT
 	goto OldaleTown_EventScript_1E911A
 	end
 
 OldaleTown_EventScript_1E911A:: @ 81E911A
 	closemessage
 	compare VAR_0x8009, 0
-	call_if 1, OldaleTown_EventScript_1E9148
+	call_if_eq OldaleTown_EventScript_1E9148
 	compare VAR_0x8009, 1
-	call_if 1, OldaleTown_EventScript_1E915E
+	call_if_eq OldaleTown_EventScript_1E915E
 	applymovement 4, OldaleTown_Movement_1E9177
 	waitmovement 0
 	removeobject 4
-	setvar VAR_0x40C7, 2
-	setflag FLAG_0x3D3
+	setvar VAR_OLDALE_STATE, 2
+	setflag FLAG_HIDE_OLDALE_TOWN_RIVAL
 	releaseall
 	end
 
 OldaleTown_EventScript_1E9148:: @ 81E9148
 	compare VAR_FACING, 1
-	goto_if 5, OldaleTown_EventScript_1E915E
+	goto_if_ne OldaleTown_EventScript_1E915E
 	applymovement 4, OldaleTown_Movement_1E9177
 	waitmovement 0
 	return
 
 OldaleTown_EventScript_1E915E:: @ 81E915E
-	applymovement 255, OldaleTown_Movement_1E917E
+	applymovement EVENT_OBJ_ID_PLAYER, OldaleTown_Movement_1E917E
 	applymovement 4, OldaleTown_Movement_1E9177
 	waitmovement 0
 	return
@@ -351,7 +345,7 @@ OldaleTown_Movement_1E918B: @ 81E918B
 	step_end
 
 OldaleTown_Text_1E918E: @ 81E918E
-	.string "I want to take a rest, so I’m saving my\n"
+	.string "I want to take a rest, so I'm saving my\n"
 	.string "progress.$"
 
 OldaleTown_Text_1E91C0: @ 81E91C0
@@ -364,17 +358,17 @@ OldaleTown_Text_1E91FD: @ 81E91FD
 	.string "Just look for our blue roof.\p"
 	.string "We sell a variety of goods including\n"
 	.string "POKé BALLS for catching POKéMON.\p"
-	.string "Here, I’d like you to have this as\n"
+	.string "Here, I'd like you to have this as\n"
 	.string "a promotional item.$"
 
 OldaleTown_Text_1E92AF: @ 81E92AF
-	.string "A POTION can be used anytime, so it’s\n"
+	.string "A POTION can be used anytime, so it's\n"
 	.string "even more useful than a POKéMON CENTER\l"
 	.string "in certain situations.$"
 
 OldaleTown_Text_1E9313: @ 81E9313
 	.string "Aaaaah! Wait!\n"
-	.string "Please don’t come in here.\p"
+	.string "Please don't come in here.\p"
 	.string "I just discovered the footprints of\n"
 	.string "a rare POKéMON!\p"
 	.string "Wait until I finish sketching\n"
@@ -395,10 +389,10 @@ OldaleTown_Text_1E93F8: @ 81E93F8
 OldaleTown_Text_1E9462: @ 81E9462
 	.string "MAY: {PLAYER}{KUN}!\n"
 	.string "Over here!\l"
-	.string "Let’s hurry home!$"
+	.string "Let's hurry home!$"
 
 OldaleTown_Text_1E948A: @ 81E948A
-	.string "BRENDAN: I’m heading back to my dad’s\n"
+	.string "BRENDAN: I'm heading back to my dad's\n"
 	.string "LAB now.\l"
 	.string "{PLAYER}, you should hustle back, too.$"
 

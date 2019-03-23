@@ -23,39 +23,48 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <assert.h>
 
-#ifndef r
+#define kMaxPath 256
+#define kMaxStringLength 1024
+#define kMaxCharmapSequenceLength 16
+
+struct Charmap;
+extern struct Charmap *g_charmap;
+extern FILE *g_file;
+extern bool g_lines;
+
 #ifdef __cplusplus
-#define r __restrict
-#else
-#define r restrict
-#endif
+#define restrict __restrict
 #endif
 
-#ifndef noreturn
+#ifndef no_return
 #ifdef __cplusplus
-#define noreturn [[noreturn]]
+#define no_return [[noreturn]]
 #else
 #if __STDC_VERSION__ >= 201112L
-#define noreturn _Noreturn
+#define no_return _Noreturn
+#elif defined(__GNUC__)
+#define no_return __attribute__((__noreturn__))
 #else
-#define noreturn
+#define no_return
 #endif
 #endif
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-#define likely(x) __builtin_expect((x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#define unlikely_else else if (__builtin_expect(1, 0))
+#define printf_fn(x, y) __attribute__((__format__(printf, x, y)))
 #else
 #define likely(x) (x)
 #define unlikely(x) (x)
-#endif
-
-#ifdef __cplusplus
-#define lambda(...) []() { __VA_ARGS__ }
-#else
-#define lambda(...) ({ __VA_ARGS__ })
+#define unlikely_else else
+#define printf_fn(x, y)
+#define __attribute__(x)
 #endif
 
 #ifdef _MSC_VER
@@ -77,11 +86,28 @@
 
 #endif  // _MSC_VER
 
-#define kMaxPath 256
-#define kMaxStringLength 1024
-#define kMaxCharmapSequenceLength 16
+// strdup clone
+__attribute__((__malloc__, __warn_unused_result__))
+static inline char *StringDup(const char *str)
+{
+    const size_t len = strlen(str);
+    char *out = (char *)malloc(len + 1);
+    if (unlikely(out == NULL))
+        return NULL;
+    return memcpy(out, str, len + 1);
+}
 
-struct Charmap;
-extern struct Charmap *g_charmap;
+// Returns a range from a string.
+__attribute__((__malloc__, __warn_unused_result__))
+static inline char *StringSlice(const void *str, size_t begin, size_t end)
+{
+    assert(end > begin);
+    char *out = (char *)malloc(end - begin + 1);
+    if (unlikely(out == NULL))
+        return NULL;
+    memcpy(out, str + begin, end - begin);
+    out[end - begin] = '\0';
+    return out;
+}
 
 #endif  // PREPROC_H

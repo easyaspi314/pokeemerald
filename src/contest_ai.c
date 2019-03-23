@@ -1,10 +1,9 @@
 #include "global.h"
+#include "battle.h"
 #include "contest.h"
 #include "random.h"
 #include "contest_ai.h"
 #include "contest_effect.h"
-
-extern u16 gContestMonConditions[];
 
 extern const u8 *gAIScriptPtr;
 extern const u8 *gContestAIs[];
@@ -809,14 +808,14 @@ static void ContestAICmd_check_move_has_highest_appeal(void)
     u16 move = gContestMons[eContestAI->contestantId].moves[eContestAI->unk4];
     u8 appeal = gContestEffects[gContestMoves[move].effect].appeal;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         u16 newMove = gContestMons[eContestAI->contestantId].moves[i];
         if (newMove != 0 && appeal < gContestEffects[gContestMoves[newMove].effect].appeal)
             break;
     }
 
-    if (i == 4)
+    if (i == MAX_MON_MOVES)
         eContestAI->scriptResult = TRUE;
     else
         eContestAI->scriptResult = FALSE;
@@ -840,14 +839,14 @@ static void ContestAICmd_unk_2F(void)
     u16 move = gContestMons[eContestAI->contestantId].moves[eContestAI->unk4];
     u8 jam = gContestEffects[gContestMoves[move].effect].jam;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         u16 newMove = gContestMons[eContestAI->contestantId].moves[i];
         if (newMove != 0 && jam < gContestEffects[gContestMoves[newMove].effect].jam)
             break;
     }
 
-    if (i == 4)
+    if (i == MAX_MON_MOVES)
         eContestAI->scriptResult = TRUE;
     else
         eContestAI->scriptResult = FALSE;
@@ -1021,7 +1020,7 @@ static void ContestAICmd_check_combo_starter(void)
     int i;
     u16 move = gContestMons[eContestAI->contestantId].moves[eContestAI->unk4];
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (gContestMons[eContestAI->contestantId].moves[i])
         {
@@ -1067,7 +1066,7 @@ static void ContestAICmd_check_combo_finisher(void)
     int i;
     u16 move = gContestMons[eContestAI->contestantId].moves[eContestAI->unk4];
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (gContestMons[eContestAI->contestantId].moves[i])
         {
@@ -1679,7 +1678,7 @@ static void ContestAICmd_check_for_exciting_move(void)
     int result = 0;
     int i;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (gContestMons[eContestAI->contestantId].moves[i])
         {
@@ -1721,7 +1720,7 @@ static void ContestAICmd_unk_85(void)
     int i;
     u16 arg = T1_READ_16(gAIScriptPtr + 1);
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         u16 move = gContestMons[eContestAI->contestantId].moves[i];
         if (move == arg)

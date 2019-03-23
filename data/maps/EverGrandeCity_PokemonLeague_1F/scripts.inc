@@ -1,13 +1,12 @@
 EverGrandeCity_PokemonLeague_1F_MapScripts:: @ 82295D2
-	map_script 3, EverGrandeCity_PokemonLeague_1F_MapScript1_2295DD
-	map_script 5, EverGrandeCity_PokemonLeague_1F_MapScript1_277C30
+	map_script MAP_SCRIPT_ON_TRANSITION, EverGrandeCity_PokemonLeague_1F_MapScript1_2295DD
+	map_script MAP_SCRIPT_ON_RESUME, EverGrandeCity_PokemonLeague_1F_MapScript1_277C30
 	.byte 0
 
 EverGrandeCity_PokemonLeague_1F_MapScript1_2295DD: @ 82295DD
 	setrespawn HEAL_LOCATION_EVER_GRANDE_CITY_2
 	setflag FLAG_LANDMARK_POKEMON_LEAGUE
-	checkflag FLAG_0x107
-	call_if 0, EverGrandeCity_PokemonLeague_1F_EventScript_2295ED
+	call_if_unset FLAG_ENTERED_ELITE_FOUR, EverGrandeCity_PokemonLeague_1F_EventScript_2295ED
 	end
 
 EverGrandeCity_PokemonLeague_1F_EventScript_2295ED:: @ 82295ED
@@ -29,7 +28,7 @@ EverGrandeCity_PokemonLeague_1F_EventScript_22960A:: @ 822960A
 	message gUnknown_08272A21
 	waitmessage
 	pokemart EverGrandeCity_PokemonLeague_1F_Pokemart_229624
-	msgbox gUnknown_08272A3F, 4
+	msgbox gUnknown_08272A3F, MSGBOX_DEFAULT
 	release
 	end
 
@@ -48,18 +47,16 @@ EverGrandeCity_PokemonLeague_1F_Pokemart_229624: @ 8229624
 
 EverGrandeCity_PokemonLeague_1F_EventScript_229636:: @ 8229636
 	lockall
-	checkflag FLAG_0x107
-	goto_eq EverGrandeCity_PokemonLeague_1F_EventScript_2296BB
+	goto_if_set FLAG_ENTERED_ELITE_FOUR, EverGrandeCity_PokemonLeague_1F_EventScript_2296BB
 	getplayerxy VAR_TEMP_0, VAR_TEMP_1
 	compare VAR_TEMP_0, 11
-	call_if 4, EverGrandeCity_PokemonLeague_1F_EventScript_229698
+	call_if_ge EverGrandeCity_PokemonLeague_1F_EventScript_229698
 	compare VAR_TEMP_0, 8
-	call_if 3, EverGrandeCity_PokemonLeague_1F_EventScript_2296A3
+	call_if_le EverGrandeCity_PokemonLeague_1F_EventScript_2296A3
 	message EverGrandeCity_PokemonLeague_1F_Text_2296E8
 	waitmessage
 	delay 120
-	checkflag FLAG_BADGE06_GET
-	goto_if 0, EverGrandeCity_PokemonLeague_1F_EventScript_2296AE
+	goto_if_unset FLAG_BADGE06_GET, EverGrandeCity_PokemonLeague_1F_EventScript_2296AE
 	closemessage
 	applymovement 3, EverGrandeCity_PokemonLeague_1F_Movement_2296E2
 	applymovement 4, EverGrandeCity_PokemonLeague_1F_Movement_2296E5
@@ -72,32 +69,32 @@ EverGrandeCity_PokemonLeague_1F_EventScript_229636:: @ 8229636
 	closemessage
 	moveobjectoffscreen 3
 	moveobjectoffscreen 4
-	setflag FLAG_0x107
+	setflag FLAG_ENTERED_ELITE_FOUR
 	releaseall
 	end
 
 EverGrandeCity_PokemonLeague_1F_EventScript_229698:: @ 8229698
-	applymovement 255, EverGrandeCity_PokemonLeague_1F_Movement_2296DA
+	applymovement EVENT_OBJ_ID_PLAYER, EverGrandeCity_PokemonLeague_1F_Movement_2296DA
 	waitmovement 0
 	return
 
 EverGrandeCity_PokemonLeague_1F_EventScript_2296A3:: @ 82296A3
-	applymovement 255, EverGrandeCity_PokemonLeague_1F_Movement_2296DE
+	applymovement EVENT_OBJ_ID_PLAYER, EverGrandeCity_PokemonLeague_1F_Movement_2296DE
 	waitmovement 0
 	return
 
 EverGrandeCity_PokemonLeague_1F_EventScript_2296AE:: @ 82296AE
 	playse SE_HAZURE
-	msgbox EverGrandeCity_PokemonLeague_1F_Text_229787, 4
+	msgbox EverGrandeCity_PokemonLeague_1F_Text_229787, MSGBOX_DEFAULT
 	releaseall
 	end
 
 EverGrandeCity_PokemonLeague_1F_EventScript_2296BB:: @ 82296BB
-	applymovement VAR_LAST_TALKED, EverGrandeCity_PokemonLeague_1F_Movement_27259E
+	applymovement VAR_LAST_TALKED, Common_Movement_FacePlayer
 	waitmovement 0
-	msgbox EverGrandeCity_PokemonLeague_1F_Text_2297EF, 4
+	msgbox EverGrandeCity_PokemonLeague_1F_Text_2297EF, MSGBOX_DEFAULT
 	closemessage
-	applymovement VAR_LAST_TALKED, EverGrandeCity_PokemonLeague_1F_Movement_2725A2
+	applymovement VAR_LAST_TALKED, Common_Movement_FaceOriginalDirection
 	waitmovement 0
 	releaseall
 	end
@@ -132,8 +129,8 @@ EverGrandeCity_PokemonLeague_1F_Text_2296E8: @ 82296E8
 	.string "all the GYM BADGES.$"
 
 EverGrandeCity_PokemonLeague_1F_Text_229787: @ 8229787
-	.string "You haven’t obtained all the BADGES.\p"
-	.string "If you’re bound for the POKéMON\n"
+	.string "You haven't obtained all the BADGES.\p"
+	.string "If you're bound for the POKéMON\n"
 	.string "LEAGUE, you must return with them.$"
 
 EverGrandeCity_PokemonLeague_1F_Text_2297EF: @ 82297EF

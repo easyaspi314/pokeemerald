@@ -1,30 +1,29 @@
 LittlerootTown_MapScripts:: @ 81E7DCB
-	map_script 3, LittlerootTown_MapScript1_1E7DDB
-	map_script 2, LittlerootTown_MapScript2_1E7EC1
-	map_script 4, LittlerootTown_MapScript2_1E7FE2
+	map_script MAP_SCRIPT_ON_TRANSITION, LittlerootTown_MapScript1_1E7DDB
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, LittlerootTown_MapScript2_1E7EC1
+	map_script MAP_SCRIPT_ON_WARP_INTO_MAP_TABLE, LittlerootTown_MapScript2_1E7FE2
 	.byte 0
 
 LittlerootTown_MapScript1_1E7DDB: @ 81E7DDB
 	setflag FLAG_VISITED_LITTLEROOT_TOWN
-	call LittlerootTown_EventScript_271ED7
-	compare VAR_0x4092, 2
-	call_if 1, LittlerootTown_EventScript_1E7E67
-	checkflag FLAG_0x052
-	call_if 0, LittlerootTown_EventScript_1E7E6F
+	call Common_EventScript_SetupRivalGender
+	compare VAR_LITTLEROOT_INTRO_STATE, 2
+	call_if_eq LittlerootTown_EventScript_1E7E67
+	call_if_unset FLAG_RESCUED_BIRCH, LittlerootTown_EventScript_1E7E6F
 	compare VAR_0x4050, 3
-	call_if 1, LittlerootTown_EventScript_1E7E92
-	compare VAR_0x4082, 4
-	call_if 1, LittlerootTown_EventScript_1E7E5C
-	compare VAR_0x408C, 4
-	call_if 1, LittlerootTown_EventScript_1E7E5C
-	compare VAR_0x40C7, 1
-	call_if 1, LittlerootTown_EventScript_1E7E53
-	compare VAR_0x408D, 3
-	call_if 1, LittlerootTown_EventScript_1E7E4F
+	call_if_eq LittlerootTown_EventScript_1E7E92
+	compare VAR_LITTLEROOT_HOUSES_STATE, 4
+	call_if_eq LittlerootTown_EventScript_1E7E5C
+	compare VAR_LITTLEROOT_HOUSES_STATE_2, 4
+	call_if_eq LittlerootTown_EventScript_1E7E5C
+	compare VAR_OLDALE_STATE, 1
+	call_if_eq LittlerootTown_EventScript_1E7E53
+	compare VAR_LITTLEROOT_RIVAL_STATE, 3
+	call_if_eq LittlerootTown_EventScript_1E7E4F
 	compare VAR_0x40D3, 1
-	call_if 1, LittlerootTown_EventScript_1E7E4B
+	call_if_eq LittlerootTown_EventScript_1E7E4B
 	compare VAR_0x40D3, 2
-	call_if 1, LittlerootTown_EventScript_1E7E45
+	call_if_eq LittlerootTown_EventScript_1E7E45
 	end
 
 LittlerootTown_EventScript_1E7E45:: @ 81E7E45
@@ -32,21 +31,21 @@ LittlerootTown_EventScript_1E7E45:: @ 81E7E45
 	return
 
 LittlerootTown_EventScript_1E7E4B:: @ 81E7E4B
-	setflag FLAG_SPECIAL_FLAG_0x4000
+	setflag FLAG_HIDE_MAP_NAME_POPUP
 	return
 
 LittlerootTown_EventScript_1E7E4F:: @ 81E7E4F
-	setflag FLAG_0x12D
+	setflag FLAG_RIVAL_LEFT_FOR_ROUTE103
 	return
 
 LittlerootTown_EventScript_1E7E53:: @ 81E7E53
-	setvar VAR_0x40C7, 2
-	setflag FLAG_0x3D3
+	setvar VAR_OLDALE_STATE, 2
+	setflag FLAG_HIDE_OLDALE_TOWN_RIVAL
 	return
 
 LittlerootTown_EventScript_1E7E5C:: @ 81E7E5C
-	setvar VAR_0x4082, 5
-	setvar VAR_0x408C, 5
+	setvar VAR_LITTLEROOT_HOUSES_STATE, 5
+	setvar VAR_LITTLEROOT_HOUSES_STATE_2, 5
 	return
 
 LittlerootTown_EventScript_1E7E67:: @ 81E7E67
@@ -55,24 +54,24 @@ LittlerootTown_EventScript_1E7E67:: @ 81E7E67
 
 LittlerootTown_EventScript_1E7E6F:: @ 81E7E6F
 	compare VAR_0x4050, 0
-	goto_eq LittlerootTown_EventScript_1E7E86
+	goto_if_eq LittlerootTown_EventScript_1E7E86
 	setobjectxyperm 1, 10, 1
-	setobjectmovementtype 1, 7
+	setobjectmovementtype 1, MOVEMENT_TYPE_FACE_UP
 	return
 
 LittlerootTown_EventScript_1E7E86:: @ 81E7E86
 	setobjectxyperm 1, 7, 2
-	setobjectmovementtype 1, 8
+	setobjectmovementtype 1, MOVEMENT_TYPE_FACE_DOWN
 	return
 
 LittlerootTown_EventScript_1E7E92:: @ 81E7E92
-	clearflag FLAG_0x2F0
-	setobjectmovementtype 4, 8
+	clearflag FLAG_HIDE_LITTLEROOT_TOWN_MOM_OUTSIDE
+	setobjectmovementtype 4, MOVEMENT_TYPE_FACE_DOWN
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E7EB1
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E7EB9
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E7EB1
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E7EB9
 	return
 
 LittlerootTown_EventScript_1E7EB1:: @ 81E7EB1
@@ -84,8 +83,8 @@ LittlerootTown_EventScript_1E7EB9:: @ 81E7EB9
 	return
 
 LittlerootTown_MapScript2_1E7EC1: @ 81E7EC1
-	map_script_2 VAR_0x4092, 1, LittlerootTown_EventScript_1E7EDB
-	map_script_2 VAR_0x4092, 2, LittlerootTown_EventScript_1E7EF9
+	map_script_2 VAR_LITTLEROOT_INTRO_STATE, 1, LittlerootTown_EventScript_1E7EDB
+	map_script_2 VAR_LITTLEROOT_INTRO_STATE, 2, LittlerootTown_EventScript_1E7EF9
 	map_script_2 VAR_0x40D3, 1, LittlerootTown_EventScript_1E7FB1
 	.2byte 0
 
@@ -94,7 +93,7 @@ LittlerootTown_EventScript_1E7EDB:: @ 81E7EDB
 	setvar VAR_0x8004, 5
 	setvar VAR_0x8005, 8
 	call LittlerootTown_EventScript_1E7F17
-	setflag FLAG_0x2F9
+	setflag FLAG_HIDE_LITTLEROOT_TOWN_BRENDANS_HOUSE_TRUCK
 	warpsilent MAP_LITTLEROOT_TOWN_BRENDANS_HOUSE_1F, 255, 8, 8
 	waitstate
 	releaseall
@@ -105,7 +104,7 @@ LittlerootTown_EventScript_1E7EF9:: @ 81E7EF9
 	setvar VAR_0x8004, 14
 	setvar VAR_0x8005, 8
 	call LittlerootTown_EventScript_1E7F17
-	setflag FLAG_0x2FA
+	setflag FLAG_HIDE_LITTLEROOT_TOWN_MAYS_HOUSE_TRUCK
 	warpsilent MAP_LITTLEROOT_TOWN_MAYS_HOUSE_1F, 255, 2, 8
 	waitstate
 	releaseall
@@ -114,7 +113,7 @@ LittlerootTown_EventScript_1E7EF9:: @ 81E7EF9
 LittlerootTown_EventScript_1E7F17:: @ 81E7F17
 	delay 15
 	playse SE_DANSA
-	applymovement 255, LittlerootTown_Movement_1E7FAC
+	applymovement EVENT_OBJ_ID_PLAYER, LittlerootTown_Movement_1E7FAC
 	waitmovement 0
 	opendoor VAR_0x8004, VAR_0x8005
 	waitdooranim
@@ -126,23 +125,23 @@ LittlerootTown_EventScript_1E7F17:: @ 81E7F17
 	delay 10
 	applymovement 4, LittlerootTown_Movement_1E7F9A
 	waitmovement 0
-	msgbox LittlerootTown_Text_1E86BC, 4
+	msgbox LittlerootTown_Text_1E86BC, MSGBOX_DEFAULT
 	closemessage
 	applymovement 4, LittlerootTown_Movement_1E7F9D
-	applymovement 255, LittlerootTown_Movement_1E7FA4
+	applymovement EVENT_OBJ_ID_PLAYER, LittlerootTown_Movement_1E7FA4
 	waitmovement 0
 	opendoor VAR_0x8004, VAR_0x8005
 	waitdooranim
 	applymovement 4, LittlerootTown_Movement_1E7FA1
-	applymovement 255, LittlerootTown_Movement_1E7FA9
+	applymovement EVENT_OBJ_ID_PLAYER, LittlerootTown_Movement_1E7FA9
 	waitmovement 0
-	setflag FLAG_0x2F0
-	setvar VAR_0x4092, 3
-	hideobjectat 255, MAP_PETALBURG_CITY
+	setflag FLAG_HIDE_LITTLEROOT_TOWN_MOM_OUTSIDE
+	setvar VAR_LITTLEROOT_INTRO_STATE, 3
+	hideobjectat EVENT_OBJ_ID_PLAYER, MAP_PETALBURG_CITY
 	closedoor VAR_0x8004, VAR_0x8005
 	waitdooranim
-	clearflag FLAG_0x364
-	clearflag FLAG_SPECIAL_FLAG_0x4000
+	clearflag FLAG_HIDE_LITTLEROOT_TOWN_FAT_MAN
+	clearflag FLAG_HIDE_MAP_NAME_POPUP
 	return
 
 LittlerootTown_Movement_1E7F98: @ 81E7F98
@@ -187,15 +186,15 @@ LittlerootTown_Movement_1E7FAC: @ 81E7FAC
 LittlerootTown_EventScript_1E7FB1:: @ 81E7FB1
 	lockall
 	playse SE_PIN
-	applymovement 8, LittlerootTown_Movement_272598
+	applymovement 8, Common_Movement_ExclamationMark
 	waitmovement 0
 	delay 80
-	msgbox LittlerootTown_Text_1E8DA2, 4
+	msgbox LittlerootTown_Text_1E8DA2, MSGBOX_DEFAULT
 	closemessage
-	clearflag FLAG_0x31A
-	clearflag FLAG_0x31B
+	clearflag FLAG_HIDE_LITTLEROOT_TOWN_RIVAL
+	clearflag FLAG_HIDE_LITTLEROOT_TOWN_BIRCH
 	delay 20
-	clearflag FLAG_SPECIAL_FLAG_0x4000
+	clearflag FLAG_HIDE_MAP_NAME_POPUP
 	warp MAP_LITTLEROOT_TOWN_PROFESSOR_BIRCHS_LAB, 255, 6, 5
 	waitstate
 	releaseall
@@ -210,7 +209,7 @@ LittlerootTown_EventScript_1E7FEC:: @ 81E7FEC
 	addobject 7
 	checkplayergender
 	compare VAR_RESULT, 0
-	goto_eq LittlerootTown_EventScript_1E8004
+	goto_if_eq LittlerootTown_EventScript_1E8004
 	goto LittlerootTown_EventScript_1E8013
 	end
 
@@ -225,31 +224,29 @@ LittlerootTown_EventScript_1E8013:: @ 81E8013
 	end
 
 LittlerootTown_EventScript_1E8022:: @ 81E8022
-	msgbox LittlerootTown_Text_1E8ACF, 2
+	msgbox LittlerootTown_Text_1E8ACF, MSGBOX_NPC
 	end
 
 LittlerootTown_EventScript_1E802B:: @ 81E802B
-	msgbox LittlerootTown_Text_1E8B25, 2
+	msgbox LittlerootTown_Text_1E8B25, MSGBOX_NPC
 	end
 
 LittlerootTown_EventScript_1E8034:: @ 81E8034
 	lock
 	faceplayer
-	checkflag FLAG_0x074
-	goto_eq LittlerootTown_EventScript_1E8087
-	checkflag FLAG_0x052
-	goto_eq LittlerootTown_EventScript_1E807A
+	goto_if_set FLAG_ADVENTURE_STARTED, LittlerootTown_EventScript_1E8087
+	goto_if_set FLAG_RESCUED_BIRCH, LittlerootTown_EventScript_1E807A
 	compare VAR_0x4050, 0
-	goto_if 5, LittlerootTown_EventScript_1E805D
-	msgbox LittlerootTown_Text_1E8BB8, 4
+	goto_if_ne LittlerootTown_EventScript_1E805D
+	msgbox LittlerootTown_Text_1E8BB8, MSGBOX_DEFAULT
 	release
 	end
 
 LittlerootTown_EventScript_1E805D:: @ 81E805D
 	special GetPlayerBigGuyGirlString
-	msgbox LittlerootTown_Text_1E8C3A, 4
+	msgbox LittlerootTown_Text_1E8C3A, MSGBOX_DEFAULT
 	closemessage
-	applymovement 1, LittlerootTown_Movement_2725A2
+	applymovement 1, Common_Movement_FaceOriginalDirection
 	waitmovement 0
 	setvar VAR_0x4050, 2
 	release
@@ -257,12 +254,12 @@ LittlerootTown_EventScript_1E805D:: @ 81E805D
 
 LittlerootTown_EventScript_1E807A:: @ 81E807A
 	special GetPlayerBigGuyGirlString
-	msgbox LittlerootTown_Text_1E8CE3, 4
+	msgbox LittlerootTown_Text_1E8CE3, MSGBOX_DEFAULT
 	release
 	end
 
 LittlerootTown_EventScript_1E8087:: @ 81E8087
-	msgbox LittlerootTown_Text_1E8D07, 4
+	msgbox LittlerootTown_Text_1E8D07, MSGBOX_DEFAULT
 	release
 	end
 
@@ -277,12 +274,12 @@ LittlerootTown_EventScript_1E8091:: @ 81E8091
 	end
 
 LittlerootTown_EventScript_1E80AD:: @ 81E80AD
-	msgbox LittlerootTown_Text_1E8BB8, 4
+	msgbox LittlerootTown_Text_1E8BB8, MSGBOX_DEFAULT
 	closemessage
 	applymovement 1, LittlerootTown_Movement_1E80DF
-	applymovement 255, LittlerootTown_Movement_1E80EB
+	applymovement EVENT_OBJ_ID_PLAYER, LittlerootTown_Movement_1E80EB
 	waitmovement 0
-	msgbox LittlerootTown_Text_1E8C07, 4
+	msgbox LittlerootTown_Text_1E8C07, MSGBOX_DEFAULT
 	closemessage
 	return
 
@@ -360,61 +357,61 @@ LittlerootTown_Movement_1E8118: @ 81E8118
 
 LittlerootTown_EventScript_1E811F:: @ 81E811F
 	lockall
-	applymovement 1, LittlerootTown_Movement_2725A8
+	applymovement 1, Common_Movement_WalkInPlaceRight
 	waitmovement 0
-	applymovement 255, LittlerootTown_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	special GetPlayerBigGuyGirlString
-	msgbox LittlerootTown_Text_1E8C3A, 4
+	msgbox LittlerootTown_Text_1E8C3A, MSGBOX_DEFAULT
 	closemessage
-	applymovement 1, LittlerootTown_Movement_2725A2
+	applymovement 1, Common_Movement_FaceOriginalDirection
 	waitmovement 0
 	setvar VAR_0x4050, 2
 	releaseall
 	end
 
 LittlerootTown_EventScript_1E8151:: @ 81E8151
-	msgbox LittlerootTown_Text_1E8D32, 3
+	msgbox LittlerootTown_Text_1E8D32, MSGBOX_SIGN
 	end
 
 LittlerootTown_EventScript_1E815A:: @ 81E815A
-	msgbox LittlerootTown_Text_1E8D69, 3
+	msgbox LittlerootTown_Text_1E8D69, MSGBOX_SIGN
 	end
 
 LittlerootTown_EventScript_1E8163:: @ 81E8163
 	lockall
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E817D
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E8186
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E817D
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E8186
 	releaseall
 	end
 
 LittlerootTown_EventScript_1E817D:: @ 81E817D
-	msgbox LittlerootTown_Text_1E8D83, 4
+	msgbox LittlerootTown_Text_1E8D83, MSGBOX_DEFAULT
 	return
 
 LittlerootTown_EventScript_1E8186:: @ 81E8186
-	msgbox LittlerootTown_Text_1E8D8E, 4
+	msgbox LittlerootTown_Text_1E8D8E, MSGBOX_DEFAULT
 	return
 
 LittlerootTown_EventScript_1E818F:: @ 81E818F
 	lockall
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E81A9
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E81B2
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E81A9
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E81B2
 	releaseall
 	end
 
 LittlerootTown_EventScript_1E81A9:: @ 81E81A9
-	msgbox LittlerootTown_Text_1E8D8E, 4
+	msgbox LittlerootTown_Text_1E8D8E, MSGBOX_DEFAULT
 	return
 
 LittlerootTown_EventScript_1E81B2:: @ 81E81B2
-	msgbox LittlerootTown_Text_1E8D83, 4
+	msgbox LittlerootTown_Text_1E8D83, MSGBOX_DEFAULT
 	return
 
 LittlerootTown_EventScript_1E81BB:: @ 81E81BB
@@ -457,28 +454,28 @@ LittlerootTown_EventScript_1E8205:: @ 81E8205
 
 LittlerootTown_EventScript_1E8211:: @ 81E8211
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E8297
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E82A2
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E8297
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E82A2
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E8281
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E828C
-	msgbox LittlerootTown_Text_1E87E1, 4
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E8281
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E828C
+	msgbox LittlerootTown_Text_1E87E1, MSGBOX_DEFAULT
 	closemessage
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E82AD
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E82F0
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E82AD
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E82F0
 	call LittlerootTown_EventScript_1E8693
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E8405
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E8448
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E8405
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E8448
 	goto LittlerootTown_EventScript_1E8686
 	end
 
@@ -493,110 +490,110 @@ LittlerootTown_EventScript_1E828C:: @ 81E828C
 	return
 
 LittlerootTown_EventScript_1E8297:: @ 81E8297
-	applymovement 4, LittlerootTown_Movement_2725A8
+	applymovement 4, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E82A2:: @ 81E82A2
-	applymovement 4, LittlerootTown_Movement_2725A4
+	applymovement 4, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E82AD:: @ 81E82AD
 	compare VAR_0x8008, 0
-	call_if 1, LittlerootTown_EventScript_1E8333
+	call_if_eq LittlerootTown_EventScript_1E8333
 	compare VAR_0x8008, 1
-	call_if 1, LittlerootTown_EventScript_1E8348
+	call_if_eq LittlerootTown_EventScript_1E8348
 	compare VAR_0x8008, 2
-	call_if 1, LittlerootTown_EventScript_1E835D
+	call_if_eq LittlerootTown_EventScript_1E835D
 	compare VAR_0x8008, 3
-	call_if 1, LittlerootTown_EventScript_1E8372
+	call_if_eq LittlerootTown_EventScript_1E8372
 	compare VAR_0x8008, 4
-	call_if 1, LittlerootTown_EventScript_1E8387
+	call_if_eq LittlerootTown_EventScript_1E8387
 	compare VAR_0x8008, 5
-	call_if 1, LittlerootTown_EventScript_1E839C
+	call_if_eq LittlerootTown_EventScript_1E839C
 	return
 
 LittlerootTown_EventScript_1E82F0:: @ 81E82F0
 	compare VAR_0x8008, 0
-	call_if 1, LittlerootTown_EventScript_1E8333
+	call_if_eq LittlerootTown_EventScript_1E8333
 	compare VAR_0x8008, 1
-	call_if 1, LittlerootTown_EventScript_1E8348
+	call_if_eq LittlerootTown_EventScript_1E8348
 	compare VAR_0x8008, 2
-	call_if 1, LittlerootTown_EventScript_1E83B1
+	call_if_eq LittlerootTown_EventScript_1E83B1
 	compare VAR_0x8008, 3
-	call_if 1, LittlerootTown_EventScript_1E83C6
+	call_if_eq LittlerootTown_EventScript_1E83C6
 	compare VAR_0x8008, 4
-	call_if 1, LittlerootTown_EventScript_1E83DB
+	call_if_eq LittlerootTown_EventScript_1E83DB
 	compare VAR_0x8008, 5
-	call_if 1, LittlerootTown_EventScript_1E83F0
+	call_if_eq LittlerootTown_EventScript_1E83F0
 	return
 
 LittlerootTown_EventScript_1E8333:: @ 81E8333
-	applymovement 255, LittlerootTown_Movement_2725AA
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceDown
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85D1
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E8348:: @ 81E8348
-	applymovement 255, LittlerootTown_Movement_2725AA
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceDown
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85D8
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E835D:: @ 81E835D
-	applymovement 255, LittlerootTown_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85DF
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E8372:: @ 81E8372
-	applymovement 255, LittlerootTown_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85E4
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E8387:: @ 81E8387
-	applymovement 255, LittlerootTown_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85EA
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E839C:: @ 81E839C
-	applymovement 255, LittlerootTown_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85ED
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E83B1:: @ 81E83B1
-	applymovement 255, LittlerootTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85F1
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E83C6:: @ 81E83C6
-	applymovement 255, LittlerootTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85F5
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E83DB:: @ 81E83DB
-	applymovement 255, LittlerootTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85F8
 	waitmovement 0
 	return
 
 LittlerootTown_EventScript_1E83F0:: @ 81E83F0
-	applymovement 255, LittlerootTown_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
 	applymovement 4, LittlerootTown_Movement_1E85FE
 	waitmovement 0
@@ -604,32 +601,32 @@ LittlerootTown_EventScript_1E83F0:: @ 81E83F0
 
 LittlerootTown_EventScript_1E8405:: @ 81E8405
 	compare VAR_0x8008, 0
-	call_if 1, LittlerootTown_EventScript_1E848B
+	call_if_eq LittlerootTown_EventScript_1E848B
 	compare VAR_0x8008, 1
-	call_if 1, LittlerootTown_EventScript_1E8496
+	call_if_eq LittlerootTown_EventScript_1E8496
 	compare VAR_0x8008, 2
-	call_if 1, LittlerootTown_EventScript_1E84A1
+	call_if_eq LittlerootTown_EventScript_1E84A1
 	compare VAR_0x8008, 3
-	call_if 1, LittlerootTown_EventScript_1E84C7
+	call_if_eq LittlerootTown_EventScript_1E84C7
 	compare VAR_0x8008, 4
-	call_if 1, LittlerootTown_EventScript_1E84ED
+	call_if_eq LittlerootTown_EventScript_1E84ED
 	compare VAR_0x8008, 5
-	call_if 1, LittlerootTown_EventScript_1E8513
+	call_if_eq LittlerootTown_EventScript_1E8513
 	return
 
 LittlerootTown_EventScript_1E8448:: @ 81E8448
 	compare VAR_0x8008, 0
-	call_if 1, LittlerootTown_EventScript_1E848B
+	call_if_eq LittlerootTown_EventScript_1E848B
 	compare VAR_0x8008, 1
-	call_if 1, LittlerootTown_EventScript_1E8496
+	call_if_eq LittlerootTown_EventScript_1E8496
 	compare VAR_0x8008, 2
-	call_if 1, LittlerootTown_EventScript_1E8539
+	call_if_eq LittlerootTown_EventScript_1E8539
 	compare VAR_0x8008, 3
-	call_if 1, LittlerootTown_EventScript_1E855F
+	call_if_eq LittlerootTown_EventScript_1E855F
 	compare VAR_0x8008, 4
-	call_if 1, LittlerootTown_EventScript_1E8585
+	call_if_eq LittlerootTown_EventScript_1E8585
 	compare VAR_0x8008, 5
-	call_if 1, LittlerootTown_EventScript_1E85AB
+	call_if_eq LittlerootTown_EventScript_1E85AB
 	return
 
 LittlerootTown_EventScript_1E848B:: @ 81E848B
@@ -892,12 +889,12 @@ LittlerootTown_EventScript_1E863D:: @ 81E863D
 	lock
 	faceplayer
 	checkplayergender
-	compare VAR_RESULT, 0
-	call_if 1, LittlerootTown_EventScript_1E8281
-	compare VAR_RESULT, 1
-	call_if 1, LittlerootTown_EventScript_1E828C
+	compare VAR_RESULT, MALE
+	call_if_eq LittlerootTown_EventScript_1E8281
+	compare VAR_RESULT, FEMALE
+	call_if_eq LittlerootTown_EventScript_1E828C
 	call LittlerootTown_EventScript_1E8693
-	applymovement 4, LittlerootTown_Movement_2725A6
+	applymovement 4, Common_Movement_WalkInPlaceUp
 	waitmovement 0
 	opendoor VAR_0x8009, VAR_0x800A
 	waitdooranim
@@ -917,28 +914,28 @@ LittlerootTown_EventScript_1E8686:: @ 81E8686
 	end
 
 LittlerootTown_EventScript_1E8693:: @ 81E8693
-	msgbox LittlerootTown_Text_1E87F0, 4
+	msgbox LittlerootTown_Text_1E87F0, MSGBOX_DEFAULT
 	playfanfare MUS_FANFA4
 	message LittlerootTown_Text_1E8925
 	waitfanfare
-	setflag FLAG_0x112
-	msgbox LittlerootTown_Text_1E894F, 4
-	msgbox LittlerootTown_Text_1E8A03, 4
+	setflag FLAG_RECEIVED_RUNNING_SHOES
+	msgbox LittlerootTown_Text_1E894F, MSGBOX_DEFAULT
+	msgbox LittlerootTown_Text_1E8A03, MSGBOX_DEFAULT
 	closemessage
 	delay 30
 	return
 
 LittlerootTown_Text_1E86BC: @ 81E86BC
-	.string "MOM: {PLAYER}, we’re here, honey!\p"
+	.string "MOM: {PLAYER}, we're here, honey!\p"
 	.string "It must be tiring riding with our things\n"
 	.string "in the moving truck.\p"
 	.string "Well, this is LITTLEROOT TOWN.\p"
 	.string "How do you like it?\n"
 	.string "This is our new home!\p"
 	.string "It has a quaint feel, but it seems to be\n"
-	.string "an easy place to live, don’t you think?\p"
+	.string "an easy place to live, don't you think?\p"
 	.string "And, you get your own room, {PLAYER}!\n"
-	.string "Let’s go inside.$"
+	.string "Let's go inside.$"
 
 LittlerootTown_Text_1E87E1: @ 81E87E1
 	.string "MOM: Wait, {PLAYER}!$"
@@ -948,11 +945,11 @@ LittlerootTown_Text_1E87F0: @ 81E87F0
 	.string "introduce yourself to PROF. BIRCH?\p"
 	.string "Oh! What an adorable POKéMON!\n"
 	.string "You got it from PROF. BIRCH. How nice!\p"
-	.string "You’re your father’s child, all right.\n"
+	.string "You're your father's child, all right.\n"
 	.string "You look good together with POKéMON!\p"
-	.string "Here, honey! If you’re going out on an\n"
+	.string "Here, honey! If you're going out on an\n"
 	.string "adventure, wear these RUNNING SHOES.\p"
-	.string "They’ll put a zip in your step!$"
+	.string "They'll put a zip in your step!$"
 
 LittlerootTown_Text_1E8925: @ 81E8925
 	.string "{PLAYER} switched shoes with the\n"
@@ -983,7 +980,7 @@ LittlerootTown_Text_1E8ACF: @ 81E8ACF
 
 LittlerootTown_Text_1E8B25: @ 81E8B25
 	.string "PROF. BIRCH spends days in his LAB\n"
-	.string "studying, then he’ll suddenly go out in\l"
+	.string "studying, then he'll suddenly go out in\l"
 	.string "the wild to do more research…\p"
 	.string "When does PROF. BIRCH spend time\n"
 	.string "at home?$"
@@ -994,21 +991,21 @@ LittlerootTown_Text_1E8BB8: @ 81E8BB8
 	.string "wild POKéMON will jump out!$"
 
 LittlerootTown_Text_1E8C07: @ 81E8C07
-	.string "It’s dangerous if you don’t have\n"
+	.string "It's dangerous if you don't have\n"
 	.string "your own POKéMON.$"
 
 LittlerootTown_Text_1E8C3A: @ 81E8C3A
 	.string "Um, hi!\p"
 	.string "There are scary POKéMON outside!\n"
 	.string "I can hear their cries!\p"
-	.string "I want to go see what’s going on,\n"
-	.string "but I don’t have any POKéMON…\p"
-	.string "Can you go see what’s happening\n"
+	.string "I want to go see what's going on,\n"
+	.string "but I don't have any POKéMON…\p"
+	.string "Can you go see what's happening\n"
 	.string "for me?$"
 
 LittlerootTown_Text_1E8CE3: @ 81E8CE3
 	.string "You saved PROF. BIRCH!\n"
-	.string "I’m so glad!$"
+	.string "I'm so glad!$"
 
 LittlerootTown_Text_1E8D07: @ 81E8D07
 	.string "Are you going to catch POKéMON?\n"
@@ -1016,16 +1013,16 @@ LittlerootTown_Text_1E8D07: @ 81E8D07
 
 LittlerootTown_Text_1E8D32: @ 81E8D32
 	.string "LITTLEROOT TOWN\n"
-	.string "“A town that can’t be shaded any hue.”$"
+	.string "“A town that can't be shaded any hue.”$"
 
 LittlerootTown_Text_1E8D69: @ 81E8D69
-	.string "PROF. BIRCH’S POKéMON LAB$"
+	.string "PROF. BIRCH'S POKéMON LAB$"
 
 LittlerootTown_Text_1E8D83: @ 81E8D83
-	.string "{PLAYER}’s HOUSE$"
+	.string "{PLAYER}'s HOUSE$"
 
 LittlerootTown_Text_1E8D8E: @ 81E8D8E
-	.string "PROF. BIRCH’S HOUSE$"
+	.string "PROF. BIRCH'S HOUSE$"
 
 LittlerootTown_Text_1E8DA2: @ 81E8DA2
 	.string "PROF. BIRCH: Well, well, {PLAYER}{KUN}!\n"
@@ -1036,5 +1033,5 @@ LittlerootTown_Text_1E8DA2: @ 81E8DA2
 	.string "Oh, yes. Do you still have the POKéDEX\n"
 	.string "I gave you?\p"
 	.string "I have something to show you.\n"
-	.string "Let’s go to my LAB.$"
+	.string "Let's go to my LAB.$"
 

@@ -1,16 +1,17 @@
 #include "global.h"
-#include "item_icon.h"
-#include "malloc.h"
-#include "sprite.h"
 #include "decompress.h"
+#include "graphics.h"
+#include "item_icon.h"
+#include "alloc.h"
+#include "sprite.h"
 #include "constants/items.h"
-#include "data/item_icon_table.h"
 
 // EWRAM vars
 EWRAM_DATA void *gItemIconDecompressionBuffer = NULL;
 EWRAM_DATA void *gItemIcon4x4Buffer = NULL;
 
 // const rom data
+#include "data/item_icon_table.h"
 
 static const struct OamData sOamData_ItemIcon =
 {
@@ -19,10 +20,10 @@ static const struct OamData sOamData_ItemIcon =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(32x32),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x32),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 2,
@@ -106,7 +107,7 @@ u8 AddItemIconSprite(u16 tilesTag, u16 paletteTag, u16 itemId)
 
         spritePalette.data = GetItemIconPicOrPalette(itemId, 1);
         spritePalette.tag = paletteTag;
-        LoadCompressedObjectPalette(&spritePalette);
+        LoadCompressedSpritePalette(&spritePalette);
 
         spriteTemplate = Alloc(sizeof(*spriteTemplate));
         CpuCopy16(&gItemIconSpriteTemplate, spriteTemplate, sizeof(*spriteTemplate));
@@ -143,7 +144,7 @@ u8 AddCustomItemIconSprite(struct SpriteTemplate *customSpriteTemplate, u16 tile
 
         spritePalette.data = GetItemIconPicOrPalette(itemId, 1);
         spritePalette.tag = paletteTag;
-        LoadCompressedObjectPalette(&spritePalette);
+        LoadCompressedSpritePalette(&spritePalette);
 
         spriteTemplate = Alloc(sizeof(*spriteTemplate));
         CpuCopy16(customSpriteTemplate, spriteTemplate, sizeof(*spriteTemplate));

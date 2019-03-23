@@ -1,48 +1,42 @@
 #include "global.h"
 #include "battle.h"
+#include "battle_ai_script_commands.h"
+#include "battle_anim.h"
+#include "battle_arena.h"
 #include "battle_controllers.h"
 #include "battle_message.h"
 #include "battle_interface.h"
-#include "battle_anim.h"
-#include "constants/battle_anim.h"
+#include "battle_setup.h"
+#include "battle_tower.h"
 #include "battle_tv.h"
-#include "battle_ai_script_commands.h"
-#include "pokemon.h"
-#include "link.h"
-#include "util.h"
-#include "main.h"
+#include "bg.h"
+#include "data2.h"
+#include "frontier_util.h"
 #include "item.h"
-#include "constants/items.h"
-#include "constants/songs.h"
-#include "sound.h"
-#include "constants/moves.h"
-#include "constants/trainers.h"
-#include "window.h"
+#include "link.h"
+#include "main.h"
 #include "m4a.h"
 #include "palette.h"
+#include "pokeball.h"
+#include "pokemon.h"
+#include "random.h"
+#include "reshow_battle_screen.h"
+#include "sound.h"
+#include "string_util.h"
 #include "task.h"
 #include "text.h"
-#include "string_util.h"
-#include "bg.h"
-#include "reshow_battle_screen.h"
-#include "random.h"
-#include "pokeball.h"
-#include "data2.h"
-#include "battle_setup.h"
+#include "util.h"
+#include "window.h"
+#include "constants/battle_anim.h"
+#include "constants/items.h"
+#include "constants/moves.h"
+#include "constants/songs.h"
+#include "constants/trainers.h"
+#include "trainer_hill.h"
 
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
-extern struct UnusedControllerStruct gUnknown_02022D0C;
 
 extern const struct CompressedSpritePalette gTrainerFrontPicPaletteTable[];
-
-extern void sub_8172EF0(u8 battlerId, struct Pokemon *mon);
-extern void sub_81A57E4(u8 battlerId, u16 stringId);
-extern u8 GetFrontierBrainTrainerPicIndex(void);
-extern u8 sub_81D5588(u16 trainerId);
-extern u8 GetFrontierTrainerFrontSpriteId(u16 trainerId);
-extern u8 GetEreaderTrainerFrontSpriteId(void);
 
 // this file's functions
 static void OpponentHandleGetMonData(void);
@@ -101,7 +95,7 @@ static void OpponentHandleBattleAnimation(void);
 static void OpponentHandleLinkStandbyMsg(void);
 static void OpponentHandleResetActionMoveSelection(void);
 static void OpponentHandleCmd55(void);
-static void nullsub_91(void);
+static void OpponentCmdEnd(void);
 
 static void OpponentBufferRunCommand(void);
 static void OpponentBufferExecCompleted(void);
@@ -173,7 +167,7 @@ static void (*const sOpponentBufferCommands[CONTROLLER_CMDS_COUNT])(void) =
     OpponentHandleLinkStandbyMsg,
     OpponentHandleResetActionMoveSelection,
     OpponentHandleCmd55,
-    nullsub_91
+    OpponentCmdEnd
 };
 
 // unknown unused data
@@ -542,7 +536,7 @@ static void OpponentHandleGetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 size += GetOpponentMonData(i, monData + size);
@@ -568,7 +562,7 @@ static u32 GetOpponentMonData(u8 monId, u8 *dst)
     case REQUEST_ALL_BATTLE:
         battleMon.species = GetMonData(&gEnemyParty[monId], MON_DATA_SPECIES);
         battleMon.item = GetMonData(&gEnemyParty[monId], MON_DATA_HELD_ITEM);
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             battleMon.moves[size] = GetMonData(&gEnemyParty[monId], MON_DATA_MOVE1 + size);
             battleMon.pp[size] = GetMonData(&gEnemyParty[monId], MON_DATA_PP1 + size);
@@ -615,7 +609,7 @@ static u32 GetOpponentMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             moveData.moves[size] = GetMonData(&gEnemyParty[monId], MON_DATA_MOVE1 + size);
             moveData.pp[size] = GetMonData(&gEnemyParty[monId], MON_DATA_PP1 + size);
@@ -635,7 +629,7 @@ static u32 GetOpponentMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_PP_DATA_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
             dst[size] = GetMonData(&gEnemyParty[monId], MON_DATA_PP1 + size);
         dst[size] = GetMonData(&gEnemyParty[monId], MON_DATA_PP_BONUSES);
         size++;
@@ -885,7 +879,7 @@ static void OpponentHandleSetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 SetOpponentMonData(i);
@@ -909,7 +903,7 @@ static void SetOpponentMonData(u8 monId)
 
             SetMonData(&gEnemyParty[monId], MON_DATA_SPECIES, &battlePokemon->species);
             SetMonData(&gEnemyParty[monId], MON_DATA_HELD_ITEM, &battlePokemon->item);
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
             {
                 SetMonData(&gEnemyParty[monId], MON_DATA_MOVE1 + i, &battlePokemon->moves[i]);
                 SetMonData(&gEnemyParty[monId], MON_DATA_PP1 + i, &battlePokemon->pp[i]);
@@ -948,7 +942,7 @@ static void SetOpponentMonData(u8 monId)
         SetMonData(&gEnemyParty[monId], MON_DATA_HELD_ITEM, &gBattleBufferA[gActiveBattler][3]);
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < MAX_MON_MOVES; i++)
         {
             SetMonData(&gEnemyParty[monId], MON_DATA_MOVE1 + i, &moveData->moves[i]);
             SetMonData(&gEnemyParty[monId], MON_DATA_PP1 + i, &moveData->pp[i]);
@@ -1132,7 +1126,7 @@ static void OpponentHandleLoadMonSprite(void)
     gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate,
                                                GetBattlerSpriteCoord(gActiveBattler, 2),
                                                GetBattlerSpriteDefault_Y(gActiveBattler),
-                                               sub_80A82E4(gActiveBattler));
+                                               GetBattlerSpriteSubpriority(gActiveBattler));
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = -240;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = gActiveBattler;
@@ -1167,7 +1161,7 @@ static void sub_80613DC(u8 battlerId, bool8 dontClearSubstituteBit)
     gBattlerSpriteIds[battlerId] = CreateSprite(&gMultiuseSpriteTemplate,
                                         GetBattlerSpriteCoord(battlerId, 2),
                                         GetBattlerSpriteDefault_Y(battlerId),
-                                        sub_80A82E4(battlerId));
+                                        GetBattlerSpriteSubpriority(battlerId));
 
     gSprites[gBattlerSpriteIds[battlerId]].data[0] = battlerId;
     gSprites[gBattlerSpriteIds[battlerId]].data[2] = species;
@@ -1236,18 +1230,18 @@ static void OpponentHandleDrawTrainerPic(void)
     {
         trainerPicId = GetFrontierBrainTrainerPicIndex();
     }
-    else if (gBattleTypeFlags & BATTLE_TYPE_x4000000)
+    else if (gBattleTypeFlags & BATTLE_TYPE_TRAINER_HILL)
     {
         if (gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS)
         {
             if (gActiveBattler == 1)
-                trainerPicId = sub_81D5588(gTrainerBattleOpponent_A);
+                trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_A);
             else
-                trainerPicId = sub_81D5588(gTrainerBattleOpponent_B);
+                trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_B);
         }
         else
         {
-            trainerPicId = sub_81D5588(gTrainerBattleOpponent_A);
+            trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_A);
         }
     }
     else if (gBattleTypeFlags & BATTLE_TYPE_FRONTIER)
@@ -1296,8 +1290,8 @@ static void OpponentHandleDrawTrainerPic(void)
     SetMultiuseSpriteTemplateToTrainerBack(trainerPicId, GetBattlerPosition(gActiveBattler));
     gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate,
                                                xPos,
-                                               (8 - gTrainerFrontPicCoords[trainerPicId].coords) * 4 + 40,
-                                               sub_80A82E4(gActiveBattler));
+                                               (8 - gTrainerFrontPicCoords[trainerPicId].size) * 4 + 40,
+                                               GetBattlerSpriteSubpriority(gActiveBattler));
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = -240;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 2;
@@ -1320,18 +1314,18 @@ static void OpponentHandleTrainerSlide(void)
     {
         trainerPicId = GetFrontierBrainTrainerPicIndex();
     }
-    else if (gBattleTypeFlags & BATTLE_TYPE_x4000000)
+    else if (gBattleTypeFlags & BATTLE_TYPE_TRAINER_HILL)
     {
         if (gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS)
         {
             if (gActiveBattler == 1)
-                trainerPicId = sub_81D5588(gTrainerBattleOpponent_A);
+                trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_A);
             else
-                trainerPicId = sub_81D5588(gTrainerBattleOpponent_B);
+                trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_B);
         }
         else
         {
-            trainerPicId = sub_81D5588(gTrainerBattleOpponent_A);
+            trainerPicId = GetTrainerHillTrainerFrontSpriteId(gTrainerBattleOpponent_A);
         }
     }
     else if (gBattleTypeFlags & BATTLE_TYPE_FRONTIER)
@@ -1366,7 +1360,7 @@ static void OpponentHandleTrainerSlide(void)
 
     DecompressTrainerFrontPic(trainerPicId, gActiveBattler);
     SetMultiuseSpriteTemplateToTrainerBack(trainerPicId, GetBattlerPosition(gActiveBattler));
-    gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, 176, (8 - gTrainerFrontPicCoords[trainerPicId].coords) * 4 + 40, 0x1E);
+    gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, 176, (8 - gTrainerFrontPicCoords[trainerPicId].size) * 4 + 40, 0x1E);
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = 96;
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.x += 32;
@@ -1380,11 +1374,11 @@ static void OpponentHandleTrainerSlide(void)
 
 static void OpponentHandleTrainerSlideBack(void)
 {
-    oamt_add_pos2_onto_pos1(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
+    SetSpritePrimaryCoordsFromSecondaryCoords(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 35;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = 280;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[4] = gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.y;
-    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_80A6EEC;
+    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = StartAnimLinearTranslation;
     StoreSpriteCallbackInData6(&gSprites[gBattlerSpriteIds[gActiveBattler]], SpriteCallbackDummy);
     gBattlerControllerFuncs[gActiveBattler] = sub_805F240;
 }
@@ -1402,7 +1396,7 @@ static void OpponentHandleFaintAnimation(void)
         if (!gBattleSpritesDataPtr->healthBoxesData[gActiveBattler].specialAnimActive)
         {
             gBattleSpritesDataPtr->healthBoxesData[gActiveBattler].animationState = 0;
-            PlaySE12WithPanning(SE_POKE_DEAD, PAN_SIDE_OPPONENT);
+            PlaySE12WithPanning(SE_POKE_DEAD, SOUND_PAN_TARGET);
             gSprites[gBattlerSpriteIds[gActiveBattler]].callback = SpriteCB_FaintOpponentMon;
             gBattlerControllerFuncs[gActiveBattler] = sub_805FAC4;
         }
@@ -1513,7 +1507,7 @@ static void OpponentHandlePrintString(void)
     BufferStringBattle(*stringId);
     BattlePutTextOnWindow(gDisplayedStringBattle, 0);
     gBattlerControllerFuncs[gActiveBattler] = CompleteOnInactiveTextPrinter;
-    sub_81A57E4(gActiveBattler, *stringId);
+    BattleArena_DeductMindPoints(gActiveBattler, *stringId);
 }
 
 static void OpponentHandlePrintSelectionString(void)
@@ -1552,10 +1546,10 @@ static void OpponentHandleChooseMove(void)
 
             switch (chosenMoveId)
             {
-            case 5:
+            case AI_CHOICE_WATCH:
                 BtlController_EmitTwoReturnValues(1, B_ACTION_SAFARI_WATCH_CAREFULLY, 0);
                 break;
-            case 4:
+            case AI_CHOICE_FLEE:
                 BtlController_EmitTwoReturnValues(1, B_ACTION_RUN, 0);
                 break;
             case 6:
@@ -1810,9 +1804,9 @@ static void OpponentHandlePlaySE(void)
     s8 pan;
 
     if (GetBattlerSide(gActiveBattler) == B_SIDE_PLAYER)
-        pan = PAN_SIDE_PLAYER;
+        pan = SOUND_PAN_ATTACKER;
     else
-        pan = PAN_SIDE_OPPONENT;
+        pan = SOUND_PAN_TARGET;
 
     PlaySE12WithPanning(gBattleBufferA[gActiveBattler][1] | (gBattleBufferA[gActiveBattler][2] << 8), pan);
     OpponentBufferExecCompleted();
@@ -1853,12 +1847,12 @@ static void OpponentHandleIntroTrainerBallThrow(void)
     u8 paletteNum;
     u8 taskId;
 
-    oamt_add_pos2_onto_pos1(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
+    SetSpritePrimaryCoordsFromSecondaryCoords(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 35;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = 280;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[4] = gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.y;
-    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_80A6EEC;
+    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = StartAnimLinearTranslation;
 
     StoreSpriteCallbackInData6(&gSprites[gBattlerSpriteIds[gActiveBattler]], sub_806280C);
 
@@ -1998,7 +1992,7 @@ static void OpponentHandleResetActionMoveSelection(void)
 
 static void OpponentHandleCmd55(void)
 {
-    if (gBattleTypeFlags & BATTLE_TYPE_LINK && !(gBattleTypeFlags & BATTLE_TYPE_WILD))
+    if (gBattleTypeFlags & BATTLE_TYPE_LINK && !(gBattleTypeFlags & BATTLE_TYPE_IS_MASTER))
     {
         gMain.inBattle = 0;
         gMain.callback1 = gPreBattleCallback1;
@@ -2007,6 +2001,6 @@ static void OpponentHandleCmd55(void)
     OpponentBufferExecCompleted();
 }
 
-static void nullsub_91(void)
+static void OpponentCmdEnd(void)
 {
 }

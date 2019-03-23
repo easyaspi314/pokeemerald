@@ -1,6 +1,6 @@
 BattleFrontier_BattlePikeRandomRoom2_MapScripts:: @ 825E392
-	map_script 2, BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E39D
-	map_script 4, BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E3DE
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E39D
+	map_script MAP_SCRIPT_ON_WARP_INTO_MAP_TABLE, BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E3DE
 	.byte 0
 
 BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E39D: @ 825E39D
@@ -14,9 +14,9 @@ BattleFrontier_BattlePikeRandomRoom2_EventScript_25E3A7:: @ 825E3A7
 	setvar VAR_0x8004, 2
 	setvar VAR_0x8005, 0
 	setvar VAR_0x8006, 3
-	special sub_81A1780
+	special CallFrontierUtilFunc
 	lockall
-	msgbox BattleFrontier_BattlePikeRandomRoom2_Text_25E3F2, 4
+	msgbox BattleFrontier_BattlePikeRandomRoom2_Text_25E3F2, MSGBOX_DEFAULT
 	closemessage
 	releaseall
 	warp MAP_BATTLE_FRONTIER_BATTLE_PIKE_LOBBY, 255, 5, 6
@@ -34,7 +34,7 @@ BattleFrontier_BattlePikeRandomRoom2_MapScript2_25E3DE: @ 825E3DE
 
 BattleFrontier_BattlePikeRandomRoom2_EventScript_25E3E8:: @ 825E3E8
 	setvar VAR_TEMP_4, 1
-	turnobject 255, 2
+	turnobject EVENT_OBJ_ID_PLAYER, 2
 	end
 
 BattleFrontier_BattlePikeRandomRoom2_Text_25E3F2: @ 825E3F2

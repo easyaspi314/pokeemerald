@@ -1,8 +1,9 @@
 #include "global.h"
 #include "rom_8034C54.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "decompress.h"
 #include "main.h"
+#include "battle_main.h"
 
 struct UnkStruct2
 {
@@ -31,10 +32,6 @@ struct UnkStruct1
     struct UnkStruct2 *array;
 };
 
-extern struct UnkStruct1 *gUnknown_02022E10;
-
-extern const struct SpriteTemplate gUnknown_0831AC88;
-
 // this file's functions
 static u8 sub_8035518(u8 arg0);;
 static void sub_8034EFC(struct UnkStruct2 *arg0);
@@ -49,6 +46,9 @@ static void sub_8035648(void);
 static IWRAM_DATA s32 gUnknown_03000DD4;
 static IWRAM_DATA s32 gUnknown_03000DD8;
 static IWRAM_DATA s32 gUnknown_03000DDC;
+
+// ewram
+static EWRAM_DATA struct UnkStruct1 *gUnknown_02022E10 = {0};
 
 // const rom data
 static const u8 gUnknown_082FF1C8[][4] =
@@ -82,7 +82,7 @@ bool32 sub_8034C54(u32 count)
     for (i = 0; i < count; i++)
     {
         gUnknown_02022E10->array[i].isActive = FALSE;
-        gUnknown_02022E10->array[i].firstOamId |= 0xFF;
+        gUnknown_02022E10->array[i].firstOamId = 0xFF;
     }
 
     return TRUE;
@@ -132,7 +132,7 @@ bool32 sub_8034D14(u32 id, s32 arg1, const struct UnkStruct3 *arg2)
 
             compSpriteSheet = *(struct CompressedSpriteSheet*)(arg2->spriteSheet);
             compSpriteSheet.size = GetDecompressedDataSize(arg2->spriteSheet->data);
-            gUnknown_02022E10->array[id].tileStart = LoadCompressedObjectPic(&compSpriteSheet);
+            gUnknown_02022E10->array[id].tileStart = LoadCompressedSpriteSheet(&compSpriteSheet);
         }
 
         if (gUnknown_02022E10->array[id].tileStart == 0xFFFF)
@@ -431,9 +431,9 @@ static bool32 SharesPalWithAnyActive(u32 id)
     return FALSE;
 }
 
-u8 sub_80355F8(u32 arg0, u32 arg1)
+u8 sub_80355F8(u32 shape, u32 size)
 {
-    return gUnknown_082FF1C8[arg0][arg1];
+    return gUnknown_082FF1C8[shape][size];
 }
 
 static void sub_8035608(void)

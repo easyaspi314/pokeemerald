@@ -7,32 +7,32 @@ SeafloorCavern_Room9_EventScript_234DC9:: @ 8234DC9
 	setvar VAR_0x8005, 3
 	setvar VAR_0x8006, 4
 	setvar VAR_0x8007, 5
-	applymovement 255, SeafloorCavern_Room9_Movement_2725A6
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceUp
 	waitmovement 0
-	applymovement 255, SeafloorCavern_Room9_Movement_23505C
+	applymovement EVENT_OBJ_ID_PLAYER, SeafloorCavern_Room9_Movement_23505C
 	waitmovement 0
 	playbgm MUS_AQA_0, 0
-	msgbox SeafloorCavern_Room9_Text_23505F, 4
+	msgbox SeafloorCavern_Room9_Text_23505F, MSGBOX_DEFAULT
 	closemessage
 	addobject VAR_0x8004
-	applymovement 255, SeafloorCavern_Room9_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
 	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_23502A
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_23507C, 4
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_2725A6
+	msgbox SeafloorCavern_Room9_Text_23507C, MSGBOX_DEFAULT
+	applymovement VAR_0x8004, Common_Movement_WalkInPlaceUp
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_2350A6, 4
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_27259E
+	msgbox SeafloorCavern_Room9_Text_2350A6, MSGBOX_DEFAULT
+	applymovement VAR_0x8004, Common_Movement_FacePlayer
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_23512C, 4
-	trainerbattle 3, TRAINER_ARCHIE, 0, SeafloorCavern_Room9_Text_2351BC
-	msgbox SeafloorCavern_Room9_Text_2351E5, 4
-	setweather 0
+	msgbox SeafloorCavern_Room9_Text_23512C, MSGBOX_DEFAULT
+	trainerbattle_no_intro TRAINER_ARCHIE, SeafloorCavern_Room9_Text_2351BC
+	msgbox SeafloorCavern_Room9_Text_2351E5, MSGBOX_DEFAULT
+	setweather WEATHER_NONE
 	doweather
 	special sub_80B05B4
 	waitstate
-	msgbox SeafloorCavern_Room9_Text_235279, 4
+	msgbox SeafloorCavern_Room9_Text_235279, MSGBOX_DEFAULT
 	special WaitWeather
 	waitstate
 	setvar VAR_RESULT, 1
@@ -47,8 +47,8 @@ SeafloorCavern_Room9_EventScript_234DC9:: @ 8234DC9
 	playfanfare MUS_ME_TAMA
 	playse SE_TAMA
 	special sub_80B0534
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_2725A6
-	applymovement 255, SeafloorCavern_Room9_Movement_2725A6
+	applymovement VAR_0x8004, Common_Movement_WalkInPlaceUp
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceUp
 	waitmovement 0
 	delay 150
 	removeobject 7
@@ -80,21 +80,21 @@ SeafloorCavern_Room9_EventScript_234DC9:: @ 8234DC9
 	setvar VAR_0x8005, 3
 	setvar VAR_0x8006, 4
 	setvar VAR_0x8007, 5
-	msgbox SeafloorCavern_Room9_Text_2352A7, 4
+	msgbox SeafloorCavern_Room9_Text_2352A7, MSGBOX_DEFAULT
 	playse SE_PC_LOGIN
-	applymovement 255, SeafloorCavern_Room9_Movement_2725A4
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_2352F6, 4
+	msgbox SeafloorCavern_Room9_Text_2352F6, MSGBOX_DEFAULT
 	closemessage
 	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_235035
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_23532B, 4
+	msgbox SeafloorCavern_Room9_Text_23532B, MSGBOX_DEFAULT
 	closemessage
 	playse SE_PC_OFF
 	delay 20
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_2725AA
+	applymovement VAR_0x8004, Common_Movement_WalkInPlaceDown
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_23546F, 4
+	msgbox SeafloorCavern_Room9_Text_23546F, MSGBOX_DEFAULT
 	closemessage
 	addobject VAR_0x8005
 	addobject VAR_0x8006
@@ -103,44 +103,44 @@ SeafloorCavern_Room9_EventScript_234DC9:: @ 8234DC9
 	applymovement VAR_0x8006, SeafloorCavern_Room9_Movement_235057
 	applymovement VAR_0x8005, SeafloorCavern_Room9_Movement_23504E
 	waitmovement 0
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_2725A4
+	applymovement VAR_0x8004, Common_Movement_WalkInPlaceLeft
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_2354F0, 4
+	msgbox SeafloorCavern_Room9_Text_2354F0, MSGBOX_DEFAULT
 	playse SE_PIN
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_272598
+	applymovement VAR_0x8004, Common_Movement_ExclamationMark
 	waitmovement 0
-	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_27259A
+	applymovement VAR_0x8004, Common_Movement_Delay48
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_2355C2, 4
-	msgbox SeafloorCavern_Room9_Text_235692, 4
+	msgbox SeafloorCavern_Room9_Text_2355C2, MSGBOX_DEFAULT
+	msgbox SeafloorCavern_Room9_Text_235692, MSGBOX_DEFAULT
 	closemessage
 	applymovement VAR_0x8005, SeafloorCavern_Room9_Movement_235054
 	applymovement VAR_0x8004, SeafloorCavern_Room9_Movement_23503A
 	waitmovement 0
-	msgbox SeafloorCavern_Room9_Text_235723, 4
-	setvar VAR_0x407B, 1
-	setvar VAR_0x405E, 1
-	clearflag FLAG_0x3CD
-	clearflag FLAG_0x33A
-	clearflag FLAG_0x33B
-	clearflag FLAG_0x356
-	clearflag FLAG_0x3E6
-	clearflag FLAG_0x3E5
-	setflag FLAG_0x347
+	msgbox SeafloorCavern_Room9_Text_235723, MSGBOX_DEFAULT
+	setvar VAR_ROUTE128_STATE, 1
+	setvar VAR_RAYQUAZA_STATE, 1
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_STEVEN
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_ARCHIE
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_MAXIE
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_RESIDENTS
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_GROUDON
+	clearflag FLAG_HIDE_SOOTOPOLIS_CITY_KYOGRE
+	setflag FLAG_HIDE_SOOTOPOLIS_CITY_MAN_1
 	setflag FLAG_LEGENDARIES_IN_SOOTOPOLIS
-	clearflag FLAG_0x3B0
-	clearflag FLAG_0x3B1
+	clearflag FLAG_HIDE_ROUTE_128_ARCHIE
+	clearflag FLAG_HIDE_ROUTE_128_MAXIE
 	setflag FLAG_SYS_WEATHER_CTRL
-	setflag FLAG_0x081
-	setflag FLAG_0x3C7
-	setvar VAR_0x40C6, 2
-	setvar VAR_0x40A2, 1
-	setflag FLAG_0x33C
-	setflag FLAG_0x33D
-	setflag FLAG_0x33F
-	setflag FLAG_0x35B
-	setflag FLAG_0x3B2
-	setflag FLAG_SPECIAL_FLAG_0x4000
+	setflag FLAG_KYOGRE_ESCAPED_SEAFLOOR_CAVERN
+	setflag FLAG_HIDE_MOSSDEEP_CITY_STEVENS_HOUSE_STEVEN
+	setvar VAR_STEVENS_HOUSE_STATE, 2
+	setvar VAR_SEAFLOOR_CAVERN_STATE, 1
+	setflag FLAG_HIDE_SEAFLOOR_CAVERN_ROOM_9_ARCHIE
+	setflag FLAG_HIDE_SEAFLOOR_CAVERN_ROOM_9_MAXIE
+	setflag FLAG_HIDE_SEAFLOOR_CAVERN_ROOM_9_MAGMA_GRUNTS
+	setflag FLAG_HIDE_SEAFLOOR_CAVERN_ROOM_9_KYOGRE_1
+	setflag FLAG_HIDE_SEAFLOOR_CAVERN_AQUA_GRUNTS
+	setflag FLAG_HIDE_MAP_NAME_POPUP
 	warp MAP_ROUTE128, 255, 38, 22
 	waitstate
 	releaseall
@@ -236,9 +236,9 @@ SeafloorCavern_Room9_Text_2350A6: @ 82350A6
 	.string "come…$"
 
 SeafloorCavern_Room9_Text_23512C: @ 823512C
-	.string "ARCHIE: It surprises me, how you’ve\n"
+	.string "ARCHIE: It surprises me, how you've\n"
 	.string "managed to chase me here.\p"
-	.string "But that’s all over now.\p"
+	.string "But that's all over now.\p"
 	.string "For the realization of my dream,\n"
 	.string "you must disappear now!$"
 
@@ -260,32 +260,32 @@ SeafloorCavern_Room9_Text_235279: @ 8235279
 
 SeafloorCavern_Room9_Text_2352A7: @ 82352A7
 	.string "ARCHIE: What?!\p"
-	.string "I didn’t do anything.\n"
+	.string "I didn't do anything.\n"
 	.string "Why did the RED ORB…\p"
 	.string "Where did KYOGRE go?$"
 
 SeafloorCavern_Room9_Text_2352F6: @ 82352F6
-	.string "ARCHIE: Hm? It’s a message from our\n"
+	.string "ARCHIE: Hm? It's a message from our\n"
 	.string "members outside…$"
 
 SeafloorCavern_Room9_Text_23532B: @ 823532B
 	.string "ARCHIE: Yes, what is it?\p"
 	.string "Hm…\n"
-	.string "It’s raining heavily?\p"
+	.string "It's raining heavily?\p"
 	.string "Good… That should have happened.\n"
 	.string "That is why we awakened KYOGRE,\l"
-	.string "to realize TEAM AQUA’s vision of\l"
+	.string "to realize TEAM AQUA's vision of\l"
 	.string "expanding the sea.\p"
 	.string "What?!\p"
-	.string "It’s raining far harder than we\n"
-	.string "envisioned? You’re in danger?\p"
-	.string "That can’t be…\n"
-	.string "That’s just not possible…\p"
+	.string "It's raining far harder than we\n"
+	.string "envisioned? You're in danger?\p"
+	.string "That can't be…\n"
+	.string "That's just not possible…\p"
 	.string "Hold your position and monitor\n"
 	.string "the situation!$"
 
 SeafloorCavern_Room9_Text_23546F: @ 823546F
-	.string "ARCHIE: There’s something wrong…\p"
+	.string "ARCHIE: There's something wrong…\p"
 	.string "The RED ORB is supposed to awaken\n"
 	.string "and control KYOGRE…\p"
 	.string "But… Why?\n"
@@ -294,30 +294,29 @@ SeafloorCavern_Room9_Text_23546F: @ 823546F
 
 SeafloorCavern_Room9_Text_2354F0: @ 82354F0
 	.string "MAXIE: What have you wrought?\p"
-	.string "ARCHIE… You’ve finally awoken KYOGRE,\n"
-	.string "haven’t you?\p"
+	.string "ARCHIE… You've finally awoken KYOGRE,\n"
+	.string "haven't you?\p"
 	.string "What will happen to the world if this\n"
 	.string "downpour continues for all eternity?\p"
-	.string "The world’s landmass will drown in\n"
+	.string "The world's landmass will drown in\n"
 	.string "the deepening sea…$"
 
 SeafloorCavern_Room9_Text_2355C2: @ 82355C2
 	.string "ARCHIE: W-what?!\n"
-	.string "Don’t get all high and mighty with me!\p"
-	.string "Wasn’t it you, TEAM MAGMA, that\n"
+	.string "Don't get all high and mighty with me!\p"
+	.string "Wasn't it you, TEAM MAGMA, that\n"
 	.string "infuriated GROUDON?\p"
 	.string "So long as I have this RED ORB,\n"
 	.string "I should be able to control KYOGRE…\p"
 	.string "I should be able to control it…$"
 
 SeafloorCavern_Room9_Text_235692: @ 8235692
-	.string "MAXIE: We don’t have the time to\n"
+	.string "MAXIE: We don't have the time to\n"
 	.string "argue about it here!\p"
 	.string "Get outside and see for yourself!\p"
-	.string "See if what you’ve wrought is the\n"
+	.string "See if what you've wrought is the\n"
 	.string "world that we desired!$"
 
 SeafloorCavern_Room9_Text_235723: @ 8235723
 	.string "MAXIE: {PLAYER}, come on, you have\n"
 	.string "to get out of here, too!$"
-

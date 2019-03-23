@@ -21,9 +21,10 @@ scaninc: $(SCANINC)
 preproc: $(PREPROC)
 bin2c: $(BIN2C)
 rsfont: $(RSFONT)
-aif2pcm: $(AIF2PCM)
+aif2pcm: $(AIF)
 ramscrgen: $(RAMSCRGEN)
 fix: $(FIX)
+mapjson: $(MAPJSON)
 
 include tools/mid2agb/Makefile
 include tools/gbagfx/Makefile
@@ -34,3 +35,4 @@ include tools/rsfont/Makefile
 include tools/aif2pcm/Makefile
 include tools/ramscrgen/Makefile
 include tools/gbafix/Makefile
+include tools/mapjson/Makefile

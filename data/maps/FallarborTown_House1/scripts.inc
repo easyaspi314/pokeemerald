@@ -4,71 +4,66 @@ FallarborTown_House1_MapScripts:: @ 8200F12
 FallarborTown_House1_EventScript_200F13:: @ 8200F13
 	lock
 	faceplayer
-	checkflag FLAG_0x0E5
-	goto_eq FallarborTown_House1_EventScript_200FB2
+	goto_if_set FLAG_RECEIVED_TM27, FallarborTown_House1_EventScript_200FB2
 	checkitem ITEM_METEORITE, 1
 	compare VAR_RESULT, 1
-	goto_eq FallarborTown_House1_EventScript_200F38
-	msgbox FallarborTown_House1_Text_200FEE, 4
+	goto_if_eq FallarborTown_House1_EventScript_200F38
+	msgbox FallarborTown_House1_Text_200FEE, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200F38:: @ 8200F38
-	checkflag FLAG_0x002
-	call_if 0, FallarborTown_House1_EventScript_200F8B
-	checkflag FLAG_0x002
-	call_if 1, FallarborTown_House1_EventScript_200F9C
+	call_if_unset FLAG_TEMP_2, FallarborTown_House1_EventScript_200F8B
+	call_if_set FLAG_TEMP_2, FallarborTown_House1_EventScript_200F9C
 	compare VAR_RESULT, 0
-	goto_eq FallarborTown_House1_EventScript_200FA5
-	msgbox FallarborTown_House1_Text_201159, 4
+	goto_if_eq FallarborTown_House1_EventScript_200FA5
+	msgbox FallarborTown_House1_Text_201159, MSGBOX_DEFAULT
 	giveitem_std ITEM_TM27
 	compare VAR_RESULT, 0
-	goto_eq FallarborTown_House1_EventScript_272054
+	goto_if_eq Common_EventScript_ShowBagIsFull
 	setvar VAR_0x8004, 280
 	call FallarborTown_House1_EventScript_2723E4
-	setflag FLAG_0x0E5
-	msgbox FallarborTown_House1_Text_2011A5, 4
+	setflag FLAG_RECEIVED_TM27
+	msgbox FallarborTown_House1_Text_2011A5, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200F8B:: @ 8200F8B
-	msgbox FallarborTown_House1_Text_200FEE, 4
-	msgbox FallarborTown_House1_Text_2010A2, 5
+	msgbox FallarborTown_House1_Text_200FEE, MSGBOX_DEFAULT
+	msgbox FallarborTown_House1_Text_2010A2, MSGBOX_YESNO
 	return
 
 FallarborTown_House1_EventScript_200F9C:: @ 8200F9C
-	msgbox FallarborTown_House1_Text_201249, 5
+	msgbox FallarborTown_House1_Text_201249, MSGBOX_YESNO
 	return
 
 FallarborTown_House1_EventScript_200FA5:: @ 8200FA5
-	setflag FLAG_0x002
-	msgbox FallarborTown_House1_Text_201212, 4
+	setflag FLAG_TEMP_2
+	msgbox FallarborTown_House1_Text_201212, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200FB2:: @ 8200FB2
-	msgbox FallarborTown_House1_Text_2011A5, 4
+	msgbox FallarborTown_House1_Text_2011A5, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200FBC:: @ 8200FBC
 	lock
 	faceplayer
-	checkflag FLAG_0x0E5
-	goto_eq FallarborTown_House1_EventScript_200FE4
-	checkflag FLAG_0x08B
-	goto_eq FallarborTown_House1_EventScript_200FDA
-	msgbox FallarborTown_House1_Text_2012BC, 4
+	goto_if_set FLAG_RECEIVED_TM27, FallarborTown_House1_EventScript_200FE4
+	goto_if_set FLAG_DEFEATED_EVIL_TEAM_MT_CHIMNEY, FallarborTown_House1_EventScript_200FDA
+	msgbox FallarborTown_House1_Text_2012BC, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200FDA:: @ 8200FDA
-	msgbox FallarborTown_House1_Text_201310, 4
+	msgbox FallarborTown_House1_Text_201310, MSGBOX_DEFAULT
 	release
 	end
 
 FallarborTown_House1_EventScript_200FE4:: @ 8200FE4
-	msgbox FallarborTown_House1_Text_20134B, 4
+	msgbox FallarborTown_House1_Text_20134B, MSGBOX_DEFAULT
 	release
 	end
 
@@ -78,7 +73,7 @@ FallarborTown_House1_Text_200FEE: @ 8200FEE
 	.string "conned into telling TEAM MAGMA where\l"
 	.string "you can find METEORITES…\p"
 	.string "That METEORITE from METEOR FALLS…\n"
-	.string "It’s never going to be mine now…$"
+	.string "It's never going to be mine now…$"
 
 FallarborTown_House1_Text_2010A2: @ 82010A2
 	.string "Oh!\n"
@@ -88,7 +83,7 @@ FallarborTown_House1_Text_2010A2: @ 82010A2
 	.string "Is it the METEORITE that TEAM MAGMA\n"
 	.string "took from METEOR FALLS?\p"
 	.string "Please, may I have it?\p"
-	.string "I’m not asking for it for free.\n"
+	.string "I'm not asking for it for free.\n"
 	.string "How about in exchange for this TM?$"
 
 FallarborTown_House1_Text_201159: @ 8201159
@@ -97,18 +92,18 @@ FallarborTown_House1_Text_201159: @ 8201159
 	.string "Please use it!$"
 
 FallarborTown_House1_Text_2011A5: @ 82011A5
-	.string "PROF. COZMO: Oh, I can’t believe it.\n"
+	.string "PROF. COZMO: Oh, I can't believe it.\n"
 	.string "This is really, really great!\p"
 	.string "This is really going to help my research!$"
 
 FallarborTown_House1_Text_201212: @ 8201212
 	.string "PROF. COZMO: Oh, but…\n"
-	.string "I’m crushed with disappointment…$"
+	.string "I'm crushed with disappointment…$"
 
 FallarborTown_House1_Text_201249: @ 8201249
 	.string "PROF. COZMO: Please, may I have that\n"
 	.string "METEORITE?\p"
-	.string "I’m not asking for it for free.\n"
+	.string "I'm not asking for it for free.\n"
 	.string "How about in exchange for this TM?$"
 
 FallarborTown_House1_Text_2012BC: @ 82012BC
@@ -118,9 +113,9 @@ FallarborTown_House1_Text_2012BC: @ 82012BC
 
 FallarborTown_House1_Text_201310: @ 8201310
 	.string "Poor PROF. COZMO…\n"
-	.string "He’s so depressed… I feel sorry for him.$"
+	.string "He's so depressed… I feel sorry for him.$"
 
 FallarborTown_House1_Text_20134B: @ 820134B
 	.string "Look at PROF. COZMO…\n"
-	.string "He’s so happy! I think it’s cute.$"
+	.string "He's so happy! I think it's cute.$"
 

@@ -3,11 +3,12 @@
 #include "battle.h"
 #include "battle_setup.h"
 #include "battle_tower.h"
+#include "frontier_util.h"
 #include "battle_message.h"
 #include "event_data.h"
 #include "overworld.h"
 #include "util.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "string_util.h"
 #include "random.h"
 #include "task.h"
@@ -16,8 +17,10 @@
 #include "text.h"
 #include "bg.h"
 #include "window.h"
+#include "strings.h"
 #include "palette.h"
 #include "decompress.h"
+#include "party_menu.h"
 #include "menu.h"
 #include "sound.h"
 #include "pokemon_icon.h"
@@ -25,6 +28,8 @@
 #include "international_string_util.h"
 #include "trainer_pokemon_sprites.h"
 #include "scanline_effect.h"
+#include "script_pokemon_util_80F87D8.h"
+#include "graphics.h"
 #include "constants/species.h"
 #include "constants/moves.h"
 #include "constants/trainers.h"
@@ -54,224 +59,63 @@ struct UnkStruct_860DD10
     u16 src;
 };
 
-extern void sub_81B8558(void);
-extern u32 sub_81A39C4(void);
-extern u16 sub_8162548(u8, u8);
-extern u16 RandomizeFacilityTrainerMonId(u16);
-extern u8 GetFacilityEnemyMonLevel(void);
-extern u16 sub_81A5060(u8 monId, u8 moveSlotId);
-extern u8 sub_81A50F0(u8, u8);
-extern u8 sub_81A50B0(u8);
-extern void sub_8162614(u16, u8);
-extern void sub_81A4C30(void);
-extern bool8 sub_81A3610(void);
-extern u16 sub_81A4FF0(u8);
-extern u8 GetFrontierTrainerFrontSpriteId(u16);
-extern u8 GetFrontierOpponentClass(u16);
-extern void sub_80F94E8(void);
-
-extern u8 gUnknown_0203CEF8[];
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
-extern u16 gBattle_BG1_X;
-extern u16 gBattle_BG1_Y;
-extern u16 gBattle_BG2_X;
-extern u16 gBattle_BG2_Y;
-extern u16 gBattle_BG3_X;
-extern u16 gBattle_BG3_Y;
-
-extern const u16 gBattleFrontierHeldItems[];
-extern const struct FacilityMon gBattleFrontierMons[];
-extern const struct BattleFrontierTrainer gBattleFrontierTrainers[];
-extern const struct SpriteTemplate gUnknown_0860CFA8;
-
-// gfx
-extern const u8 gUnknown_08D83D50[];
-extern const u8 gUnknown_08D84970[];
-extern const u8 gUnknown_08D84F00[];
-extern const u8 gUnknown_08D85444[];
-extern const u8 gUnknown_08D85358[];
-extern const u8 gUnknown_08D85600[];
-extern const u8 gUnknown_08D854C8[];
-extern const u8 gUnknown_08D82F10[];
-extern const u8 gUnknown_08D834FC[];
-extern const u8 gUnknown_08D83B2C[];
-extern const u8 gUnknown_08D83C3C[];
-extern const u8 gUnknown_08D83900[];
-extern const u8 gBattleFrontierGfx_DomeOptions[];
-
 // text
-extern const u8 gTrainerClassNames[][0xD];
-
-extern const u8 gBattleDomeOpponentPotential1[];
-extern const u8 gBattleDomeOpponentPotential2[];
-extern const u8 gBattleDomeOpponentPotential3[];
-extern const u8 gBattleDomeOpponentPotential4[];
-extern const u8 gBattleDomeOpponentPotential5[];
-extern const u8 gBattleDomeOpponentPotential6[];
-extern const u8 gBattleDomeOpponentPotential7[];
-extern const u8 gBattleDomeOpponentPotential8[];
-extern const u8 gBattleDomeOpponentPotential9[];
-extern const u8 gBattleDomeOpponentPotential10[];
-extern const u8 gBattleDomeOpponentPotential11[];
-extern const u8 gBattleDomeOpponentPotential12[];
-extern const u8 gBattleDomeOpponentPotential13[];
-extern const u8 gBattleDomeOpponentPotential14[];
-extern const u8 gBattleDomeOpponentPotential15[];
-extern const u8 gBattleDomeOpponentPotential16[];
-extern const u8 gBattleDomeOpponentPotential17[];
-extern const u8 gBattleDomeOpponentStyle1[];
-extern const u8 gBattleDomeOpponentStyle2[];
-extern const u8 gBattleDomeOpponentStyle3[];
-extern const u8 gBattleDomeOpponentStyle4[];
-extern const u8 gBattleDomeOpponentStyle5[];
-extern const u8 gBattleDomeOpponentStyle6[];
-extern const u8 gBattleDomeOpponentStyle7[];
-extern const u8 gBattleDomeOpponentStyle8[];
-extern const u8 gBattleDomeOpponentStyle9[];
-extern const u8 gBattleDomeOpponentStyle10[];
-extern const u8 gBattleDomeOpponentStyle11[];
-extern const u8 gBattleDomeOpponentStyle12[];
-extern const u8 gBattleDomeOpponentStyle13[];
-extern const u8 gBattleDomeOpponentStyle14[];
-extern const u8 gBattleDomeOpponentStyle15[];
-extern const u8 gBattleDomeOpponentStyle16[];
-extern const u8 gBattleDomeOpponentStyle17[];
-extern const u8 gBattleDomeOpponentStyle18[];
-extern const u8 gBattleDomeOpponentStyle19[];
-extern const u8 gBattleDomeOpponentStyle20[];
-extern const u8 gBattleDomeOpponentStyle21[];
-extern const u8 gBattleDomeOpponentStyle22[];
-extern const u8 gBattleDomeOpponentStyle23[];
-extern const u8 gBattleDomeOpponentStyle24[];
-extern const u8 gBattleDomeOpponentStyle25[];
-extern const u8 gBattleDomeOpponentStyle26[];
-extern const u8 gBattleDomeOpponentStyle27[];
-extern const u8 gBattleDomeOpponentStyle28[];
-extern const u8 gBattleDomeOpponentStyleUnused1[];
-extern const u8 gBattleDomeOpponentStyleUnused2[];
-extern const u8 gBattleDomeOpponentStyleUnused3[];
-extern const u8 gBattleDomeOpponentStyleUnused4[];
-extern const u8 gBattleDomeOpponentStats1[];
-extern const u8 gBattleDomeOpponentStats2[];
-extern const u8 gBattleDomeOpponentStats3[];
-extern const u8 gBattleDomeOpponentStats4[];
-extern const u8 gBattleDomeOpponentStats5[];
-extern const u8 gBattleDomeOpponentStats6[];
-extern const u8 gBattleDomeOpponentStats7[];
-extern const u8 gBattleDomeOpponentStats8[];
-extern const u8 gBattleDomeOpponentStats9[];
-extern const u8 gBattleDomeOpponentStats10[];
-extern const u8 gBattleDomeOpponentStats11[];
-extern const u8 gBattleDomeOpponentStats12[];
-extern const u8 gBattleDomeOpponentStats13[];
-extern const u8 gBattleDomeOpponentStats14[];
-extern const u8 gBattleDomeOpponentStats15[];
-extern const u8 gBattleDomeOpponentStats16[];
-extern const u8 gBattleDomeOpponentStats17[];
-extern const u8 gBattleDomeOpponentStats18[];
-extern const u8 gBattleDomeOpponentStats19[];
-extern const u8 gBattleDomeOpponentStats20[];
-extern const u8 gBattleDomeOpponentStats21[];
-extern const u8 gBattleDomeOpponentStats22[];
-extern const u8 gBattleDomeOpponentStats23[];
-extern const u8 gBattleDomeOpponentStats24[];
-extern const u8 gBattleDomeOpponentStats25[];
-extern const u8 gBattleDomeOpponentStats26[];
-extern const u8 gBattleDomeOpponentStats27[];
-extern const u8 gBattleDomeOpponentStats28[];
-extern const u8 gBattleDomeOpponentStats29[];
-extern const u8 gBattleDomeOpponentStats30[];
-extern const u8 gBattleDomeOpponentStats31[];
-extern const u8 gBattleDomeOpponentStats32[];
-extern const u8 gBattleDomeOpponentStats33[];
-extern const u8 gBattleDomeOpponentStats34[];
-extern const u8 gBattleDomeOpponentStats35[];
-extern const u8 gBattleDomeOpponentStats36[];
-extern const u8 gBattleDomeOpponentStats37[];
-extern const u8 gBattleDomeOpponentStats38[];
-extern const u8 gBattleDomeOpponentStats39[];
-extern const u8 gBattleDomeOpponentStats40[];
-extern const u8 gBattleDomeOpponentStats41[];
-extern const u8 gBattleDomeOpponentStats42[];
-extern const u8 gBattleDomeOpponentStats43[];
-extern const u8 gBattleDomeMatchNumber1[];
-extern const u8 gBattleDomeMatchNumber2[];
-extern const u8 gBattleDomeMatchNumber3[];
-extern const u8 gBattleDomeMatchNumber4[];
-extern const u8 gBattleDomeMatchNumber5[];
-extern const u8 gBattleDomeMatchNumber6[];
-extern const u8 gBattleDomeMatchNumber7[];
-extern const u8 gBattleDomeMatchNumber8[];
-extern const u8 gBattleDomeMatchNumber9[];
-extern const u8 gBattleDomeMatchNumber10[];
-extern const u8 gBattleDomeMatchNumber11[];
-extern const u8 gBattleDomeMatchNumber12[];
-extern const u8 gBattleDomeMatchNumber13[];
-extern const u8 gBattleDomeMatchNumber14[];
-extern const u8 gBattleDomeMatchNumber15[];
-extern const u8 gBattleDomeWinStrings1[];
-extern const u8 gBattleDomeWinStrings2[];
-extern const u8 gBattleDomeWinStrings3[];
-extern const u8 gBattleDomeWinStrings4[];
-extern const u8 gBattleDomeWinStrings5[];
-extern const u8 gBattleDomeWinStrings6[];
-extern const u8 gBattleDomeWinStrings7[];
+extern const u8 gTrainerClassNames[][13];
 
 // This file's functions.
 static u8 GetDomeTrainerMonIvs(u16 trainerId);
-static void SwapDomeTrainers(s32 id1, s32 id2, u16 *statsArray);
-static void CalcDomeMonStats(u16 species, s32 level, s32 ivs, u8 evBits, u8 nature, s32 *stats);
-static void CreateDomeTrainerMons(u16 tournamentTrainerId);
-static s32 sub_818FCBC(u16 tournamentTrainerId, bool8 arg1);
-static s32 sub_818FDB8(u16 tournamentTrainerId, bool8 arg1);
-static s32 GetTypeEffectivenessPoints(s32 move, s32 species, s32 arg2);
-static s32 sub_818FEB4(s32 *arr, bool8 arg1);
-static void sub_8190400(u8 taskId);
+static void SwapDomeTrainers(int id1, int id2, u16 *statsArray);
+static void CalcDomeMonStats(u16 species, int level, int ivs, u8 evBits, u8 nature, int *stats);
+static void CreateDomeOpponentMons(u16 tournamentTrainerId);
+static int sub_818FCBC(u16 tournamentTrainerId, bool8 arg1);
+static int sub_818FDB8(u16 tournamentTrainerId, bool8 arg1);
+static int GetTypeEffectivenessPoints(int move, int species, int arg2);
+static int sub_818FEB4(int *arr, bool8 arg1);
+static void Task_ShowOpponentInfo(u8 taskId);
 static void sub_8190CD4(u8 taskId);
 static u8 sub_819221C(u8 taskId);
-static void sub_8194D48(void);
-static s32 TrainerIdToTournamentId(u16 trainerId);
+static void InitDomeFacilityTrainersAndMons(void);
+static int TrainerIdToTournamentId(u16 trainerId);
 static u16 TrainerIdOfPlayerOpponent(void);
-static void sub_8194220(u8 taskId);
+static void Task_ShowTourneyTree(u8 taskId);
 static void sub_8194950(u8 taskId);
 static void CB2_BattleDome(void);
 static void VblankCb0_BattleDome(void);
 static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo);
 static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId);
-static s32 sub_8192F08(u8, u8*);
+static int sub_8192F08(u8, u8*);
 static u8 GetDomeBrainTrainerPicId(void);
 static u8 GetDomeBrainTrainerClass(void);
-static void CopyDomeBrainTrainerName(u8 *dst);
-static void CopyDomeTrainerName(u8 *dst, u16 trainerId);
+static void CopyDomeBrainTrainerName(u8 *str);
+static void CopyDomeTrainerName(u8 *str, u16 trainerId);
 static void HblankCb_BattleDome(void);
 static void VblankCb1_BattleDome(void);
-static u8 sub_8193BDC(u8 taskId);
+static u8 UpdateTourneyTreeCursor(u8 taskId);
 static void DecideRoundWinners(u8 roundId);
 static u8 sub_81953E8(u8 tournamentId, u8);
 static void sub_81948EC(u8, u8);
 static void sub_8190B40(struct Sprite *sprite);
 static void sub_8190C6C(struct Sprite *sprite);
-static void sub_818E9CC(void);
-static void sub_818EA84(void);
-static void sub_818ED28(void);
-static void sub_818F9B0(void);
-static void sub_818F9E0(void);
-static void sub_818FA20(void);
+static void InitDomeChallenge(void);
+static void GetDomeData(void);
+static void SetDomeData(void);
+static void BufferDomeRoundText(void);
+static void BufferDomeOpponentName(void);
+static void InitDomeOpponentParty(void);
 static void ShowDomeOpponentInfo(void);
-static void sub_81938A4(void);
-static void sub_81938E0(void);
-static void sub_8190298(void);
-static void sub_81902E4(void);
-static void sub_8193D40(void);
-static void sub_8193D7C(void);
+static void ShowDomeTourneyTree(void);
+static void ShowPreviousDomeResultsTourneyTree(void);
+static void SetDomeOpponentId(void);
+static void SetDomeOpponentGraphicsId(void);
+static void ShowNonInteractiveDomeTourneyTree(void);
+static void ResolveDomeRoundWinners(void);
 static void sub_81902F8(void);
-static void sub_819033C(void);
-static void sub_8194D68(void);
-static void sub_8194E44(void);
-static void sub_8194EB4(void);
-static void sub_8194EC0(void);
-static void sub_8194EF8(void);
+static void UpdateDomeStreaks(void);
+static void RestoreDomePlayerParty(void);
+static void RestoreDomePlayerPartyHeldItems(void);
+static void ReduceDomePlayerPartyTo3Mons(void);
+static void GetPlayerSeededBeforeOpponent(void);
+static void BufferLastDomeWinnerName(void);
 static void sub_8194F58(void);
 static void InitDomeTrainers(void);
 
@@ -284,361 +128,361 @@ static EWRAM_DATA u8 *sTilemapBuffer = NULL;
 // Const rom data.
 static const u8 sMovePointsForDomeTrainers[MOVES_COUNT][DOME_TOURNAMENT_TRAINERS_COUNT] =
 {
-	[MOVE_NONE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_POUND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_KARATE_CHOP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_DOUBLE_SLAP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_COMET_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_MEGA_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_PAY_DAY] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_FIRE_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_ICE_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_THUNDER_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SCRATCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_VICE_GRIP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_GUILLOTINE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_RAZOR_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SWORDS_DANCE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-	[MOVE_CUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_GUST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_WING_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_WHIRLWIND] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FLY] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BIND] = {0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SLAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_VINE_WHIP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_STOMP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_DOUBLE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_MEGA_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_JUMP_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROLLING_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SAND_ATTACK] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_HEADBUTT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_HORN_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FURY_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_HORN_DRILL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_TACKLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BODY_SLAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_WRAP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_TAKE_DOWN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_THRASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_DOUBLE_EDGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TAIL_WHIP] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_POISON_STING] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_TWINEEDLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_PIN_MISSILE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LEER] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_BITE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_GROWL] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROAR] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SING] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SUPERSONIC] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SONIC_BOOM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DISABLE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ACID] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_EMBER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_FLAMETHROWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-	[MOVE_MIST] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_WATER_GUN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_HYDRO_PUMP] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0},
-	[MOVE_SURF] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0},
-	[MOVE_ICE_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-	[MOVE_BLIZZARD] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1},
-	[MOVE_PSYBEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_BUBBLE_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_AURORA_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_HYPER_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0},
-	[MOVE_PECK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_DRILL_PECK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SUBMISSION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LOW_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_COUNTER] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_SEISMIC_TOSS] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_STRENGTH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ABSORB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_MEGA_DRAIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_LEECH_SEED] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_GROWTH] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_RAZOR_LEAF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SOLAR_BEAM] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
-	[MOVE_POISON_POWDER] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_STUN_SPORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SLEEP_POWDER] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_PETAL_DANCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_STRING_SHOT] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DRAGON_RAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FIRE_SPIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_THUNDER_SHOCK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_THUNDERBOLT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-	[MOVE_THUNDER_WAVE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_THUNDER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1},
-	[MOVE_ROCK_THROW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_EARTHQUAKE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
-	[MOVE_FISSURE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0},
-	[MOVE_DIG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TOXIC] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_CONFUSION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_PSYCHIC] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-	[MOVE_HYPNOSIS] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_MEDITATE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_AGILITY] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_QUICK_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_RAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TELEPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_NIGHT_SHADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_MIMIC] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SCREECH] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DOUBLE_TEAM] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_RECOVER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_HARDEN] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_MINIMIZE] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SMOKESCREEN] = {0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CONFUSE_RAY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_WITHDRAW] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DEFENSE_CURL] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BARRIER] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LIGHT_SCREEN] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_HAZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_REFLECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_FOCUS_ENERGY] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BIDE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_METRONOME] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-	[MOVE_MIRROR_MOVE] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-	[MOVE_SELF_DESTRUCT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
-	[MOVE_EGG_BOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0},
-	[MOVE_LICK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SMOG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SLUDGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_BONE_CLUB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_FIRE_BLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
-	[MOVE_WATERFALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CLAMP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SWIFT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SKULL_BASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
-	[MOVE_SPIKE_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CONSTRICT] = {0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_AMNESIA] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_KINESIS] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SOFT_BOILED] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_HI_JUMP_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_GLARE] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DREAM_EATER] = {1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
-	[MOVE_POISON_GAS] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BARRAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LEECH_LIFE] = {0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_LOVELY_KISS] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SKY_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
-	[MOVE_TRANSFORM] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BUBBLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_DIZZY_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SPORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FLASH] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_PSYWAVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SPLASH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ACID_ARMOR] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_CRABHAMMER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0},
-	[MOVE_EXPLOSION] = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0},
-	[MOVE_FURY_SWIPES] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BONEMERANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_REST] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROCK_SLIDE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_HYPER_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SHARPEN] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_CONVERSION] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_TRI_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SUPER_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SLASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SUBSTITUTE] = {0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_STRUGGLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_SKETCH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0},
-	[MOVE_TRIPLE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_THIEF] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SPIDER_WEB] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_MIND_READER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_NIGHTMARE] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FLAME_WHEEL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SNORE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_CURSE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_FLAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CONVERSION_2] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_AEROBLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
-	[MOVE_COTTON_SPORE] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_REVERSAL] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SPITE] = {0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_POWDER_SNOW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_PROTECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
-	[MOVE_MACH_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SCARY_FACE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_FAINT_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SWEET_KISS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BELLY_DRUM] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SLUDGE_BOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
-	[MOVE_MUD_SLAP] = {0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_OCTAZOOKA] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SPIKES] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ZAP_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1},
-	[MOVE_FORESIGHT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_DESTINY_BOND] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_PERISH_SONG] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_ICY_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_DETECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_BONE_RUSH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LOCK_ON] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_OUTRAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
-	[MOVE_SANDSTORM] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_GIGA_DRAIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_ENDURE] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_CHARM] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROLLOUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_FALSE_SWIPE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SWAGGER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_MILK_DRINK] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SPARK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_FURY_CUTTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_STEEL_WING] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_MEAN_LOOK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_ATTRACT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SLEEP_TALK] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-	[MOVE_HEAL_BELL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_RETURN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_PRESENT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
-	[MOVE_FRUSTRATION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SAFEGUARD] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_PAIN_SPLIT] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SACRED_FIRE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
-	[MOVE_MAGNITUDE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_DYNAMIC_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1},
-	[MOVE_MEGAHORN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0},
-	[MOVE_DRAGON_BREATH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_BATON_PASS] = {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ENCORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_PURSUIT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_RAPID_SPIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SWEET_SCENT] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_IRON_TAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
-	[MOVE_METAL_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_VITAL_THROW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_MORNING_SUN] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_SYNTHESIS] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_MOONLIGHT] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_HIDDEN_POWER] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CROSS_CHOP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0},
-	[MOVE_TWISTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_RAIN_DANCE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_SUNNY_DAY] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_CRUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_MIRROR_COAT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_PSYCH_UP] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_EXTREME_SPEED] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_ANCIENT_POWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1},
-	[MOVE_SHADOW_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_FUTURE_SIGHT] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROCK_SMASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_WHIRLPOOL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_BEAT_UP] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FAKE_OUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_UPROAR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_STOCKPILE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SPIT_UP] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
-	[MOVE_SWALLOW] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_HEAT_WAVE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
-	[MOVE_HAIL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_TORMENT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FLATTER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_WILL_O_WISP] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_MEMENTO] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FACADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FOCUS_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
-	[MOVE_SMELLING_SALT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FOLLOW_ME] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_NATURE_POWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_CHARGE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TAUNT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_HELPING_HAND] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TRICK] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROLE_PLAY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_WISH] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ASSIST] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_INGRAIN] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_SUPERPOWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0},
-	[MOVE_MAGIC_COAT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_RECYCLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_REVENGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_BRICK_BREAK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_YAWN] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_KNOCK_OFF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_ENDEAVOR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_ERUPTION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
-	[MOVE_SKILL_SWAP] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_IMPRISON] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_REFRESH] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_GRUDGE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_SNATCH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
-	[MOVE_SECRET_POWER] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_DIVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ARM_THRUST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CAMOUFLAGE] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TAIL_GLOW] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_LUSTER_PURGE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1},
-	[MOVE_MIST_BALL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1},
-	[MOVE_FEATHER_DANCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_TEETER_DANCE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_BLAZE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_MUD_SPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ICE_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_NEEDLE_ARM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SLACK_OFF] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_HYPER_VOICE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
-	[MOVE_POISON_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_CRUSH_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_BLAST_BURN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
-	[MOVE_HYDRO_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
-	[MOVE_METEOR_MASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1},
-	[MOVE_ASTONISH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_WEATHER_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_AROMATHERAPY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	[MOVE_FAKE_TEARS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_AIR_CUTTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_OVERHEAT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
-	[MOVE_ODOR_SLEUTH] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROCK_TOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SILVER_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1},
-	[MOVE_METAL_SOUND] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_GRASS_WHISTLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_TICKLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_COSMIC_POWER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_WATER_SPOUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
-	[MOVE_SIGNAL_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SHADOW_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_EXTRASENSORY] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_SKY_UPPERCUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SAND_TOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_SHEER_COLD] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0},
-	[MOVE_MUDDY_WATER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
-	[MOVE_BULLET_SEED] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_AERIAL_ACE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ICICLE_SPEAR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_IRON_DEFENSE] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BLOCK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	[MOVE_HOWL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_DRAGON_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_FRENZY_PLANT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
-	[MOVE_BULK_UP] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_BOUNCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1},
-	[MOVE_MUD_SHOT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	[MOVE_POISON_TAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_COVET] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_VOLT_TACKLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0},
-	[MOVE_MAGICAL_LEAF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_WATER_SPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_CALM_MIND] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_LEAF_BLADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
-	[MOVE_DRAGON_DANCE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_ROCK_BLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_SHOCK_WAVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-	[MOVE_WATER_PULSE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
-	[MOVE_DOOM_DESIRE] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
-	[MOVE_PSYCHO_BOOST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
+    [MOVE_NONE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_POUND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_KARATE_CHOP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_DOUBLE_SLAP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_COMET_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_MEGA_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_PAY_DAY] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_FIRE_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_ICE_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_THUNDER_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SCRATCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_VICE_GRIP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_GUILLOTINE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_RAZOR_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SWORDS_DANCE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+    [MOVE_CUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_GUST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_WING_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_WHIRLWIND] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FLY] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BIND] = {0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SLAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_VINE_WHIP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_STOMP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_DOUBLE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_MEGA_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_JUMP_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROLLING_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SAND_ATTACK] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_HEADBUTT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_HORN_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FURY_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_HORN_DRILL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_TACKLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BODY_SLAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_WRAP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_TAKE_DOWN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_THRASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_DOUBLE_EDGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TAIL_WHIP] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_POISON_STING] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_TWINEEDLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_PIN_MISSILE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LEER] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_BITE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_GROWL] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROAR] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SING] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SUPERSONIC] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SONIC_BOOM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DISABLE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ACID] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_EMBER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_FLAMETHROWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+    [MOVE_MIST] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_WATER_GUN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_HYDRO_PUMP] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0},
+    [MOVE_SURF] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0},
+    [MOVE_ICE_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+    [MOVE_BLIZZARD] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1},
+    [MOVE_PSYBEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_BUBBLE_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_AURORA_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_HYPER_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0},
+    [MOVE_PECK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_DRILL_PECK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SUBMISSION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LOW_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_COUNTER] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_SEISMIC_TOSS] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_STRENGTH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ABSORB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_MEGA_DRAIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_LEECH_SEED] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_GROWTH] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_RAZOR_LEAF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SOLAR_BEAM] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
+    [MOVE_POISON_POWDER] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_STUN_SPORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SLEEP_POWDER] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_PETAL_DANCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_STRING_SHOT] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DRAGON_RAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FIRE_SPIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_THUNDER_SHOCK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_THUNDERBOLT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+    [MOVE_THUNDER_WAVE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_THUNDER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1},
+    [MOVE_ROCK_THROW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_EARTHQUAKE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0},
+    [MOVE_FISSURE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0},
+    [MOVE_DIG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TOXIC] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_CONFUSION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_PSYCHIC] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+    [MOVE_HYPNOSIS] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_MEDITATE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_AGILITY] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_QUICK_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_RAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TELEPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_NIGHT_SHADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_MIMIC] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SCREECH] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DOUBLE_TEAM] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_RECOVER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_HARDEN] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_MINIMIZE] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SMOKESCREEN] = {0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CONFUSE_RAY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_WITHDRAW] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DEFENSE_CURL] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BARRIER] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LIGHT_SCREEN] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_HAZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_REFLECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_FOCUS_ENERGY] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BIDE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_METRONOME] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+    [MOVE_MIRROR_MOVE] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+    [MOVE_SELF_DESTRUCT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
+    [MOVE_EGG_BOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0},
+    [MOVE_LICK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SMOG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SLUDGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_BONE_CLUB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_FIRE_BLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
+    [MOVE_WATERFALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CLAMP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SWIFT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SKULL_BASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
+    [MOVE_SPIKE_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CONSTRICT] = {0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_AMNESIA] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_KINESIS] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SOFT_BOILED] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_HI_JUMP_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_GLARE] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DREAM_EATER] = {1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
+    [MOVE_POISON_GAS] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BARRAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LEECH_LIFE] = {0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_LOVELY_KISS] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SKY_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
+    [MOVE_TRANSFORM] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BUBBLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_DIZZY_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SPORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FLASH] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_PSYWAVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SPLASH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ACID_ARMOR] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_CRABHAMMER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0},
+    [MOVE_EXPLOSION] = {0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0},
+    [MOVE_FURY_SWIPES] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BONEMERANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_REST] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROCK_SLIDE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_HYPER_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SHARPEN] = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_CONVERSION] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_TRI_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SUPER_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SLASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SUBSTITUTE] = {0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_STRUGGLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_SKETCH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0},
+    [MOVE_TRIPLE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_THIEF] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SPIDER_WEB] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_MIND_READER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_NIGHTMARE] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FLAME_WHEEL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SNORE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_CURSE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_FLAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CONVERSION_2] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_AEROBLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
+    [MOVE_COTTON_SPORE] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_REVERSAL] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SPITE] = {0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_POWDER_SNOW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_PROTECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+    [MOVE_MACH_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SCARY_FACE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_FAINT_ATTACK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SWEET_KISS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BELLY_DRUM] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SLUDGE_BOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
+    [MOVE_MUD_SLAP] = {0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_OCTAZOOKA] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SPIKES] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ZAP_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1},
+    [MOVE_FORESIGHT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_DESTINY_BOND] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_PERISH_SONG] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_ICY_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_DETECT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_BONE_RUSH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LOCK_ON] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_OUTRAGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1},
+    [MOVE_SANDSTORM] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_GIGA_DRAIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_ENDURE] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_CHARM] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROLLOUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_FALSE_SWIPE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SWAGGER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_MILK_DRINK] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SPARK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_FURY_CUTTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_STEEL_WING] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_MEAN_LOOK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_ATTRACT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SLEEP_TALK] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
+    [MOVE_HEAL_BELL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_RETURN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_PRESENT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0},
+    [MOVE_FRUSTRATION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SAFEGUARD] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_PAIN_SPLIT] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SACRED_FIRE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
+    [MOVE_MAGNITUDE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_DYNAMIC_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1},
+    [MOVE_MEGAHORN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0},
+    [MOVE_DRAGON_BREATH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_BATON_PASS] = {1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ENCORE] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_PURSUIT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_RAPID_SPIN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SWEET_SCENT] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_IRON_TAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
+    [MOVE_METAL_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_VITAL_THROW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_MORNING_SUN] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_SYNTHESIS] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_MOONLIGHT] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_HIDDEN_POWER] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CROSS_CHOP] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0},
+    [MOVE_TWISTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_RAIN_DANCE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_SUNNY_DAY] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_CRUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_MIRROR_COAT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_PSYCH_UP] = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_EXTREME_SPEED] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_ANCIENT_POWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1},
+    [MOVE_SHADOW_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_FUTURE_SIGHT] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROCK_SMASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_WHIRLPOOL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_BEAT_UP] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FAKE_OUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_UPROAR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_STOCKPILE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SPIT_UP] = {1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
+    [MOVE_SWALLOW] = {1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_HEAT_WAVE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},
+    [MOVE_HAIL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_TORMENT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FLATTER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_WILL_O_WISP] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_MEMENTO] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FACADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FOCUS_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
+    [MOVE_SMELLING_SALT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FOLLOW_ME] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_NATURE_POWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_CHARGE] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TAUNT] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_HELPING_HAND] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TRICK] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROLE_PLAY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_WISH] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ASSIST] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_INGRAIN] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_SUPERPOWER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0},
+    [MOVE_MAGIC_COAT] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_RECYCLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_REVENGE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_BRICK_BREAK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_YAWN] = {1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_KNOCK_OFF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_ENDEAVOR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_ERUPTION] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
+    [MOVE_SKILL_SWAP] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_IMPRISON] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_REFRESH] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_GRUDGE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_SNATCH] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0},
+    [MOVE_SECRET_POWER] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_DIVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ARM_THRUST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CAMOUFLAGE] = {0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TAIL_GLOW] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_LUSTER_PURGE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1},
+    [MOVE_MIST_BALL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1},
+    [MOVE_FEATHER_DANCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_TEETER_DANCE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_BLAZE_KICK] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_MUD_SPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ICE_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_NEEDLE_ARM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SLACK_OFF] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_HYPER_VOICE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0},
+    [MOVE_POISON_FANG] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_CRUSH_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_BLAST_BURN] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
+    [MOVE_HYDRO_CANNON] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
+    [MOVE_METEOR_MASH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1},
+    [MOVE_ASTONISH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_WEATHER_BALL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_AROMATHERAPY] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+    [MOVE_FAKE_TEARS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_AIR_CUTTER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_OVERHEAT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1},
+    [MOVE_ODOR_SLEUTH] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROCK_TOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SILVER_WIND] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1},
+    [MOVE_METAL_SOUND] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_GRASS_WHISTLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_TICKLE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_COSMIC_POWER] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_WATER_SPOUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0},
+    [MOVE_SIGNAL_BEAM] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SHADOW_PUNCH] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_EXTRASENSORY] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_SKY_UPPERCUT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SAND_TOMB] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_SHEER_COLD] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0},
+    [MOVE_MUDDY_WATER] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
+    [MOVE_BULLET_SEED] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_AERIAL_ACE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ICICLE_SPEAR] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_IRON_DEFENSE] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BLOCK] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+    [MOVE_HOWL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_DRAGON_CLAW] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_FRENZY_PLANT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
+    [MOVE_BULK_UP] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_BOUNCE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1},
+    [MOVE_MUD_SHOT] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+    [MOVE_POISON_TAIL] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_COVET] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_VOLT_TACKLE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0},
+    [MOVE_MAGICAL_LEAF] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_WATER_SPORT] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_CALM_MIND] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_LEAF_BLADE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0},
+    [MOVE_DRAGON_DANCE] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_ROCK_BLAST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_SHOCK_WAVE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+    [MOVE_WATER_PULSE] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1},
+    [MOVE_DOOM_DESIRE] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0},
+    [MOVE_PSYCHO_BOOST] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1},
 };
 
 static const u8 gUnknown_0860C988[][DOME_TOURNAMENT_TRAINERS_COUNT] =
@@ -687,7 +531,7 @@ static const u8 sUnusedArray[] =
     0, 0, 0, 254, 0, 0, 0, 0, 0,
 };
 
-static const u8 gUnknown_0860CBF1[][5][4]=
+static const u8 sTourneyTreeCursorMovementMap[][5][4]=
 {
     {{0x07, 0x01, 0x08, 0x10}, {0x07, 0x01, 0x08, 0x10}, {0x07, 0x01, 0x08, 0x10}, {0x07, 0x01, 0x08, 0x10}, {0x07, 0x01, 0x08, 0x10}},
     {{0x00, 0x02, 0x09, 0x10}, {0x00, 0x02, 0x09, 0x10}, {0x00, 0x02, 0x09, 0x10}, {0x00, 0x02, 0x09, 0x10}, {0x00, 0x02, 0x09, 0x10}},
@@ -806,7 +650,7 @@ static const struct BgTemplate gUnknown_0860CE84[4] =
 static const struct WindowTemplate gUnknown_0860CE94[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 0,
         .tilemapTop = 3,
         .width = 8,
@@ -815,7 +659,7 @@ static const struct WindowTemplate gUnknown_0860CE94[] =
         .baseBlock = 16,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 22,
         .tilemapTop = 3,
         .width = 8,
@@ -824,7 +668,7 @@ static const struct WindowTemplate gUnknown_0860CE94[] =
         .baseBlock = 144,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 8,
         .tilemapTop = 1,
         .width = 14,
@@ -838,7 +682,7 @@ static const struct WindowTemplate gUnknown_0860CE94[] =
 static const struct WindowTemplate gUnknown_0860CEB4[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 2,
         .width = 26,
@@ -847,7 +691,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 1,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 16,
         .tilemapTop = 5,
         .width = 8,
@@ -856,7 +700,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 53,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 19,
         .tilemapTop = 7,
         .width = 9,
@@ -865,7 +709,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 69,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 16,
         .tilemapTop = 10,
         .width = 8,
@@ -874,7 +718,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 96,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 12,
         .width = 26,
@@ -883,7 +727,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 112,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 5,
         .tilemapTop = 2,
         .width = 23,
@@ -892,7 +736,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 294,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 5,
         .width = 8,
@@ -901,7 +745,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 340,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 20,
         .tilemapTop = 5,
         .width = 8,
@@ -910,7 +754,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 356,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 16,
         .width = 26,
@@ -919,7 +763,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 372,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 2,
         .tilemapTop = 2,
         .width = 26,
@@ -928,7 +772,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 1,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 16,
         .tilemapTop = 5,
         .width = 8,
@@ -937,7 +781,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 53,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 19,
         .tilemapTop = 7,
         .width = 9,
@@ -946,7 +790,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 69,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 16,
         .tilemapTop = 10,
         .width = 8,
@@ -955,7 +799,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 96,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 2,
         .tilemapTop = 12,
         .width = 26,
@@ -964,7 +808,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 112,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 5,
         .tilemapTop = 2,
         .width = 23,
@@ -973,7 +817,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 294,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 2,
         .tilemapTop = 5,
         .width = 8,
@@ -982,7 +826,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 340,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 20,
         .tilemapTop = 5,
         .width = 8,
@@ -991,7 +835,7 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
         .baseBlock = 356,
     },
     {
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 2,
         .tilemapTop = 16,
         .width = 26,
@@ -1002,14 +846,14 @@ static const struct WindowTemplate gUnknown_0860CEB4[] =
     // UB: No DUMMY_WIN_TEMPLATE at the array's end.
 };
 
-static const struct ScanlineEffectParams gUnknown_0860CF44 =
+static const struct ScanlineEffectParams sTourneyTreeScanlineEffectParams =
 {
     .dmaDest = (void *)REG_ADDR_BG3CNT,
-    .dmaControl = 0xa2600001,
+    .dmaControl = SCANLINE_EFFECT_DMACNT_16BIT,
     .initState = 1,
 };
 
-static const struct CompressedSpriteSheet gUnknown_0860CF50[] =
+static const struct CompressedSpriteSheet sDomeOptionsSpriteSheet[] =
 {
     {gBattleFrontierGfx_DomeOptions, 0x0600, 0x0000},
     {},
@@ -1028,10 +872,10 @@ static const struct OamData gUnknown_0860CF70 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(16x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 1,
+    .size = SPRITE_SIZE(16x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 0,
@@ -1045,10 +889,10 @@ static const struct OamData gUnknown_0860CF78 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 1,
+    .shape = SPRITE_SHAPE(32x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 1,
@@ -1062,10 +906,10 @@ static const struct OamData gUnknown_0860CF80 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 1,
+    .shape = SPRITE_SHAPE(16x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(16x8),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 2,
@@ -1079,10 +923,10 @@ static const struct OamData gUnknown_0860CF88 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 2,
+    .shape = SPRITE_SHAPE(8x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 2,
@@ -1233,34 +1077,31 @@ static const struct SpriteTemplate gUnknown_0860D068 =
     .callback = sub_8190C6C
 };
 
-static const u8 gUnknown_0860D080[DOME_TOURNAMENT_TRAINERS_COUNT] =
-{
-    0x00, 0x08, 0x0c, 0x04, 0x07, 0x0f, 0x0b, 0x03, 0x02, 0x0a, 0x0e, 0x06, 0x05, 0x0d, 0x09, 0x01
-};
+static const u8 sTourneyTreeTrainerIds[] = {0, 8, 12, 4, 7, 15, 11, 3, 2, 10, 14, 6, 5, 13, 9, 1};
 
-static void (* const gUnknown_0860D090[])(void) =
+static void (* const sBattleDomeFunctions[])(void) =
 {
-    sub_818E9CC,
-    sub_818EA84,
-    sub_818ED28,
-    sub_818F9B0,
-    sub_818F9E0,
-    sub_818FA20,
+    InitDomeChallenge,
+    GetDomeData,
+    SetDomeData,
+    BufferDomeRoundText,
+    BufferDomeOpponentName,
+    InitDomeOpponentParty,
     ShowDomeOpponentInfo,
-    sub_81938A4,
-    sub_81938E0,
-    sub_8190298,
-    sub_81902E4,
-    sub_8193D40,
-    sub_8193D7C,
+    ShowDomeTourneyTree,
+    ShowPreviousDomeResultsTourneyTree,
+    SetDomeOpponentId,
+    SetDomeOpponentGraphicsId,
+    ShowNonInteractiveDomeTourneyTree,
+    ResolveDomeRoundWinners,
     sub_81902F8,
-    sub_819033C,
-    sub_8194D48,
-    sub_8194D68,
-    sub_8194E44,
-    sub_8194EB4,
-    sub_8194EC0,
-    sub_8194EF8,
+    UpdateDomeStreaks,
+    InitDomeFacilityTrainersAndMons,
+    RestoreDomePlayerParty,
+    RestoreDomePlayerPartyHeldItems,
+    ReduceDomePlayerPartyTo3Mons,
+    GetPlayerSeededBeforeOpponent,
+    BufferLastDomeWinnerName,
     sub_8194F58,
     InitDomeTrainers,
 };
@@ -1335,108 +1176,108 @@ static const u8 gUnknown_0860D1A0[][4] =
 
 static const u8 gUnknown_0860D1C0[] = {0x00, 0x0f, 0x08, 0x07, 0x03, 0x0c, 0x0b, 0x04, 0x01, 0x0e, 0x09, 0x06, 0x02, 0x0d, 0x0a, 0x05};
 
-static const u8 *const gBattleDomePotentialPointers[] =
+static const u8 *const sBattleDomePotentialTexts[] =
 {
-    gBattleDomeOpponentPotential1,
-    gBattleDomeOpponentPotential2,
-    gBattleDomeOpponentPotential3,
-    gBattleDomeOpponentPotential4,
-    gBattleDomeOpponentPotential5,
-    gBattleDomeOpponentPotential6,
-    gBattleDomeOpponentPotential7,
-    gBattleDomeOpponentPotential8,
-    gBattleDomeOpponentPotential9,
-    gBattleDomeOpponentPotential10,
-    gBattleDomeOpponentPotential11,
-    gBattleDomeOpponentPotential12,
-    gBattleDomeOpponentPotential13,
-    gBattleDomeOpponentPotential14,
-    gBattleDomeOpponentPotential15,
-    gBattleDomeOpponentPotential16,
-    gBattleDomeOpponentPotential17,
+    gBattleDomeOpponentPotentialText1,
+    gBattleDomeOpponentPotentialText2,
+    gBattleDomeOpponentPotentialText3,
+    gBattleDomeOpponentPotentialText4,
+    gBattleDomeOpponentPotentialText5,
+    gBattleDomeOpponentPotentialText6,
+    gBattleDomeOpponentPotentialText7,
+    gBattleDomeOpponentPotentialText8,
+    gBattleDomeOpponentPotentialText9,
+    gBattleDomeOpponentPotentialText10,
+    gBattleDomeOpponentPotentialText11,
+    gBattleDomeOpponentPotentialText12,
+    gBattleDomeOpponentPotentialText13,
+    gBattleDomeOpponentPotentialText14,
+    gBattleDomeOpponentPotentialText15,
+    gBattleDomeOpponentPotentialText16,
+    gBattleDomeOpponentPotentialText17,
 };
 
-static const u8 *const gBattleDomeOpponentStylePointers[] =
+static const u8 *const sBattleDomeOpponentStyleTexts[] =
 {
-    gBattleDomeOpponentStyle1,
-    gBattleDomeOpponentStyle2,
-    gBattleDomeOpponentStyle3,
-    gBattleDomeOpponentStyle4,
-    gBattleDomeOpponentStyle5,
-    gBattleDomeOpponentStyle6,
-    gBattleDomeOpponentStyle7,
-    gBattleDomeOpponentStyle8,
-    gBattleDomeOpponentStyle9,
-    gBattleDomeOpponentStyle10,
-    gBattleDomeOpponentStyle11,
-    gBattleDomeOpponentStyle12,
-    gBattleDomeOpponentStyle13,
-    gBattleDomeOpponentStyle14,
-    gBattleDomeOpponentStyle15,
-    gBattleDomeOpponentStyle16,
-    gBattleDomeOpponentStyle17,
-    gBattleDomeOpponentStyle18,
-    gBattleDomeOpponentStyle19,
-    gBattleDomeOpponentStyle20,
-    gBattleDomeOpponentStyle21,
-    gBattleDomeOpponentStyle22,
-    gBattleDomeOpponentStyle23,
-    gBattleDomeOpponentStyle24,
-    gBattleDomeOpponentStyle25,
-    gBattleDomeOpponentStyle26,
-    gBattleDomeOpponentStyle27,
-    gBattleDomeOpponentStyle28,
-    gBattleDomeOpponentStyleUnused1,
-    gBattleDomeOpponentStyleUnused2,
-    gBattleDomeOpponentStyleUnused3,
-    gBattleDomeOpponentStyleUnused4,
+    gBattleDomeOpponentStyleText1,
+    gBattleDomeOpponentStyleText2,
+    gBattleDomeOpponentStyleText3,
+    gBattleDomeOpponentStyleText4,
+    gBattleDomeOpponentStyleText5,
+    gBattleDomeOpponentStyleText6,
+    gBattleDomeOpponentStyleText7,
+    gBattleDomeOpponentStyleText8,
+    gBattleDomeOpponentStyleText9,
+    gBattleDomeOpponentStyleText10,
+    gBattleDomeOpponentStyleText11,
+    gBattleDomeOpponentStyleText12,
+    gBattleDomeOpponentStyleText13,
+    gBattleDomeOpponentStyleText14,
+    gBattleDomeOpponentStyleText15,
+    gBattleDomeOpponentStyleText16,
+    gBattleDomeOpponentStyleText17,
+    gBattleDomeOpponentStyleText18,
+    gBattleDomeOpponentStyleText19,
+    gBattleDomeOpponentStyleText20,
+    gBattleDomeOpponentStyleText21,
+    gBattleDomeOpponentStyleText22,
+    gBattleDomeOpponentStyleText23,
+    gBattleDomeOpponentStyleText24,
+    gBattleDomeOpponentStyleText25,
+    gBattleDomeOpponentStyleText26,
+    gBattleDomeOpponentStyleText27,
+    gBattleDomeOpponentStyleText28,
+    gBattleDomeOpponentStyleTextUnused1,
+    gBattleDomeOpponentStyleTextUnused2,
+    gBattleDomeOpponentStyleTextUnused3,
+    gBattleDomeOpponentStyleTextUnused4,
 };
 
-static const u8 *const gBattleDomeOpponentStatsPointers[] =
+static const u8 *const sBattleDomeOpponentStatsTexts[] =
 {
-    gBattleDomeOpponentStats1,
-    gBattleDomeOpponentStats2,
-    gBattleDomeOpponentStats3,
-    gBattleDomeOpponentStats4,
-    gBattleDomeOpponentStats5,
-    gBattleDomeOpponentStats6,
-    gBattleDomeOpponentStats7,
-    gBattleDomeOpponentStats8,
-    gBattleDomeOpponentStats9,
-    gBattleDomeOpponentStats10,
-    gBattleDomeOpponentStats11,
-    gBattleDomeOpponentStats12,
-    gBattleDomeOpponentStats13,
-    gBattleDomeOpponentStats14,
-    gBattleDomeOpponentStats15,
-    gBattleDomeOpponentStats16,
-    gBattleDomeOpponentStats17,
-    gBattleDomeOpponentStats18,
-    gBattleDomeOpponentStats19,
-    gBattleDomeOpponentStats20,
-    gBattleDomeOpponentStats21,
-    gBattleDomeOpponentStats22,
-    gBattleDomeOpponentStats23,
-    gBattleDomeOpponentStats24,
-    gBattleDomeOpponentStats25,
-    gBattleDomeOpponentStats26,
-    gBattleDomeOpponentStats27,
-    gBattleDomeOpponentStats28,
-    gBattleDomeOpponentStats29,
-    gBattleDomeOpponentStats30,
-    gBattleDomeOpponentStats31,
-    gBattleDomeOpponentStats32,
-    gBattleDomeOpponentStats33,
-    gBattleDomeOpponentStats34,
-    gBattleDomeOpponentStats35,
-    gBattleDomeOpponentStats36,
-    gBattleDomeOpponentStats37,
-    gBattleDomeOpponentStats38,
-    gBattleDomeOpponentStats39,
-    gBattleDomeOpponentStats40,
-    gBattleDomeOpponentStats41,
-    gBattleDomeOpponentStats42,
-    gBattleDomeOpponentStats43,
+    gBattleDomeOpponentStatsText1,
+    gBattleDomeOpponentStatsText2,
+    gBattleDomeOpponentStatsText3,
+    gBattleDomeOpponentStatsText4,
+    gBattleDomeOpponentStatsText5,
+    gBattleDomeOpponentStatsText6,
+    gBattleDomeOpponentStatsText7,
+    gBattleDomeOpponentStatsText8,
+    gBattleDomeOpponentStatsText9,
+    gBattleDomeOpponentStatsText10,
+    gBattleDomeOpponentStatsText11,
+    gBattleDomeOpponentStatsText12,
+    gBattleDomeOpponentStatsText13,
+    gBattleDomeOpponentStatsText14,
+    gBattleDomeOpponentStatsText15,
+    gBattleDomeOpponentStatsText16,
+    gBattleDomeOpponentStatsText17,
+    gBattleDomeOpponentStatsText18,
+    gBattleDomeOpponentStatsText19,
+    gBattleDomeOpponentStatsText20,
+    gBattleDomeOpponentStatsText21,
+    gBattleDomeOpponentStatsText22,
+    gBattleDomeOpponentStatsText23,
+    gBattleDomeOpponentStatsText24,
+    gBattleDomeOpponentStatsText25,
+    gBattleDomeOpponentStatsText26,
+    gBattleDomeOpponentStatsText27,
+    gBattleDomeOpponentStatsText28,
+    gBattleDomeOpponentStatsText29,
+    gBattleDomeOpponentStatsText30,
+    gBattleDomeOpponentStatsText31,
+    gBattleDomeOpponentStatsText32,
+    gBattleDomeOpponentStatsText33,
+    gBattleDomeOpponentStatsText34,
+    gBattleDomeOpponentStatsText35,
+    gBattleDomeOpponentStatsText36,
+    gBattleDomeOpponentStatsText37,
+    gBattleDomeOpponentStatsText38,
+    gBattleDomeOpponentStatsText39,
+    gBattleDomeOpponentStatsText40,
+    gBattleDomeOpponentStatsText41,
+    gBattleDomeOpponentStatsText42,
+    gBattleDomeOpponentStatsText43,
 };
 
 static const u8 sInfoTrainerMonX[] = {0x68, 0x88, 0x68};
@@ -1445,34 +1286,34 @@ static const u8 gUnknown_0860D346[] = {0x00, 0x04, 0x00};
 
 static const u8 gUnknown_0860D349[] = {0x00, 0x05, 0x09, 0x0c, 0x0e, 0x00, 0x00};
 
-static const u8 *const gBattleDomeMatchNumberPointers[] =
+static const u8 *const sBattleDomeMatchNumberTexts[] =
 {
-    gBattleDomeMatchNumber1,
-    gBattleDomeMatchNumber2,
-    gBattleDomeMatchNumber3,
-    gBattleDomeMatchNumber4,
-    gBattleDomeMatchNumber5,
-    gBattleDomeMatchNumber6,
-    gBattleDomeMatchNumber7,
-    gBattleDomeMatchNumber8,
-    gBattleDomeMatchNumber9,
-    gBattleDomeMatchNumber10,
-    gBattleDomeMatchNumber11,
-    gBattleDomeMatchNumber12,
-    gBattleDomeMatchNumber13,
-    gBattleDomeMatchNumber14,
-    gBattleDomeMatchNumber15,
+    gBattleDomeMatchNumberText1,
+    gBattleDomeMatchNumberText2,
+    gBattleDomeMatchNumberText3,
+    gBattleDomeMatchNumberText4,
+    gBattleDomeMatchNumberText5,
+    gBattleDomeMatchNumberText6,
+    gBattleDomeMatchNumberText7,
+    gBattleDomeMatchNumberText8,
+    gBattleDomeMatchNumberText9,
+    gBattleDomeMatchNumberText10,
+    gBattleDomeMatchNumberText11,
+    gBattleDomeMatchNumberText12,
+    gBattleDomeMatchNumberText13,
+    gBattleDomeMatchNumberText14,
+    gBattleDomeMatchNumberText15,
 };
 
-static const u8 *const gBattleDomeWinStringsPointers[] =
+static const u8 *const sBattleDomeWinTexts[] =
 {
-    gBattleDomeWinStrings1,
-    gBattleDomeWinStrings2,
-    gBattleDomeWinStrings3,
-    gBattleDomeWinStrings4,
-    gBattleDomeWinStrings5,
-    gBattleDomeWinStrings6,
-    gBattleDomeWinStrings7,
+    gBattleDomeWinText1,
+    gBattleDomeWinText2,
+    gBattleDomeWinText3,
+    gBattleDomeWinText4,
+    gBattleDomeWinText5,
+    gBattleDomeWinText6,
+    gBattleDomeWinText7,
 };
 
 static const u8 sFirstTrainerMonX[] = {0x60, 0x60, 0x60};
@@ -2415,26 +2256,26 @@ static const u8 gUnknown_0860DE10[DOME_TOURNAMENT_TRAINERS_COUNT][4] =
 // code
 void CallBattleDomeFunction(void)
 {
-    gUnknown_0860D090[gSpecialVar_0x8004]();
+    sBattleDomeFunctions[gSpecialVar_0x8004]();
 }
 
-static void sub_818E9CC(void)
+static void InitDomeChallenge(void)
 {
     u32 lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
     u32 battleMode = VarGet(VAR_FRONTIER_BATTLE_MODE);
 
     gSaveBlock2Ptr->frontier.field_CA8 = 0;
-    gSaveBlock2Ptr->frontier.field_CB2 = 0;
+    gSaveBlock2Ptr->frontier.curChallengeBattleNum = 0;
     gSaveBlock2Ptr->frontier.field_CA9_a = 0;
     gSaveBlock2Ptr->frontier.field_CA9_b = 0;
     if (!(gSaveBlock2Ptr->frontier.field_CDC & gUnknown_0860D0EC[battleMode][lvlMode]))
-        gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode] = 0;
+        gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode] = 0;
 
-    saved_warp2_set(0, gSaveBlock1Ptr->location.mapGroup, gSaveBlock1Ptr->location.mapNum, -1);
+    SetDynamicWarp(0, gSaveBlock1Ptr->location.mapGroup, gSaveBlock1Ptr->location.mapNum, -1);
     gTrainerBattleOpponent_A = 0;
 }
 
-static void sub_818EA84(void)
+static void GetDomeData(void)
 {
     u32 lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
     u32 battleMode = VarGet(VAR_FRONTIER_BATTLE_MODE);
@@ -2442,7 +2283,7 @@ static void sub_818EA84(void)
     switch (gSpecialVar_0x8005)
     {
     case 0:
-        gSpecialVar_Result = gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode];
+        gSpecialVar_Result = gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode];
         break;
     case 1:
         gSpecialVar_Result = ((gSaveBlock2Ptr->frontier.field_CDC & gUnknown_0860D0EC[battleMode][lvlMode]) != 0);
@@ -2493,8 +2334,8 @@ static void sub_818EA84(void)
         break;
     case 8:
         sub_81B8558();
-        gUnknown_0203CEF8[0] = gSaveBlock2Ptr->frontier.field_CB0;
-        gUnknown_0203CEF8[1] = gSaveBlock2Ptr->frontier.field_CB0 >> 8;
+        gSelectedOrderFromParty[0] = gSaveBlock2Ptr->frontier.field_CB0;
+        gSelectedOrderFromParty[1] = gSaveBlock2Ptr->frontier.field_CB0 >> 8;
         break;
     case 9:
         gSpecialVar_Result = (gSaveBlock2Ptr->frontier.field_D0A * 2) - 3 + gSaveBlock2Ptr->frontier.field_D0B;
@@ -2502,7 +2343,7 @@ static void sub_818EA84(void)
     }
 }
 
-static void sub_818ED28(void)
+static void SetDomeData(void)
 {
     u32 lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
     u32 battleMode = VarGet(VAR_FRONTIER_BATTLE_MODE);
@@ -2510,7 +2351,7 @@ static void sub_818ED28(void)
     switch (gSpecialVar_0x8005)
     {
     case 0:
-        gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode] = gSpecialVar_0x8006;
+        gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode] = gSpecialVar_0x8006;
         break;
     case 1:
         if (gSpecialVar_0x8006)
@@ -2563,28 +2404,28 @@ static void sub_818ED28(void)
         }
         break;
     case 8:
-        gSaveBlock2Ptr->frontier.field_CB0 = T1_READ_16(gUnknown_0203CEF8);
+        gSaveBlock2Ptr->frontier.field_CB0 = T1_READ_16(gSelectedOrderFromParty);
         break;
     }
 }
 
 static void InitDomeTrainers(void)
 {
-    s32 i, j, k;
-    s32 monLevel;
-    s32 species[3];
-    s32 monTypesBits, monTypesCount;
-    s32 trainerId;
-    s32 monTournamentId;
+    int i, j, k;
+    int monLevel;
+    int species[3];
+    int monTypesBits, monTypesCount;
+    int trainerId;
+    int monSetId;
     u16 *statSums;
-    s32 *statValues;
+    int *statValues;
     u8 ivs = 0;
 
     species[0] = 0;
     species[1] = 0;
     species[2] = 0;
     statSums = AllocZeroed(sizeof(u16) * DOME_TOURNAMENT_TRAINERS_COUNT);
-    statValues = AllocZeroed(sizeof(s32) * 6);
+    statValues = AllocZeroed(sizeof(int) * 6);
 
     gSaveBlock2Ptr->frontier.field_D0A = gSaveBlock2Ptr->frontier.lvlMode + 1;
     gSaveBlock2Ptr->frontier.field_D0B = VarGet(VAR_FRONTIER_BATTLE_MODE) + 1;
@@ -2595,13 +2436,13 @@ static void InitDomeTrainers(void)
 
     for (i = 0; i < 3; i++)
     {
-        gSaveBlock2Ptr->frontier.domeMonId[0][i] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.field_CAA[i] - 1], MON_DATA_SPECIES, NULL);
-        for (j = 0; j < 4; j++)
-            gSaveBlock2Ptr->frontier.field_EFC[i].moves[j] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.field_CAA[i] - 1], MON_DATA_MOVE1 + j, NULL);
+        gSaveBlock2Ptr->frontier.domeMonIds[0][i] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[i] - 1], MON_DATA_SPECIES, NULL);
+        for (j = 0; j < MAX_MON_MOVES; j++)
+            gSaveBlock2Ptr->frontier.field_EFC[i].moves[j] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[i] - 1], MON_DATA_MOVE1 + j, NULL);
         for (j = 0; j < 6; j++)
-            gSaveBlock2Ptr->frontier.field_EFC[i].evs[j] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.field_CAA[i] - 1], MON_DATA_HP_EV + j, NULL);
+            gSaveBlock2Ptr->frontier.field_EFC[i].evs[j] = GetMonData(&gPlayerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[i] - 1], MON_DATA_HP_EV + j, NULL);
 
-        gSaveBlock2Ptr->frontier.field_EFC[i].nature = GetNature(&gPlayerParty[gSaveBlock2Ptr->frontier.field_CAA[i] - 1]);
+        gSaveBlock2Ptr->frontier.field_EFC[i].nature = GetNature(&gPlayerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[i] - 1]);
     }
 
     for (i = 1; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
@@ -2610,7 +2451,7 @@ static void InitDomeTrainers(void)
         {
             do
             {
-                trainerId = sub_8162548(sub_81A39C4(), 0);
+                trainerId = sub_8162548(GetCurrentFacilityWinStreak(), 0);
                 for (j = 1; j < i; j++)
                 {
                     if (gSaveBlock2Ptr->frontier.domeTrainers[j].trainerId == trainerId)
@@ -2623,7 +2464,7 @@ static void InitDomeTrainers(void)
         {
             do
             {
-                trainerId = sub_8162548(sub_81A39C4() + 1, 0);
+                trainerId = sub_8162548(GetCurrentFacilityWinStreak() + 1, 0);
                 for (j = 1; j < i; j++)
                 {
                     if (gSaveBlock2Ptr->frontier.domeTrainers[j].trainerId == trainerId)
@@ -2638,20 +2479,20 @@ static void InitDomeTrainers(void)
             // Make sure the mon is valid.
             do
             {
-                monTournamentId = RandomizeFacilityTrainerMonId(trainerId);
+                monSetId = RandomizeFacilityTrainerMonSet(trainerId);
                 for (k = 0; k < j; k++)
                 {
-                    s32 checkingMonId = gSaveBlock2Ptr->frontier.domeMonId[i][k];
-                    if (checkingMonId == monTournamentId
-                        || species[0] == gFacilityTrainerMons[monTournamentId].species
-                        || species[1] == gFacilityTrainerMons[monTournamentId].species
-                        || gFacilityTrainerMons[checkingMonId].itemTableId == gFacilityTrainerMons[monTournamentId].itemTableId)
+                    int checkingMonSetId = gSaveBlock2Ptr->frontier.domeMonIds[i][k];
+                    if (checkingMonSetId == monSetId
+                        || species[0] == gFacilityTrainerMons[monSetId].species
+                        || species[1] == gFacilityTrainerMons[monSetId].species
+                        || gFacilityTrainerMons[checkingMonSetId].itemTableId == gFacilityTrainerMons[monSetId].itemTableId)
                         break;
                 }
             } while (k != j);
 
-            gSaveBlock2Ptr->frontier.domeMonId[i][j] = monTournamentId;
-            species[j] = gFacilityTrainerMons[monTournamentId].species;
+            gSaveBlock2Ptr->frontier.domeMonIds[i][j] = monSetId;
+            species[j] = gFacilityTrainerMons[monSetId].species;
         }
 
         gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated = 0;
@@ -2663,7 +2504,7 @@ static void InitDomeTrainers(void)
     statSums[0] = 0;
     for (i = 0; i < 3; i++)
     {
-        trainerId = gSaveBlock2Ptr->frontier.field_CAA[i] - 1; // Great variable choice, gamefreak.
+        trainerId = gSaveBlock2Ptr->frontier.selectedPartyMons[i] - 1; // Great variable choice, gamefreak.
         statSums[0] += GetMonData(&gPlayerParty[trainerId], MON_DATA_ATK, NULL);
         statSums[0] += GetMonData(&gPlayerParty[trainerId], MON_DATA_DEF, NULL);
         statSums[0] += GetMonData(&gPlayerParty[trainerId], MON_DATA_SPATK, NULL);
@@ -2681,7 +2522,7 @@ static void InitDomeTrainers(void)
         monTypesBits >>= 1;
     }
 
-    monLevel = GetFacilityEnemyMonLevel();
+    monLevel = SetFacilityPtrsGetLevel();
     statSums[0] += (monTypesCount * monLevel) / 20;
 
     for (i = 1; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
@@ -2691,10 +2532,10 @@ static void InitDomeTrainers(void)
         ivs = GetDomeTrainerMonIvs(gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId);
         for (j = 0; j < 3; j++)
         {
-            CalcDomeMonStats(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species,
+            CalcDomeMonStats(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species,
                              monLevel, ivs,
-                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].evSpread,
-                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].nature,
+                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].evSpread,
+                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].nature,
                              statValues);
 
             statSums[i] += statValues[STAT_ATK];
@@ -2703,8 +2544,8 @@ static void InitDomeTrainers(void)
             statSums[i] += statValues[STAT_SPDEF];
             statSums[i] += statValues[STAT_SPEED];
             statSums[i] += statValues[STAT_HP];
-            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species].type1];
-            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species].type2];
+            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species].type1];
+            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species].type2];
         }
 
         for (monTypesCount = 0, j = 0; j < 32; j++)
@@ -2757,7 +2598,7 @@ static void InitDomeTrainers(void)
         }
 
         for (i = 0; i < 3; i++)
-            gSaveBlock2Ptr->frontier.domeMonId[j][i] = sub_81A4FF0(i);
+            gSaveBlock2Ptr->frontier.domeMonIds[j][i] = GetFrontierBrainMonSpecies(i);
     }
 
     Free(statSums);
@@ -2771,22 +2612,22 @@ static void InitDomeTrainers(void)
     stats[statIndex] = (u8) ModifyStatByNature(nature, stats[statIndex], statIndex);        \
 }
 
-static void CalcDomeMonStats(u16 species, s32 level, s32 ivs, u8 evBits, u8 nature, s32 *stats)
+static void CalcDomeMonStats(u16 species, int level, int ivs, u8 evBits, u8 nature, int *stats)
 {
-    s32 i, count;
+    int i, count;
     u8 bits;
     u16 resultingEvs;
-    s32 evs[6];
+    int evs[NUM_STATS];
 
     count = 0, bits = evBits;
-    for (i = 0; i < 6; bits >>= 1, i++)
+    for (i = 0; i < NUM_STATS; bits >>= 1, i++)
     {
         if (bits & 1)
             count++;
     }
 
     resultingEvs = MAX_TOTAL_EVS / count;
-    for (i = 0; i < 6; bits <<= 1, i++)
+    for (i = 0; i < NUM_STATS; bits <<= 1, i++)
     {
         evs[i] = 0;
         if (evBits & bits)
@@ -2799,7 +2640,7 @@ static void CalcDomeMonStats(u16 species, s32 level, s32 ivs, u8 evBits, u8 natu
     }
     else
     {
-        s32 n = 2 * gBaseStats[species].baseHP;
+        int n = 2 * gBaseStats[species].baseHP;
         stats[STAT_HP] = (((n + ivs + evs[STAT_HP] / 4) * level) / 100) + level + 10;
     }
 
@@ -2810,73 +2651,73 @@ static void CalcDomeMonStats(u16 species, s32 level, s32 ivs, u8 evBits, u8 natu
     CALC_STAT(baseSpDefense, STAT_SPDEF);
 }
 
-static void SwapDomeTrainers(s32 id1, s32 id2, u16 *statsArray)
+static void SwapDomeTrainers(int id1, int id2, u16 *statsArray)
 {
-    s32 i;
+    int i;
     u16 temp;
 
     SWAP(statsArray[id1], statsArray[id2], temp);
     SWAP(gSaveBlock2Ptr->frontier.domeTrainers[id1].trainerId, gSaveBlock2Ptr->frontier.domeTrainers[id2].trainerId, temp);
 
     for (i = 0; i < 3; i++)
-        SWAP(gSaveBlock2Ptr->frontier.domeMonId[id1][i], gSaveBlock2Ptr->frontier.domeMonId[id2][i], temp);
+        SWAP(gSaveBlock2Ptr->frontier.domeMonIds[id1][i], gSaveBlock2Ptr->frontier.domeMonIds[id2][i], temp);
 }
 
-static void sub_818F9B0(void)
+static void BufferDomeRoundText(void)
 {
-    StringCopy(gStringVar1, gRoundsStringTable[gSaveBlock2Ptr->frontier.field_CB2]);
+    StringCopy(gStringVar1, gRoundsStringTable[gSaveBlock2Ptr->frontier.curChallengeBattleNum]);
 }
 
-static void sub_818F9E0(void)
+static void BufferDomeOpponentName(void)
 {
-    StringCopy(gStringVar1, gRoundsStringTable[gSaveBlock2Ptr->frontier.field_CB2]);
+    StringCopy(gStringVar1, gRoundsStringTable[gSaveBlock2Ptr->frontier.curChallengeBattleNum]);
     CopyDomeTrainerName(gStringVar2, gTrainerBattleOpponent_A);
 }
 
-static void sub_818FA20(void)
+static void InitDomeOpponentParty(void)
 {
     gUnknown_0203CD70 = 0;
     gUnknown_0203CD74 =  GetMonData(&gPlayerParty[0], MON_DATA_MAX_HP, NULL);
     gUnknown_0203CD74 += GetMonData(&gPlayerParty[1], MON_DATA_MAX_HP, NULL);
     CalculatePlayerPartyCount();
-    CreateDomeTrainerMons(TrainerIdToTournamentId(gTrainerBattleOpponent_A));
+    CreateDomeOpponentMons(TrainerIdToTournamentId(gTrainerBattleOpponent_A));
 }
 
-static void CreateDomeMon(u8 monPartyId, u16 tournamentTrainerId, u8 tournamentMonId, u32 otId)
+static void CreateDomeOpponentMon(u8 monPartyId, u16 tournamentTrainerId, u8 tournamentMonId, u32 otId)
 {
-    s32 i;
+    int i;
     u8 happiness = 0xFF;
     u8 fixedIv = GetDomeTrainerMonIvs(tournamentTrainerId); // BUG: Should be using trainerId instead of tournamentTrainerId. As a result, all Pokemon have ivs of 3.
-    u8 level = GetFacilityEnemyMonLevel();
-    CreateMonWithEVSpreadPersonalityOTID(&gEnemyParty[monPartyId],
-                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].species,
+    u8 level = SetFacilityPtrsGetLevel();
+    CreateMonWithEVSpreadNatureOTID(&gEnemyParty[monPartyId],
+                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].species,
                                          level,
-                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].nature,
+                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].nature,
                                          fixedIv,
-                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].evSpread, otId);
+                                         gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].evSpread, otId);
 
     happiness = 0xFF;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         SetMonMoveSlot(&gEnemyParty[monPartyId],
-                       gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].moves[i], i);
-        if (gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].moves[i] == MOVE_FRUSTRATION)
+                       gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].moves[i], i);
+        if (gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].moves[i] == MOVE_FRUSTRATION)
             happiness = 0;
     }
 
     SetMonData(&gEnemyParty[monPartyId], MON_DATA_FRIENDSHIP, &happiness);
     SetMonData(&gEnemyParty[monPartyId], MON_DATA_HELD_ITEM,
-               &gBattleFrontierHeldItems[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][tournamentMonId]].itemTableId]);
+               &gBattleFrontierHeldItems[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][tournamentMonId]].itemTableId]);
 }
 
-static void CreateDomeTrainerMons(u16 tournamentTrainerId)
+static void CreateDomeOpponentMons(u16 tournamentTrainerId)
 {
     u8 monsCount = 0;
     u32 otId = 0;
-    s32 i, bits;
+    int i, bits;
 
     ZeroEnemyPartyMons();
-    bits = GetTrainerMonCountInBits(tournamentTrainerId);
+    bits = GetDomeTrainerMonCountInBits(tournamentTrainerId);
     otId = Random32();
     if (Random() % 10 > 5)
     {
@@ -2884,7 +2725,7 @@ static void CreateDomeTrainerMons(u16 tournamentTrainerId)
         {
             if (bits & 1)
             {
-                CreateDomeMon(monsCount, tournamentTrainerId, i, otId);
+                CreateDomeOpponentMon(monsCount, tournamentTrainerId, i, otId);
                 monsCount++;
             }
             bits >>= 1;
@@ -2896,7 +2737,7 @@ static void CreateDomeTrainerMons(u16 tournamentTrainerId)
         {
             if (bits & 4)
             {
-                CreateDomeMon(monsCount, tournamentTrainerId, i, otId);
+                CreateDomeOpponentMon(monsCount, tournamentTrainerId, i, otId);
                 monsCount++;
             }
             bits <<= 1;
@@ -2904,9 +2745,9 @@ static void CreateDomeTrainerMons(u16 tournamentTrainerId)
     }
 }
 
-s32 GetTrainerMonCountInBits(u16 tournamentTrainerId)
+int GetDomeTrainerMonCountInBits(u16 tournamentTrainerId)
 {
-    s32 bits;
+    int bits;
     if (Random() & 1)
     {
         bits = sub_818FCBC(tournamentTrainerId, FALSE);
@@ -2923,26 +2764,26 @@ s32 GetTrainerMonCountInBits(u16 tournamentTrainerId)
     return bits;
 }
 
-static s32 sub_818FCBC(u16 tournamentTrainerId, bool8 arg1)
+static int sub_818FCBC(u16 tournamentTrainerId, bool8 arg1)
 {
-    s32 i, moveId, playerMonId;
-    s32 array[3];
+    int i, moveId, playerMonId;
+    int array[3];
 
     for (i = 0; i < 3; i++)
     {
         array[i] = 0;
-        for (moveId = 0; moveId < 4; moveId++)
+        for (moveId = 0; moveId < MAX_MON_MOVES; moveId++)
         {
             for (playerMonId = 0; playerMonId < 3; playerMonId++)
             {
                 if (gSaveBlock2Ptr->frontier.domeTrainers[tournamentTrainerId].trainerId == TRAINER_FRONTIER_BRAIN)
                 {
-                    array[i] += GetTypeEffectivenessPoints(sub_81A5060(i, moveId),
+                    array[i] += GetTypeEffectivenessPoints(GetFrontierBrainMonMove(i, moveId),
                                             GetMonData(&gPlayerParty[playerMonId], MON_DATA_SPECIES, NULL), 0);
                 }
                 else
                 {
-                    array[i] += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][i]].moves[moveId],
+                    array[i] += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][i]].moves[moveId],
                                             GetMonData(&gPlayerParty[playerMonId], MON_DATA_SPECIES, NULL), 0);
                 }
             }
@@ -2951,26 +2792,26 @@ static s32 sub_818FCBC(u16 tournamentTrainerId, bool8 arg1)
     return sub_818FEB4(array, arg1);
 }
 
-static s32 sub_818FDB8(u16 tournamentTrainerId, bool8 arg1)
+static int sub_818FDB8(u16 tournamentTrainerId, bool8 arg1)
 {
-    s32 i, moveId, playerMonId;
-    s32 array[3];
+    int i, moveId, playerMonId;
+    int array[3];
 
     for (i = 0; i < 3; i++)
     {
         array[i] = 0;
-        for (moveId = 0; moveId < 4; moveId++)
+        for (moveId = 0; moveId < MAX_MON_MOVES; moveId++)
         {
             for (playerMonId = 0; playerMonId < 3; playerMonId++)
             {
                 if (gSaveBlock2Ptr->frontier.domeTrainers[tournamentTrainerId].trainerId == TRAINER_FRONTIER_BRAIN)
                 {
-                    array[i] += GetTypeEffectivenessPoints(sub_81A5060(i, moveId),
+                    array[i] += GetTypeEffectivenessPoints(GetFrontierBrainMonMove(i, moveId),
                                             GetMonData(&gPlayerParty[playerMonId], MON_DATA_SPECIES, NULL), 1);
                 }
                 else
                 {
-                    array[i] += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentTrainerId][i]].moves[moveId],
+                    array[i] += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentTrainerId][i]].moves[moveId],
                                             GetMonData(&gPlayerParty[playerMonId], MON_DATA_SPECIES, NULL), 1);
                 }
             }
@@ -2979,11 +2820,11 @@ static s32 sub_818FDB8(u16 tournamentTrainerId, bool8 arg1)
     return sub_818FEB4(array, arg1);
 }
 
-static s32 sub_818FEB4(s32 *arr, bool8 arg1)
+static int sub_818FEB4(int *arr, bool8 arg1)
 {
-    s32 i, j;
-    s32 bits = 0;
-    s32 array[3];
+    int i, j;
+    int bits = 0;
+    int array[3];
 
     for (i = 0; i < 3; i++)
         array[i] = i;
@@ -3010,7 +2851,7 @@ static s32 sub_818FEB4(s32 *arr, bool8 arg1)
         {
             for (j = i + 1; j < 3; j++)
             {
-                s32 temp;
+                int temp;
 
                 if (arr[i] < arr[j])
                 {
@@ -3054,11 +2895,11 @@ static s32 sub_818FEB4(s32 *arr, bool8 arg1)
 
 // Functionally equivalent, while loop is impossible to match.
 #ifdef NONMATCHING
-static s32 GetTypeEffectivenessPoints(s32 move, s32 targetSpecies, s32 arg2)
+static int GetTypeEffectivenessPoints(int move, int targetSpecies, int arg2)
 {
-    s32 defType1, defType2, defAbility, moveType;
-    s32 i = 0;
-    s32 typePower = TYPE_x1;
+    int defType1, defType2, defAbility, moveType;
+    int i = 0;
+    int typePower = TYPE_x1;
 
     if (move == MOVE_NONE || move == 0xFFFF || gBattleMoves[move].power == 0)
         return 0;
@@ -3173,242 +3014,242 @@ static s32 GetTypeEffectivenessPoints(s32 move, s32 targetSpecies, s32 arg2)
 }
 #else
 NAKED
-static s32 GetTypeEffectivenessPoints(s32 move, s32 species, s32 arg2)
+static int GetTypeEffectivenessPoints(int move, int species, int arg2)
 {
     asm_unified("\n\
-	push {r4-r7,lr}\n\
-	mov r7, r10\n\
-	mov r6, r9\n\
-	mov r5, r8\n\
-	push {r5-r7}\n\
-	sub sp, 0x8\n\
-	adds r3, r0, 0\n\
-	adds r4, r1, 0\n\
-	str r2, [sp]\n\
-	movs r6, 0\n\
-	movs r2, 0x14\n\
-	cmp r3, 0\n\
-	beq _0818FFF0\n\
-	ldr r0, =0x0000ffff\n\
-	cmp r3, r0\n\
-	beq _0818FFF0\n\
-	ldr r0, =gBattleMoves\n\
-	lsls r1, r3, 1\n\
-	adds r1, r3\n\
-	lsls r1, 2\n\
-	adds r3, r1, r0\n\
-	ldrb r0, [r3, 0x1]\n\
-	cmp r0, 0\n\
-	bne _0818FFFC\n\
+    push {r4-r7,lr}\n\
+    mov r7, r10\n\
+    mov r6, r9\n\
+    mov r5, r8\n\
+    push {r5-r7}\n\
+    sub sp, 0x8\n\
+    adds r3, r0, 0\n\
+    adds r4, r1, 0\n\
+    str r2, [sp]\n\
+    movs r6, 0\n\
+    movs r2, 0x14\n\
+    cmp r3, 0\n\
+    beq _0818FFF0\n\
+    ldr r0, =0x0000ffff\n\
+    cmp r3, r0\n\
+    beq _0818FFF0\n\
+    ldr r0, =gBattleMoves\n\
+    lsls r1, r3, 1\n\
+    adds r1, r3\n\
+    lsls r1, 2\n\
+    adds r3, r1, r0\n\
+    ldrb r0, [r3, 0x1]\n\
+    cmp r0, 0\n\
+    bne _0818FFFC\n\
 _0818FFF0:\n\
-	movs r0, 0\n\
-	b _08190156\n\
-	.pool\n\
+    movs r0, 0\n\
+    b _08190156\n\
+    .pool\n\
 _0818FFFC:\n\
-	ldr r1, =gBaseStats\n\
-	lsls r0, r4, 3\n\
-	subs r0, r4\n\
-	lsls r0, 2\n\
-	adds r0, r1\n\
-	ldrb r1, [r0, 0x6]\n\
-	mov r10, r1\n\
-	ldrb r1, [r0, 0x7]\n\
-	mov r9, r1\n\
-	ldrb r0, [r0, 0x16]\n\
-	mov r8, r0\n\
-	ldrb r3, [r3, 0x2]\n\
-	str r3, [sp, 0x4]\n\
-	cmp r0, 0x1A\n\
-	bne _0819002C\n\
-	cmp r3, 0x4\n\
-	bne _0819002C\n\
-	ldr r0, [sp]\n\
-	cmp r0, 0x1\n\
-	bne _081900AA\n\
-	movs r2, 0x8\n\
-	b _081900A4\n\
-	.pool\n\
+    ldr r1, =gBaseStats\n\
+    lsls r0, r4, 3\n\
+    subs r0, r4\n\
+    lsls r0, 2\n\
+    adds r0, r1\n\
+    ldrb r1, [r0, 0x6]\n\
+    mov r10, r1\n\
+    ldrb r1, [r0, 0x7]\n\
+    mov r9, r1\n\
+    ldrb r0, [r0, 0x16]\n\
+    mov r8, r0\n\
+    ldrb r3, [r3, 0x2]\n\
+    str r3, [sp, 0x4]\n\
+    cmp r0, 0x1A\n\
+    bne _0819002C\n\
+    cmp r3, 0x4\n\
+    bne _0819002C\n\
+    ldr r0, [sp]\n\
+    cmp r0, 0x1\n\
+    bne _081900AA\n\
+    movs r2, 0x8\n\
+    b _081900A4\n\
+    .pool\n\
 _0819002C:\n\
-	ldr r0, =gTypeEffectiveness\n\
-	adds r1, r6, r0\n\
-	ldrb r0, [r1]\n\
-	ldr r7, =gTypeEffectiveness\n\
-	cmp r0, 0xFF\n\
-	beq _081900A4\n\
-	adds r4, r1, 0\n\
+    ldr r0, =gTypeEffectiveness\n\
+    adds r1, r6, r0\n\
+    ldrb r0, [r1]\n\
+    ldr r7, =gTypeEffectiveness\n\
+    cmp r0, 0xFF\n\
+    beq _081900A4\n\
+    adds r4, r1, 0\n\
 _0819003A:\n\
-	ldrb r0, [r4]\n\
-	cmp r0, 0xFE\n\
-	beq _08190096\n\
-	ldrb r0, [r4]\n\
-	ldr r1, [sp, 0x4]\n\
-	cmp r0, r1\n\
-	bne _08190096\n\
-	ldrb r0, [r4, 0x1]\n\
-	adds r5, r6, 0x1\n\
-	cmp r0, r10\n\
-	bne _0819006C\n\
-	adds r1, r6, 0x2\n\
-	mov r0, r8\n\
-	cmp r0, 0x19\n\
-	bne _0819005E\n\
-	ldrb r0, [r4, 0x2]\n\
-	cmp r0, 0x28\n\
-	bne _0819006C\n\
+    ldrb r0, [r4]\n\
+    cmp r0, 0xFE\n\
+    beq _08190096\n\
+    ldrb r0, [r4]\n\
+    ldr r1, [sp, 0x4]\n\
+    cmp r0, r1\n\
+    bne _08190096\n\
+    ldrb r0, [r4, 0x1]\n\
+    adds r5, r6, 0x1\n\
+    cmp r0, r10\n\
+    bne _0819006C\n\
+    adds r1, r6, 0x2\n\
+    mov r0, r8\n\
+    cmp r0, 0x19\n\
+    bne _0819005E\n\
+    ldrb r0, [r4, 0x2]\n\
+    cmp r0, 0x28\n\
+    bne _0819006C\n\
 _0819005E:\n\
-	adds r0, r1, r7\n\
-	ldrb r0, [r0]\n\
-	muls r0, r2\n\
-	movs r1, 0xA\n\
-	bl __divsi3\n\
-	adds r2, r0, 0\n\
+    adds r0, r1, r7\n\
+    ldrb r0, [r0]\n\
+    muls r0, r2\n\
+    movs r1, 0xA\n\
+    bl __divsi3\n\
+    adds r2, r0, 0\n\
 _0819006C:\n\
-	adds r0, r5, r7\n\
-	ldrb r0, [r0]\n\
-	cmp r0, r9\n\
-	bne _08190096\n\
-	cmp r10, r9\n\
-	beq _08190096\n\
-	adds r1, r6, 0x2\n\
-	mov r0, r8\n\
-	cmp r0, 0x19\n\
-	bne _08190088\n\
-	adds r0, r1, r7\n\
-	ldrb r0, [r0]\n\
-	cmp r0, 0x28\n\
-	bne _08190096\n\
+    adds r0, r5, r7\n\
+    ldrb r0, [r0]\n\
+    cmp r0, r9\n\
+    bne _08190096\n\
+    cmp r10, r9\n\
+    beq _08190096\n\
+    adds r1, r6, 0x2\n\
+    mov r0, r8\n\
+    cmp r0, 0x19\n\
+    bne _08190088\n\
+    adds r0, r1, r7\n\
+    ldrb r0, [r0]\n\
+    cmp r0, 0x28\n\
+    bne _08190096\n\
 _08190088:\n\
-	adds r0, r1, r7\n\
-	ldrb r0, [r0]\n\
-	muls r0, r2\n\
-	movs r1, 0xA\n\
-	bl __divsi3\n\
-	adds r2, r0, 0\n\
+    adds r0, r1, r7\n\
+    ldrb r0, [r0]\n\
+    muls r0, r2\n\
+    movs r1, 0xA\n\
+    bl __divsi3\n\
+    adds r2, r0, 0\n\
 _08190096:\n\
-	adds r4, 0x3\n\
-	adds r6, 0x3\n\
-	ldr r1, =gTypeEffectiveness\n\
-	adds r0, r6, r1\n\
-	ldrb r0, [r0]\n\
-	cmp r0, 0xFF\n\
-	bne _0819003A\n\
+    adds r4, 0x3\n\
+    adds r6, 0x3\n\
+    ldr r1, =gTypeEffectiveness\n\
+    adds r0, r6, r1\n\
+    ldrb r0, [r0]\n\
+    cmp r0, 0xFF\n\
+    bne _0819003A\n\
 _081900A4:\n\
-	ldr r0, [sp]\n\
-	cmp r0, 0x1\n\
-	beq _081900E0\n\
+    ldr r0, [sp]\n\
+    cmp r0, 0x1\n\
+    beq _081900E0\n\
 _081900AA:\n\
-	ldr r1, [sp]\n\
-	cmp r1, 0x1\n\
-	bgt _081900BC\n\
-	cmp r1, 0\n\
-	beq _081900C4\n\
-	b _08190154\n\
-	.pool\n\
+    ldr r1, [sp]\n\
+    cmp r1, 0x1\n\
+    bgt _081900BC\n\
+    cmp r1, 0\n\
+    beq _081900C4\n\
+    b _08190154\n\
+    .pool\n\
 _081900BC:\n\
-	ldr r0, [sp]\n\
-	cmp r0, 0x2\n\
-	beq _08190114\n\
-	b _08190154\n\
+    ldr r0, [sp]\n\
+    cmp r0, 0x2\n\
+    beq _08190114\n\
+    b _08190154\n\
 _081900C4:\n\
-	cmp r2, 0xA\n\
-	beq _08190146\n\
-	cmp r2, 0xA\n\
-	ble _08190146\n\
-	cmp r2, 0x28\n\
-	beq _0819014A\n\
-	cmp r2, 0x28\n\
-	bgt _081900DA\n\
-	cmp r2, 0x14\n\
-	beq _08190104\n\
-	b _08190146\n\
+    cmp r2, 0xA\n\
+    beq _08190146\n\
+    cmp r2, 0xA\n\
+    ble _08190146\n\
+    cmp r2, 0x28\n\
+    beq _0819014A\n\
+    cmp r2, 0x28\n\
+    bgt _081900DA\n\
+    cmp r2, 0x14\n\
+    beq _08190104\n\
+    b _08190146\n\
 _081900DA:\n\
-	cmp r2, 0x50\n\
-	bne _08190146\n\
-	b _08190100\n\
+    cmp r2, 0x50\n\
+    bne _08190146\n\
+    b _08190100\n\
 _081900E0:\n\
-	cmp r2, 0xA\n\
-	beq _08190104\n\
-	cmp r2, 0xA\n\
-	bgt _081900F2\n\
-	cmp r2, 0\n\
-	beq _08190100\n\
-	cmp r2, 0x5\n\
-	beq _0819014A\n\
-	b _08190146\n\
+    cmp r2, 0xA\n\
+    beq _08190104\n\
+    cmp r2, 0xA\n\
+    bgt _081900F2\n\
+    cmp r2, 0\n\
+    beq _08190100\n\
+    cmp r2, 0x5\n\
+    beq _0819014A\n\
+    b _08190146\n\
 _081900F2:\n\
-	cmp r2, 0x28\n\
-	beq _08190108\n\
-	cmp r2, 0x28\n\
-	ble _08190146\n\
-	cmp r2, 0x50\n\
-	beq _0819010E\n\
-	b _08190146\n\
+    cmp r2, 0x28\n\
+    beq _08190108\n\
+    cmp r2, 0x28\n\
+    ble _08190146\n\
+    cmp r2, 0x50\n\
+    beq _0819010E\n\
+    b _08190146\n\
 _08190100:\n\
-	movs r2, 0x8\n\
-	b _08190154\n\
+    movs r2, 0x8\n\
+    b _08190154\n\
 _08190104:\n\
-	movs r2, 0x2\n\
-	b _08190154\n\
+    movs r2, 0x2\n\
+    b _08190154\n\
 _08190108:\n\
-	movs r2, 0x2\n\
-	negs r2, r2\n\
-	b _08190154\n\
+    movs r2, 0x2\n\
+    negs r2, r2\n\
+    b _08190154\n\
 _0819010E:\n\
-	movs r2, 0x4\n\
-	negs r2, r2\n\
-	b _08190154\n\
+    movs r2, 0x4\n\
+    negs r2, r2\n\
+    b _08190154\n\
 _08190114:\n\
-	cmp r2, 0xA\n\
-	beq _08190146\n\
-	cmp r2, 0xA\n\
-	bgt _08190126\n\
-	cmp r2, 0\n\
-	beq _0819013A\n\
-	cmp r2, 0x5\n\
-	beq _08190140\n\
-	b _08190146\n\
+    cmp r2, 0xA\n\
+    beq _08190146\n\
+    cmp r2, 0xA\n\
+    bgt _08190126\n\
+    cmp r2, 0\n\
+    beq _0819013A\n\
+    cmp r2, 0x5\n\
+    beq _08190140\n\
+    b _08190146\n\
 _08190126:\n\
-	cmp r2, 0x28\n\
-	beq _0819014E\n\
-	cmp r2, 0x28\n\
-	bgt _08190134\n\
-	cmp r2, 0x14\n\
-	beq _0819014A\n\
-	b _08190146\n\
+    cmp r2, 0x28\n\
+    beq _0819014E\n\
+    cmp r2, 0x28\n\
+    bgt _08190134\n\
+    cmp r2, 0x14\n\
+    beq _0819014A\n\
+    b _08190146\n\
 _08190134:\n\
-	cmp r2, 0x50\n\
-	beq _08190152\n\
-	b _08190146\n\
+    cmp r2, 0x50\n\
+    beq _08190152\n\
+    b _08190146\n\
 _0819013A:\n\
-	movs r2, 0x10\n\
-	negs r2, r2\n\
-	b _08190154\n\
+    movs r2, 0x10\n\
+    negs r2, r2\n\
+    b _08190154\n\
 _08190140:\n\
-	movs r2, 0x8\n\
-	negs r2, r2\n\
-	b _08190154\n\
+    movs r2, 0x8\n\
+    negs r2, r2\n\
+    b _08190154\n\
 _08190146:\n\
-	movs r2, 0\n\
-	b _08190154\n\
+    movs r2, 0\n\
+    b _08190154\n\
 _0819014A:\n\
-	movs r2, 0x4\n\
-	b _08190154\n\
+    movs r2, 0x4\n\
+    b _08190154\n\
 _0819014E:\n\
-	movs r2, 0xC\n\
-	b _08190154\n\
+    movs r2, 0xC\n\
+    b _08190154\n\
 _08190152:\n\
-	movs r2, 0x14\n\
+    movs r2, 0x14\n\
 _08190154:\n\
-	adds r0, r2, 0\n\
+    adds r0, r2, 0\n\
 _08190156:\n\
-	add sp, 0x8\n\
-	pop {r3-r5}\n\
-	mov r8, r3\n\
-	mov r9, r4\n\
-	mov r10, r5\n\
-	pop {r4-r7}\n\
-	pop {r1}\n\
-	bx r1\n\
+    add sp, 0x8\n\
+    pop {r3-r5}\n\
+    mov r8, r3\n\
+    mov r9, r4\n\
+    mov r10, r5\n\
+    pop {r4-r7}\n\
+    pop {r1}\n\
+    bx r1\n\
                 ");
 }
 #endif // NONMATCHING
@@ -3436,9 +3277,9 @@ static u8 GetDomeTrainerMonIvs(u16 trainerId)
     return fixedIv;
 }
 
-static s32 TournamentIdOfOpponent(s32 roundId, s32 trainerId)
+static int TournamentIdOfOpponent(int roundId, int trainerId)
 {
-    s32 i, j, val;
+    int i, j, val;
 
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
     {
@@ -3473,19 +3314,19 @@ static s32 TournamentIdOfOpponent(s32 roundId, s32 trainerId)
     }
 }
 
-static void sub_8190298(void)
+static void SetDomeOpponentId(void)
 {
     gTrainerBattleOpponent_A = TrainerIdOfPlayerOpponent();
 }
 
 static u16 TrainerIdOfPlayerOpponent(void)
 {
-    return gSaveBlock2Ptr->frontier.domeTrainers[TournamentIdOfOpponent(gSaveBlock2Ptr->frontier.field_CB2, TRAINER_PLAYER)].trainerId;
+    return gSaveBlock2Ptr->frontier.domeTrainers[TournamentIdOfOpponent(gSaveBlock2Ptr->frontier.curChallengeBattleNum, TRAINER_PLAYER)].trainerId;
 }
 
-static void sub_81902E4(void)
+static void SetDomeOpponentGraphicsId(void)
 {
-    sub_8162614(gTrainerBattleOpponent_A, 0);
+    SetBattleFacilityTrainerGfxId(gTrainerBattleOpponent_A, 0);
 }
 
 static void sub_81902F8(void)
@@ -3496,23 +3337,23 @@ static void sub_81902F8(void)
     sub_81A4C30();
 }
 
-static void sub_819033C(void)
+static void UpdateDomeStreaks(void)
 {
     u8 lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
     u8 battleMode = VarGet(VAR_FRONTIER_BATTLE_MODE);
 
-    if (gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode] < 999)
-        gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode]++;
-    if (gSaveBlock2Ptr->frontier.field_D1C[battleMode][lvlMode] < 999)
-        gSaveBlock2Ptr->frontier.field_D1C[battleMode][lvlMode]++;
+    if (gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode] < 999)
+        gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode]++;
+    if (gSaveBlock2Ptr->frontier.domeTotalChampionships[battleMode][lvlMode] < 999)
+        gSaveBlock2Ptr->frontier.domeTotalChampionships[battleMode][lvlMode]++;
 
-    if (gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode] > gSaveBlock2Ptr->frontier.field_D14[battleMode][lvlMode])
-        gSaveBlock2Ptr->frontier.field_D14[battleMode][lvlMode] = gSaveBlock2Ptr->frontier.field_D0C[battleMode][lvlMode];
+    if (gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode] > gSaveBlock2Ptr->frontier.domeRecordWinStreaks[battleMode][lvlMode])
+        gSaveBlock2Ptr->frontier.domeRecordWinStreaks[battleMode][lvlMode] = gSaveBlock2Ptr->frontier.domeWinStreaks[battleMode][lvlMode];
 }
 
 static void ShowDomeOpponentInfo(void)
 {
-    u8 taskId = CreateTask(sub_8190400, 0);
+    u8 taskId = CreateTask(Task_ShowOpponentInfo, 0);
     gTasks[taskId].data[0] = 0;
     gTasks[taskId].data[1] = TrainerIdToTournamentId(TrainerIdOfPlayerOpponent());
     gTasks[taskId].data[2] = 0;
@@ -3521,12 +3362,12 @@ static void ShowDomeOpponentInfo(void)
     SetMainCallback2(CB2_BattleDome);
 }
 
-static void sub_8190400(u8 taskId)
+static void Task_ShowOpponentInfo(u8 taskId)
 {
-    s32 i;
-    s32 r5 = gTasks[taskId].data[1];
-    s32 r9 = gTasks[taskId].data[2];
-    s32 r7 = gTasks[taskId].data[3];
+    int i;
+    int r5 = gTasks[taskId].data[1];
+    int r9 = gTasks[taskId].data[2];
+    int r7 = gTasks[taskId].data[3];
 
     switch (gTasks[taskId].data[0])
     {
@@ -3573,7 +3414,7 @@ static void sub_8190400(u8 taskId)
         DecompressAndLoadBgGfxUsingHeap(2, gUnknown_08D83D50, 0x2000, 0, 0);
         DecompressAndLoadBgGfxUsingHeap(2, gUnknown_08D84970, 0x2000, 0, 1);
         DecompressAndLoadBgGfxUsingHeap(3, gUnknown_08D84F00, 0x800, 0, 1);
-        LoadCompressedObjectPic(gUnknown_0860CF50);
+        LoadCompressedSpriteSheet(sDomeOptionsSpriteSheet);
         LoadCompressedPalette(gUnknown_08D85358, 0, 0x200);
         LoadCompressedPalette(gUnknown_08D85444, 0x100, 0x200);
         LoadCompressedPalette(gUnknown_08D85600, 0xF0, 0x20);
@@ -3590,7 +3431,7 @@ static void sub_8190400(u8 taskId)
         SetVBlankCallback(VblankCb0_BattleDome);
         sBattleDomeStruct = AllocZeroed(sizeof(*sBattleDomeStruct));
         for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
-            sBattleDomeStruct->arr[i] |= 0xFF;
+            sBattleDomeStruct->arr[i] = 0xFF;
         LoadMonIconPalettes();
         i = CreateTask(sub_8190CD4, 0);
         gTasks[i].data[0] = 0;
@@ -3816,10 +3657,10 @@ static void SpriteCb_MonIconCardScrollRight(struct Sprite *sprite)
 
 static void sub_8190B40(struct Sprite *sprite)
 {
-    s32 taskId1 = sprite->data[0];
-    s32 arrId = gTasks[gTasks[taskId1].data[4]].data[1];
-    s32 tournmanetTrainerId = gUnknown_0860D080[arrId];
-    s32 r12 = gSaveBlock2Ptr->frontier.field_CB2;
+    int taskId1 = sprite->data[0];
+    int arrId = gTasks[gTasks[taskId1].data[4]].data[1];
+    int tournmanetTrainerId = sTourneyTreeTrainerIds[arrId];
+    int roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
 
     if (gTasks[taskId1].data[3] == 1)
     {
@@ -3831,7 +3672,7 @@ static void sub_8190B40(struct Sprite *sprite)
                 sprite->invisible = FALSE;
             }
             else if (!gSaveBlock2Ptr->frontier.domeTrainers[tournmanetTrainerId].isEliminated
-                     && sBattleDomeStruct->unk_10 - 1 < r12)
+                     && sBattleDomeStruct->unk_10 - 1 < roundId)
             {
                 sprite->invisible = FALSE;
             }
@@ -3885,7 +3726,7 @@ static void sub_8190B40(struct Sprite *sprite)
 
 static void sub_8190C6C(struct Sprite *sprite)
 {
-    s32 taskId1 = sprite->data[0];
+    int taskId1 = sprite->data[0];
 
     if (gTasks[taskId1].data[3] == 1)
     {
@@ -3915,12 +3756,12 @@ static void sub_8190C6C(struct Sprite *sprite)
 
 static void sub_8190CD4(u8 taskId)
 {
-    s32 i;
-    s32 windowId = 0;
-    s32 r9 = gTasks[taskId].data[3];
-    s32 taskId2 = gTasks[taskId].data[4];
-    s32 trainerTournamentId = 0;
-    s32 matchNo = 0;
+    int i;
+    int windowId = 0;
+    int r9 = gTasks[taskId].data[3];
+    int taskId2 = gTasks[taskId].data[4];
+    int trainerTournamentId = 0;
+    int matchNo = 0;
 
     switch (gTasks[taskId].data[0])
     {
@@ -3953,7 +3794,7 @@ static void sub_8190CD4(u8 taskId)
             for (i = windowId; i < windowId + 9; i++)
             {
                 CopyWindowToVram(i, 2);
-                FillWindowPixelBuffer(i, 0);
+                FillWindowPixelBuffer(i, PIXEL_FILL(0));
             }
             gTasks[taskId].data[0] = 3;
             break;
@@ -3988,14 +3829,14 @@ static void sub_8190CD4(u8 taskId)
                 {
                     gBattle_BG2_X = 0;
                     gBattle_BG2_Y = 320;
-                    trainerTournamentId = gUnknown_0860D080[gTasks[taskId2].data[1]];
+                    trainerTournamentId = sTourneyTreeTrainerIds[gTasks[taskId2].data[1]];
                     DisplayTrainerInfoOnCard(gTasks[taskId].data[2] | 0x10, trainerTournamentId);
                 }
                 else
                 {
                     gBattle_BG2_X = 256;
                     gBattle_BG2_Y = 0;
-                    trainerTournamentId = gUnknown_0860D080[gTasks[taskId2].data[1]];
+                    trainerTournamentId = sTourneyTreeTrainerIds[gTasks[taskId2].data[1]];
                     DisplayTrainerInfoOnCard(gTasks[taskId].data[2] | 0x10, trainerTournamentId);
                     sBattleDomeStruct->unk_10 = 0;
                 }
@@ -4104,14 +3945,14 @@ static void sub_8190CD4(u8 taskId)
                 {
                     gBattle_BG2_X = 0;
                     gBattle_BG2_Y = 160;
-                    trainerTournamentId = gUnknown_0860D080[gTasks[taskId2].data[1]];
+                    trainerTournamentId = sTourneyTreeTrainerIds[gTasks[taskId2].data[1]];
                     DisplayTrainerInfoOnCard(gTasks[taskId].data[2] | 4, trainerTournamentId);
                 }
                 else
                 {
                     gBattle_BG2_X = 0;
                     gBattle_BG2_Y = 0;
-                    trainerTournamentId = gUnknown_0860D080[gTasks[taskId2].data[1]];
+                    trainerTournamentId = sTourneyTreeTrainerIds[gTasks[taskId2].data[1]];
                     DisplayTrainerInfoOnCard(gTasks[taskId].data[2] | 4, trainerTournamentId);
                     sBattleDomeStruct->unk_10 = 0;
                 }
@@ -4217,7 +4058,7 @@ static void sub_8190CD4(u8 taskId)
             {
                 gBattle_BG2_X = 256;
                 gBattle_BG2_Y = 160;
-                trainerTournamentId = gUnknown_0860D080[gTasks[taskId2].data[1]];
+                trainerTournamentId = sTourneyTreeTrainerIds[gTasks[taskId2].data[1]];
                 DisplayTrainerInfoOnCard(gTasks[taskId].data[2] | 8, trainerTournamentId);
             }
             else
@@ -4616,7 +4457,7 @@ static void sub_8190CD4(u8 taskId)
             }
             else
             {
-                i = CreateTask(sub_8194220, 0);
+                i = CreateTask(Task_ShowTourneyTree, 0);
                 gTasks[i].data[0] = 0;
                 gTasks[i].data[1] = 0;
                 gTasks[i].data[2] = 3;
@@ -4632,10 +4473,10 @@ static void sub_8190CD4(u8 taskId)
 static u8 sub_819221C(u8 taskId)
 {
     u8 retVal = 0;
-    s32 taskId2 = gTasks[taskId].data[4];
-    s32 r5 = gTasks[taskId2].data[1];
-    u8 r10 = gUnknown_0860D080[r5];
-    u16 roundId = gSaveBlock2Ptr->frontier.field_CB2;
+    int taskId2 = gTasks[taskId].data[4];
+    int r5 = gTasks[taskId2].data[1];
+    u8 r10 = sTourneyTreeTrainerIds[r5];
+    u16 roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
 
     if (gMain.newKeys & (A_BUTTON | B_BUTTON))
         retVal = 9;
@@ -4740,13 +4581,13 @@ static u8 sub_819221C(u8 taskId)
 
 static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
 {
-    struct TextSubPrinter textPrinter;
-    s32 i, j, k;
-    s32 trainerId = 0;
+    struct TextPrinterTemplate textPrinter;
+    int i, j, k;
+    int trainerId = 0;
     u8 nature = 0;
-    s32 arrId = 0;
-    s32 windowId = 0;
-    s32 x = 0, y = 0;
+    int arrId = 0;
+    int windowId = 0;
+    int x = 0, y = 0;
     u8 palSlot = 0;
     s16 *allocatedArray = AllocZeroed(sizeof(s16) * 18);
     trainerId = gSaveBlock2Ptr->frontier.domeTrainers[trainerTournamentId].trainerId;
@@ -4776,7 +4617,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     {
         if (trainerId == TRAINER_PLAYER)
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i],
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sInfoTrainerMonX[i],
                                                                   y + sInfoTrainerMonY[i],
@@ -4785,7 +4626,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
         }
         else if (trainerId == TRAINER_FRONTIER_BRAIN)
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i],
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sInfoTrainerMonX[i],
                                                                   y + sInfoTrainerMonY[i],
@@ -4794,7 +4635,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
         }
         else
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].species,
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].species,
                                                                   SpriteCb_MonIcon,
                                                                   x | sInfoTrainerMonX[i],
                                                                   y + sInfoTrainerMonY[i],
@@ -4812,14 +4653,14 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     textPrinter.currentY = textPrinter.y;
     textPrinter.letterSpacing = 2;
     textPrinter.lineSpacing = 0;
-    textPrinter.fontColor_l = 0;
+    textPrinter.unk = 0;
     textPrinter.fgColor = 14;
     textPrinter.bgColor = 0;
     textPrinter.shadowColor = 13;
 
     i = 0;
     if (trainerId == TRAINER_PLAYER)
-        j = gFacilityClassToTrainerClass[FACILITY_CLASS_PKMN_TRAINER_BRENDAN];
+        j = gFacilityClassToTrainerClass[FACILITY_CLASS_BRENDAN];
     else if (trainerId == TRAINER_FRONTIER_BRAIN)
         j = GetDomeBrainTrainerClass();
     else
@@ -4846,7 +4687,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     }
 
     textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, gStringVar1, 0xD0, textPrinter.letterSpacing);
-    textPrinter.current_text_offset = gStringVar1;
+    textPrinter.currentChar = gStringVar1;
     textPrinter.windowId = windowId;
     PutWindowTilemap(windowId);
     CopyWindowToVram(windowId, 3);
@@ -4857,11 +4698,11 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     {
         textPrinter.currentY = gUnknown_0860D346[i];
         if (trainerId == TRAINER_PLAYER)
-            textPrinter.current_text_offset = gSpeciesNames[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]];
+            textPrinter.currentChar = gSpeciesNames[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]];
         else if (trainerId == TRAINER_FRONTIER_BRAIN)
-            textPrinter.current_text_offset = gSpeciesNames[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]];
+            textPrinter.currentChar = gSpeciesNames[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]];
         else
-            textPrinter.current_text_offset = gSpeciesNames[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].species];
+            textPrinter.currentChar = gSpeciesNames[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].species];
 
         textPrinter.windowId = 1 + i + windowId;
         if (i == 1)
@@ -4877,9 +4718,9 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     PutWindowTilemap(windowId + 4);
     CopyWindowToVram(windowId + 4, 3);
     if (trainerId == TRAINER_FRONTIER_BRAIN)
-        textPrinter.current_text_offset = gBattleDomePotentialPointers[16];
+        textPrinter.currentChar = sBattleDomePotentialTexts[16];
     else
-        textPrinter.current_text_offset = gBattleDomePotentialPointers[trainerTournamentId];
+        textPrinter.currentChar = sBattleDomePotentialTexts[trainerTournamentId];
 
     textPrinter.fontId = 1;
     textPrinter.windowId = windowId + 4;
@@ -4890,23 +4731,23 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
 
     for (i = 0; i < 3; i++)
     {
-        for (j = 0; j < 4; j++)
+        for (j = 0; j < MAX_MON_MOVES; j++)
         {
             for (k = 0; k < DOME_TOURNAMENT_TRAINERS_COUNT; k++)
             {
                 if (trainerId == TRAINER_FRONTIER_BRAIN)
-                    allocatedArray[k] += sMovePointsForDomeTrainers[sub_81A5060(i, j)][k];
+                    allocatedArray[k] += sMovePointsForDomeTrainers[GetFrontierBrainMonMove(i, j)][k];
                 else if (trainerId == TRAINER_PLAYER)
                     allocatedArray[k] += sMovePointsForDomeTrainers[gSaveBlock2Ptr->frontier.field_EFC[i].moves[j]][k];
                 else
-                    allocatedArray[k] += sMovePointsForDomeTrainers[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].moves[j]][k];
+                    allocatedArray[k] += sMovePointsForDomeTrainers[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].moves[j]][k];
             }
         }
     }
 
     for (i = 0; i < ARRAY_COUNT(gUnknown_0860C988); i++)
     {
-        s32 r4 = 0;
+        int r4 = 0;
 
         for (k = 0, j = 0; j < DOME_TOURNAMENT_TRAINERS_COUNT; j++)
         {
@@ -4921,7 +4762,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
             break;
     }
 
-    textPrinter.current_text_offset = gBattleDomeOpponentStylePointers[i];
+    textPrinter.currentChar = sBattleDomeOpponentStyleTexts[i];
     textPrinter.y = 20;
     textPrinter.currentY = 20;
     AddTextPrinter(&textPrinter, 0, NULL);
@@ -4936,7 +4777,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
             for (j = 0; j < 6; j++)
             {
                 if (trainerId == TRAINER_FRONTIER_BRAIN)
-                    allocatedArray[j] = sub_81A50F0(i, j);
+                    allocatedArray[j] = GetFrontierBrainMonEvs(i, j);
                 else
                     allocatedArray[j] = gSaveBlock2Ptr->frontier.field_EFC[i].evs[j];
             }
@@ -4944,7 +4785,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
             for (j = 0; j < 5; j++)
             {
                 if (trainerId == TRAINER_FRONTIER_BRAIN)
-                    nature = sub_81A50B0(i);
+                    nature = GetFrontierBrainMonNature(i);
                 else
                     nature = gSaveBlock2Ptr->frontier.field_EFC[i].nature;
 
@@ -4972,8 +4813,8 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     {
         for (i = 0; i < 3; i++)
         {
-            s32 evBits = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].evSpread;
-            for (k = 0, j = 0; j < 6; j++)
+            int evBits = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].evSpread;
+            for (k = 0, j = 0; j < NUM_STATS; j++)
             {
                 allocatedArray[j] = 0;
                 if (evBits & 1)
@@ -4981,8 +4822,8 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
                 evBits >>= 1;
             }
             k = MAX_TOTAL_EVS / k;
-            evBits = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].evSpread;
-            for (j = 0; j < 6; j++)
+            evBits = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].evSpread;
+            for (j = 0; j < NUM_STATS; j++)
             {
                 if (evBits & 1)
                     allocatedArray[j] = k;
@@ -4992,7 +4833,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
             allocatedArray[6] += allocatedArray[0];
             for (j = 0; j < 5; j++)
             {
-                nature = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[trainerTournamentId][i]].nature;
+                nature = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[trainerTournamentId][i]].nature;
                 if (gNatureStatTable[nature][j] > 0)
                 {
                     allocatedArray[j + 7] += (allocatedArray[j + 1] * 110) / 100;
@@ -5093,19 +4934,19 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTournamentId)
     else
         i = 42;
 
-    textPrinter.current_text_offset = gBattleDomeOpponentStatsPointers[i];
+    textPrinter.currentChar = sBattleDomeOpponentStatsTexts[i];
     textPrinter.y = 36;
     textPrinter.currentY = 36;
     AddTextPrinter(&textPrinter, 0, NULL);
     Free(allocatedArray);
 }
 
-static s32 sub_8192F08(u8 arg0, u8 *arg1)
+static int sub_8192F08(u8 arg0, u8 *arg1)
 {
-    s32 i;
+    int i;
     u8 tournamentId;
-    s32 retVal = 0;
-    s32 count = 0;
+    int retVal = 0;
+    int count = 0;
 
     for (i = gUnknown_0860D3C4[arg0][0]; i < gUnknown_0860D3C4[arg0][0] + gUnknown_0860D3C4[arg0][1]; i++)
     {
@@ -5164,15 +5005,15 @@ static s32 sub_8192F08(u8 arg0, u8 *arg1)
 
 static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
 {
-    struct TextSubPrinter textPrinter;
-    s32 tournamentIds[2];
-    s32 trainerIds[2];
+    struct TextPrinterTemplate textPrinter;
+    int tournamentIds[2];
+    int trainerIds[2];
     bool32 lost[2];
-    s32 i;
-    s32 winStringId = 0;
-    s32 arrId = 0;
-    s32 windowId = 0;
-    s32 x = 0, y = 0;
+    int i;
+    int winStringId = 0;
+    int arrId = 0;
+    int windowId = 0;
+    int x = 0, y = 0;
     u8 palSlot = 0;
 
     if (flags & 1)
@@ -5230,7 +5071,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
     {
         if (trainerIds[0] == TRAINER_PLAYER)
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[0]][i],
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[0]][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sFirstTrainerMonX[i],
                                                                   y + sFirstTrainerMonY[i],
@@ -5239,7 +5080,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
         }
         else if (trainerIds[0] == TRAINER_FRONTIER_BRAIN)
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[0]][i],
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[0]][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sFirstTrainerMonX[i],
                                                                   y + sFirstTrainerMonY[i],
@@ -5248,7 +5089,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
         }
         else
         {
-            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[0]][i]].species,
+            sBattleDomeStruct->arr[2 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[0]][i]].species,
                                                                   SpriteCb_MonIcon,
                                                                   x | sFirstTrainerMonX[i],
                                                                   y + sFirstTrainerMonY[i],
@@ -5270,7 +5111,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
     {
         if (trainerIds[1] == TRAINER_PLAYER)
         {
-            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[1]][i],
+            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[1]][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sSecondTrainerMonX[i],
                                                                   y + sSecondTrainerMonY[i],
@@ -5279,7 +5120,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
         }
         else if (trainerIds[1] == TRAINER_FRONTIER_BRAIN)
         {
-            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[1]][i],
+            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[1]][i],
                                                                   SpriteCb_MonIcon,
                                                                   x | sSecondTrainerMonX[i],
                                                                   y + sSecondTrainerMonY[i],
@@ -5288,7 +5129,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
         }
         else
         {
-            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentIds[1]][i]].species,
+            sBattleDomeStruct->arr[5 + i + arrId] = CreateMonIcon(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentIds[1]][i]].species,
                                                                   SpriteCb_MonIcon,
                                                                   x | sSecondTrainerMonX[i],
                                                                   y + sSecondTrainerMonY[i],
@@ -5312,12 +5153,12 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
     textPrinter.currentY = textPrinter.y;
     textPrinter.letterSpacing = 0;
     textPrinter.lineSpacing = 0;
-    textPrinter.fontColor_l = 0;
+    textPrinter.unk = 0;
     textPrinter.fgColor = 14;
     textPrinter.bgColor = 0;
     textPrinter.shadowColor = 13;
-    StringExpandPlaceholders(gStringVar4, gBattleDomeWinStringsPointers[winStringId]);
-    textPrinter.current_text_offset = gStringVar4;
+    StringExpandPlaceholders(gStringVar4, sBattleDomeWinTexts[winStringId]);
+    textPrinter.currentChar = gStringVar4;
     textPrinter.windowId = windowId + 8;
     textPrinter.fontId = 1;
     PutWindowTilemap(windowId + 8);
@@ -5336,9 +5177,9 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
 
     textPrinter.fontId = 2;
     textPrinter.letterSpacing = 2;
-    textPrinter.current_text_offset = gStringVar1;
+    textPrinter.currentChar = gStringVar1;
     textPrinter.windowId = windowId + 6;
-    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.current_text_offset, 0x40, textPrinter.letterSpacing);
+    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.currentChar, 0x40, textPrinter.letterSpacing);
     textPrinter.currentY = textPrinter.y = 2;
     PutWindowTilemap(windowId + 6);
     CopyWindowToVram(windowId + 6, 3);
@@ -5352,9 +5193,9 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
     else
         CopyDomeTrainerName(gStringVar1, trainerIds[1]);
 
-    textPrinter.current_text_offset = gStringVar1;
+    textPrinter.currentChar = gStringVar1;
     textPrinter.windowId = windowId + 7;
-    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.current_text_offset, 0x40, textPrinter.letterSpacing);
+    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.currentChar, 0x40, textPrinter.letterSpacing);
     textPrinter.currentY = textPrinter.y = 2;
     PutWindowTilemap(windowId + 7);
     CopyWindowToVram(windowId + 7, 3);
@@ -5362,18 +5203,18 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
 
     // Print match number.
     textPrinter.letterSpacing = 0;
-    textPrinter.current_text_offset = gBattleDomeMatchNumberPointers[matchNo];
+    textPrinter.currentChar = sBattleDomeMatchNumberTexts[matchNo];
     textPrinter.windowId = windowId + 5;
-    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.current_text_offset, 0xA0, textPrinter.letterSpacing);
+    textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.currentChar, 0xA0, textPrinter.letterSpacing);
     textPrinter.currentY = textPrinter.y = 2;
     PutWindowTilemap(windowId + 5);
     CopyWindowToVram(windowId + 5, 3);
     AddTextPrinter(&textPrinter, 0, NULL);
 }
 
-static void sub_81938A4(void)
+static void ShowDomeTourneyTree(void)
 {
-    u8 taskId = CreateTask(sub_8194220, 0);
+    u8 taskId = CreateTask(Task_ShowTourneyTree, 0);
     gTasks[taskId].data[0] = 0;
     gTasks[taskId].data[1] = 0;
     gTasks[taskId].data[2] = 2;
@@ -5381,14 +5222,14 @@ static void sub_81938A4(void)
     SetMainCallback2(CB2_BattleDome);
 }
 
-static void sub_81938E0(void)
+static void ShowPreviousDomeResultsTourneyTree(void)
 {
     u8 taskId;
 
-    sub_8194D48();
+    InitDomeFacilityTrainersAndMons();
     gSaveBlock2Ptr->frontier.lvlMode = gSaveBlock2Ptr->frontier.field_D0A - 1;
-    gSaveBlock2Ptr->frontier.field_CB2 = 3;
-    taskId = CreateTask(sub_8194220, 0);
+    gSaveBlock2Ptr->frontier.curChallengeBattleNum = 3;
+    taskId = CreateTask(Task_ShowTourneyTree, 0);
     gTasks[taskId].data[0] = 0;
     gTasks[taskId].data[1] = 0;
     gTasks[taskId].data[2] = 2;
@@ -5399,7 +5240,7 @@ static void sub_81938E0(void)
 static void sub_819395C(u8 taskId)
 {
     u8 newTaskId = 0;
-    s32 spriteId = gTasks[taskId].data[1];
+    int spriteId = gTasks[taskId].data[1];
 
     switch (gTasks[taskId].data[0])
     {
@@ -5416,7 +5257,7 @@ static void sub_819395C(u8 taskId)
             gTasks[taskId].data[0] = 2;
         break;
     case 2:
-        switch (sub_8193BDC(taskId))
+        switch (UpdateTourneyTreeCursor(taskId))
         {
         case 0:
         default:
@@ -5441,9 +5282,9 @@ static void sub_819395C(u8 taskId)
             FreeAllWindowBuffers();
             ScanlineEffect_Stop();
             FREE_AND_SET_NULL(sTilemapBuffer);
-            newTaskId = CreateTask(sub_8190400, 0);
+            newTaskId = CreateTask(Task_ShowOpponentInfo, 0);
             gTasks[newTaskId].data[0] = 0;
-            gTasks[newTaskId].data[1] = gUnknown_0860D080[spriteId];
+            gTasks[newTaskId].data[1] = sTourneyTreeTrainerIds[spriteId];
             gTasks[newTaskId].data[2] = 1;
             gTasks[newTaskId].data[3] = taskId;
 
@@ -5459,7 +5300,7 @@ static void sub_819395C(u8 taskId)
             FreeAllWindowBuffers();
             ScanlineEffect_Stop();
             FREE_AND_SET_NULL(sTilemapBuffer);
-            newTaskId = CreateTask(sub_8190400, 0);
+            newTaskId = CreateTask(Task_ShowOpponentInfo, 0);
             gTasks[newTaskId].data[0] = 0;
             gTasks[newTaskId].data[1] = spriteId - 16;
             gTasks[newTaskId].data[2] = 2;
@@ -5484,21 +5325,21 @@ static void sub_819395C(u8 taskId)
     }
 }
 
-static u8 sub_8193BDC(u8 taskId)
+static u8 UpdateTourneyTreeCursor(u8 taskId)
 {
     u8 retVal = 1;
-    s32 arrId = 4;
-    s32 spriteId = gTasks[taskId].data[1];
-    s32 roundId = gSaveBlock2Ptr->frontier.field_CB2;
+    int direction = 4;
+    int tourneyTreeCursorSpriteId = gTasks[taskId].data[1];
+    int roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
 
-    if (gMain.newKeys == B_BUTTON || (gMain.newKeys & A_BUTTON && spriteId == 31))
+    if (gMain.newKeys == B_BUTTON || (gMain.newKeys & A_BUTTON && tourneyTreeCursorSpriteId == 31))
     {
         PlaySE(SE_SELECT);
         retVal = 0;
     }
     else if (gMain.newKeys & A_BUTTON)
     {
-        if (spriteId < 16)
+        if (tourneyTreeCursorSpriteId < 16)
         {
             PlaySE(SE_SELECT);
             retVal = 2;
@@ -5511,31 +5352,31 @@ static u8 sub_8193BDC(u8 taskId)
     }
     else
     {
-        if (gMain.newKeys == DPAD_UP && gUnknown_0860CBF1[spriteId][roundId][0] != 0xFF)
-            arrId = 0;
-        else if (gMain.newKeys == DPAD_DOWN && gUnknown_0860CBF1[spriteId][roundId][1] != 0xFF)
-            arrId = 1;
-        else if (gMain.newKeys == DPAD_LEFT && gUnknown_0860CBF1[spriteId][roundId][2] != 0xFF)
-            arrId = 2;
-        else if (gMain.newKeys == DPAD_RIGHT && gUnknown_0860CBF1[spriteId][roundId][3] != 0xFF)
-            arrId = 3;
+        if (gMain.newKeys == DPAD_UP && sTourneyTreeCursorMovementMap[tourneyTreeCursorSpriteId][roundId][0] != 0xFF)
+            direction = 0;
+        else if (gMain.newKeys == DPAD_DOWN && sTourneyTreeCursorMovementMap[tourneyTreeCursorSpriteId][roundId][1] != 0xFF)
+            direction = 1;
+        else if (gMain.newKeys == DPAD_LEFT && sTourneyTreeCursorMovementMap[tourneyTreeCursorSpriteId][roundId][2] != 0xFF)
+            direction = 2;
+        else if (gMain.newKeys == DPAD_RIGHT && sTourneyTreeCursorMovementMap[tourneyTreeCursorSpriteId][roundId][3] != 0xFF)
+            direction = 3;
     }
 
-    if (arrId != 4)
+    if (direction != 4)
     {
         PlaySE(SE_SELECT);
-        StartSpriteAnim(&gSprites[spriteId], 0);
-        spriteId = gUnknown_0860CBF1[spriteId][roundId][arrId];
-        StartSpriteAnim(&gSprites[spriteId], 1);
-        gTasks[taskId].data[1] = spriteId;
+        StartSpriteAnim(&gSprites[tourneyTreeCursorSpriteId], 0);
+        tourneyTreeCursorSpriteId = sTourneyTreeCursorMovementMap[tourneyTreeCursorSpriteId][roundId][direction];
+        StartSpriteAnim(&gSprites[tourneyTreeCursorSpriteId], 1);
+        gTasks[taskId].data[1] = tourneyTreeCursorSpriteId;
     }
 
     return retVal;
 }
 
-static void sub_8193D40(void)
+static void ShowNonInteractiveDomeTourneyTree(void)
 {
-    u8 taskId = CreateTask(sub_8194220, 0);
+    u8 taskId = CreateTask(Task_ShowTourneyTree, 0);
     gTasks[taskId].data[0] = 0;
     gTasks[taskId].data[1] = 1;
     gTasks[taskId].data[2] = 2;
@@ -5543,50 +5384,51 @@ static void sub_8193D40(void)
     SetMainCallback2(CB2_BattleDome);
 }
 
-static void sub_8193D7C(void)
+static void ResolveDomeRoundWinners(void)
 {
-    s32 i;
+    int i;
 
     if (gSpecialVar_0x8005 == 1)
     {
         gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(gTrainerBattleOpponent_A)].isEliminated = 1;
-        gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(gTrainerBattleOpponent_A)].eliminatedAt = gSaveBlock2Ptr->frontier.field_CB2;
+        gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(gTrainerBattleOpponent_A)].eliminatedAt = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
         gSaveBlock2Ptr->frontier.field_EC0[TrainerIdToTournamentId(gTrainerBattleOpponent_A)] = gBattleResults.lastUsedMovePlayer;
-        if (gSaveBlock2Ptr->frontier.field_CB2 < DOME_FINAL)
-            DecideRoundWinners(gSaveBlock2Ptr->frontier.field_CB2);
+        if (gSaveBlock2Ptr->frontier.curChallengeBattleNum < DOME_FINAL)
+            DecideRoundWinners(gSaveBlock2Ptr->frontier.curChallengeBattleNum);
     }
     else
     {
         gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(TRAINER_PLAYER)].isEliminated = 1;
-        gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(TRAINER_PLAYER)].eliminatedAt = gSaveBlock2Ptr->frontier.field_CB2;
+        gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(TRAINER_PLAYER)].eliminatedAt = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
         gSaveBlock2Ptr->frontier.field_EC0[TrainerIdToTournamentId(TRAINER_PLAYER)] = gBattleResults.lastUsedMoveOpponent;
         if (gBattleOutcome == B_OUTCOME_FORFEITED || gSpecialVar_0x8005 == 9)
             gSaveBlock2Ptr->frontier.domeTrainers[TrainerIdToTournamentId(TRAINER_PLAYER)].unk3 = 1;
-        for (i = gSaveBlock2Ptr->frontier.field_CB2; i < DOME_ROUNDS_COUNT; i++)
+        for (i = gSaveBlock2Ptr->frontier.curChallengeBattleNum; i < DOME_ROUNDS_COUNT; i++)
             DecideRoundWinners(i);
     }
 }
 
-static u16 GetWinningMove(s32 winnerTournamentId, s32 loserTournamentId, u8 roundId)
+static u16 GetWinningMove(int winnerTournamentId, int loserTournamentId, u8 roundId)
 {
-    s32 i, j, k;
-    s32 moveScores[4 * 3];
+    int i, j, k;
+    int moveScores[4 * 3];
     u16 moveIds[4 * 3];
     u16 bestScore = 0;
     u16 bestId = 0;
-    s32 movePower = 0;
-    GetFacilityEnemyMonLevel(); // Unused return variable.
+    int movePower = 0;
+    SetFacilityPtrsGetLevel();
 
     // Calc move points of all 4 moves for all 3 pokemon hitting all 3 target mons.
     for (i = 0; i < 3; i++)
     {
-        for (j = 0; j < 4; j++)
+        for (j = 0; j < MAX_MON_MOVES; j++)
         {
+            // TODO: Clean this up, looks like a different data structure
             moveScores[i * 4 + j] = 0;
             if (gSaveBlock2Ptr->frontier.domeTrainers[winnerTournamentId].trainerId == TRAINER_FRONTIER_BRAIN)
-                moveIds[i * 4 + j] = sub_81A5060(i, j);
+                moveIds[i * 4 + j] = GetFrontierBrainMonMove(i, j);
             else
-                moveIds[i * 4 + j] = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[winnerTournamentId][i]].moves[j];
+                moveIds[i * 4 + j] = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[winnerTournamentId][i]].moves[j];
 
             movePower = gBattleMoves[moveIds[i * 4 + j]].power;
             if (movePower == 0)
@@ -5604,9 +5446,9 @@ static u16 GetWinningMove(s32 winnerTournamentId, s32 loserTournamentId, u8 roun
                 do
                 {
                     var = Random32();
-                } while (gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[loserTournamentId][k]].nature != GetNatureFromPersonality(var));
+                } while (gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[loserTournamentId][k]].nature != GetNatureFromPersonality(var));
 
-                targetSpecies = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[loserTournamentId][k]].species;
+                targetSpecies = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[loserTournamentId][k]].species;
                 if (var & 1)
                     targetAbility = gBaseStats[targetSpecies].ability2;
                 else
@@ -5642,7 +5484,7 @@ static u16 GetWinningMove(s32 winnerTournamentId, s32 loserTournamentId, u8 roun
     goto LABEL;
     while (j != 0)
     {
-        for (j = 0, k = 0; k < 4 * 3; k++)
+        for (j = 0, k = 0; k < MAX_MON_MOVES * 3; k++)
         {
             if (bestScore < moveScores[k])
             {
@@ -5669,7 +5511,7 @@ static u16 GetWinningMove(s32 winnerTournamentId, s32 loserTournamentId, u8 roun
             moveScores[j] = 0;
             bestScore = 0;
             j = 0;
-            for (k = 0; k < 4 * 3; k++)
+            for (k = 0; k < MAX_MON_MOVES * 3; k++)
                 j += moveScores[k];
         }
     }
@@ -5680,12 +5522,12 @@ static u16 GetWinningMove(s32 winnerTournamentId, s32 loserTournamentId, u8 roun
     return moveIds[j];
 }
 
-static void sub_8194220(u8 taskId)
+static void Task_ShowTourneyTree(u8 taskId)
 {
-    s32 i;
-    struct TextSubPrinter textPrinter;
-    s32 r10 = gTasks[taskId].data[1];
-    s32 r4 = gTasks[taskId].data[2];
+    int i;
+    struct TextPrinterTemplate textPrinter;
+    int r10 = gTasks[taskId].data[1];
+    int r4 = gTasks[taskId].data[2];
 
     switch (gTasks[taskId].data[0])
     {
@@ -5744,7 +5586,7 @@ static void sub_8194220(u8 taskId)
         gTasks[taskId].data[0]++;
         break;
     case 3:
-        LoadCompressedObjectPic(gUnknown_0860CF50);
+        LoadCompressedSpriteSheet(sDomeOptionsSpriteSheet);
         if (r10 == 0)
         {
             for (i = 0; i < (unsigned) 31; i++)
@@ -5760,22 +5602,22 @@ static void sub_8194220(u8 taskId)
         break;
     case 4:
         textPrinter.fontId = 2;
-        textPrinter.current_text_offset = gText_BattleTourney;
+        textPrinter.currentChar = gText_BattleTourney;
         textPrinter.windowId = 2;
         textPrinter.x = 0;
         textPrinter.y = 0;
         textPrinter.letterSpacing = 2;
         textPrinter.lineSpacing = 0;
-        textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.current_text_offset, 0x70, textPrinter.letterSpacing);
+        textPrinter.currentX = GetStringCenterAlignXOffsetWithLetterSpacing(textPrinter.fontId, textPrinter.currentChar, 0x70, textPrinter.letterSpacing);
         textPrinter.currentY = 1;
-        textPrinter.fontColor_l = 0;
+        textPrinter.unk = 0;
         textPrinter.fgColor = 14;
         textPrinter.bgColor = 0;
         textPrinter.shadowColor = 13;
         AddTextPrinter(&textPrinter, 0, NULL);
         for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
         {
-            s32 var, var2;
+            int roundId, var2;
 
             CopyDomeTrainerName(gDisplayedStringBattle, gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId);
             if (r10 == 1)
@@ -5788,9 +5630,9 @@ static void sub_8194220(u8 taskId)
                         sub_81948EC(i, var2);
                     }
                 }
-                else if (gSaveBlock2Ptr->frontier.field_CB2 != DOME_ROUND2)
+                else if (gSaveBlock2Ptr->frontier.curChallengeBattleNum != DOME_ROUND2)
                 {
-                    sub_81948EC(i, gSaveBlock2Ptr->frontier.field_CB2 - 2);
+                    sub_81948EC(i, gSaveBlock2Ptr->frontier.curChallengeBattleNum - 2);
                 }
             }
             else if (r10 == 0)
@@ -5803,23 +5645,23 @@ static void sub_8194220(u8 taskId)
                         sub_81948EC(i, var2);
                     }
                 }
-                else if (gSaveBlock2Ptr->frontier.field_CB2 != DOME_ROUND1)
+                else if (gSaveBlock2Ptr->frontier.curChallengeBattleNum != DOME_ROUND1)
                 {
                     if (gTasks[taskId].data[4])
-                        var2 = gSaveBlock2Ptr->frontier.field_CB2;
+                        var2 = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
                     else
-                        var2 = gSaveBlock2Ptr->frontier.field_CB2 - 1;
+                        var2 = gSaveBlock2Ptr->frontier.curChallengeBattleNum - 1;
                     sub_81948EC(i, var2);
                 }
             }
 
             if (gTasks[taskId].data[4])
-                var = gSaveBlock2Ptr->frontier.field_CB2;
+                roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum;
             else
-                var = gSaveBlock2Ptr->frontier.field_CB2 - 1;
+                roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum - 1;
 
-            if (    ((r10 == 1 && gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt < gSaveBlock2Ptr->frontier.field_CB2 - 1)
-                  || (r10 == 0 && gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt <= var))
+            if (    ((r10 == 1 && gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt < gSaveBlock2Ptr->frontier.curChallengeBattleNum - 1)
+                  || (r10 == 0 && gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt <= roundId))
                 && gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated)
             {
                 if (gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId == TRAINER_PLAYER)
@@ -5851,7 +5693,7 @@ static void sub_8194220(u8 taskId)
                 textPrinter.currentX = GetStringWidthDifference(textPrinter.fontId, gDisplayedStringBattle, 0x3D, textPrinter.letterSpacing);
             else
                 textPrinter.currentX = 3;
-            textPrinter.current_text_offset = gDisplayedStringBattle;
+            textPrinter.currentChar = gDisplayedStringBattle;
             textPrinter.windowId = gUnknown_0860D3F1[i][0];
             textPrinter.currentY = gUnknown_0860D3F1[i][1];
             AddTextPrinter(&textPrinter, 0, NULL);
@@ -5888,18 +5730,23 @@ static void sub_8194220(u8 taskId)
             gTasks[i].data[0] = 0;
         }
         ScanlineEffect_Clear();
-        for (i = 0; i < 91; i++)
+        
+        i = 0;
+        while (i < 91)
         {
-            gScanlineEffectRegBuffers[0][i] = 0x1F0A;
-            gScanlineEffectRegBuffers[1][i] = 0x1F0A;
+            gScanlineEffectRegBuffers[0][i] = BGCNT_PRIORITY(2) | BGCNT_SCREENBASE(31) | BGCNT_16COLOR | BGCNT_CHARBASE(2) | BGCNT_TXT256x256;
+            gScanlineEffectRegBuffers[1][i] = BGCNT_PRIORITY(2) | BGCNT_SCREENBASE(31) | BGCNT_16COLOR | BGCNT_CHARBASE(2) | BGCNT_TXT256x256;
+            i++;
         }
-        for (i = 91; i < 160; i++)
+
+        while (i < 160)
         {
-            asm(""::"r"(i));
-            gScanlineEffectRegBuffers[0][i] = 0x1F09;
-            gScanlineEffectRegBuffers[1][i] = 0x1F09;
+            gScanlineEffectRegBuffers[0][i] =  BGCNT_PRIORITY(1) | BGCNT_SCREENBASE(31) | BGCNT_16COLOR | BGCNT_CHARBASE(2) | BGCNT_TXT256x256;
+            gScanlineEffectRegBuffers[1][i] =  BGCNT_PRIORITY(1) | BGCNT_SCREENBASE(31) | BGCNT_16COLOR | BGCNT_CHARBASE(2) | BGCNT_TXT256x256;
+            i++;
         }
-        ScanlineEffect_SetParams(gUnknown_0860CF44);
+        
+        ScanlineEffect_SetParams(sTourneyTreeScanlineEffectParams);
         DestroyTask(taskId);
         break;
     }
@@ -5907,7 +5754,7 @@ static void sub_8194220(u8 taskId)
 
 static void sub_81948EC(u8 tournamentId, u8 arg1)
 {
-    s32 i;
+    int i;
     const struct UnkStruct_860DD10 *structPtr = gUnknown_0860DD10[tournamentId][arg1];
 
     for (i = 0; i < gUnknown_0860DE10[tournamentId][arg1]; i++)
@@ -5918,8 +5765,8 @@ static void sub_81948EC(u8 tournamentId, u8 arg1)
 
 static void sub_8194950(u8 taskId)
 {
-    s32 i;
-    struct TextSubPrinter textPrinter;
+    int i;
+    struct TextPrinterTemplate textPrinter;
 
     switch (gTasks[taskId].data[0])
     {
@@ -5937,14 +5784,14 @@ static void sub_8194950(u8 taskId)
             textPrinter.y = 0;
             textPrinter.letterSpacing = 2;
             textPrinter.lineSpacing = 0;
-            textPrinter.fontColor_l = 0;
+            textPrinter.unk = 0;
             textPrinter.fgColor = 11;
             textPrinter.bgColor = 0;
             textPrinter.shadowColor = 13;
             for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
             {
                 CopyDomeTrainerName(gDisplayedStringBattle, gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId);
-                if (gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt == gSaveBlock2Ptr->frontier.field_CB2 - 1
+                if (gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt == gSaveBlock2Ptr->frontier.curChallengeBattleNum - 1
                     && gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated)
                 {
                     if (gUnknown_0860D3F1[i][0] == 0)
@@ -5952,15 +5799,15 @@ static void sub_8194950(u8 taskId)
                     else
                         textPrinter.currentX = 3;
 
-                    textPrinter.current_text_offset = gDisplayedStringBattle;
+                    textPrinter.currentChar = gDisplayedStringBattle;
                     textPrinter.windowId = gUnknown_0860D3F1[i][0];
                     textPrinter.currentY = gUnknown_0860D3F1[i][1];
                     AddTextPrinter(&textPrinter, 0, NULL);
                 }
                 if (!gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated)
                 {
-                    s32 var = gSaveBlock2Ptr->frontier.field_CB2 - 1;
-                    sub_81948EC(i, var);
+                    int roundId = gSaveBlock2Ptr->frontier.curChallengeBattleNum - 1;
+                    sub_81948EC(i, roundId);
                 }
             }
         }
@@ -6086,31 +5933,31 @@ static void VblankCb1_BattleDome(void)
     ScanlineEffect_InitHBlankDmaTransfer();
 }
 
-static void sub_8194D48(void)
+static void InitDomeFacilityTrainersAndMons(void)
 {
     gFacilityTrainerMons = gBattleFrontierMons;
     gFacilityTrainers = gBattleFrontierTrainers;
 }
 
-static void sub_8194D68(void)
+static void RestoreDomePlayerParty(void)
 {
-    s32 i, moveSlot;
+    int i, moveSlot;
 
     for (i = 0; i < 2; i++)
     {
-        s32 playerMonId = gSaveBlock2Ptr->frontier.field_CAA[gUnknown_0203CEF8[i] - 1] - 1;
-        s32 count;
+        int playerMonId = gSaveBlock2Ptr->frontier.selectedPartyMons[gSelectedOrderFromParty[i] - 1] - 1;
+        int count;
 
-        for (moveSlot = 0; moveSlot < 4; moveSlot++)
+        for (moveSlot = 0; moveSlot < MAX_MON_MOVES; moveSlot++)
         {
             count = 0;
-            while (count < 4)
+            while (count < MAX_MON_MOVES)
             {
                 if (GetMonData(&gSaveBlock1Ptr->playerParty[playerMonId], MON_DATA_MOVE1 + count, NULL) == GetMonData(&gPlayerParty[i], MON_DATA_MOVE1 + moveSlot, NULL))
                     break;
                 count++;
             }
-            if (count == 4)
+            if (count == MAX_MON_MOVES)
                 SetMonMoveSlot(&gPlayerParty[i], MOVE_SKETCH, moveSlot);
         }
 
@@ -6118,24 +5965,24 @@ static void sub_8194D68(void)
     }
 }
 
-static void sub_8194E44(void)
+static void RestoreDomePlayerPartyHeldItems(void)
 {
-    s32 i;
+    int i;
 
     for (i = 0; i < 2; i++)
     {
-        s32 playerMonId = gSaveBlock2Ptr->frontier.field_CAA[gUnknown_0203CEF8[i] - 1] - 1;
+        int playerMonId = gSaveBlock2Ptr->frontier.selectedPartyMons[gSelectedOrderFromParty[i] - 1] - 1;
         u16 item = GetMonData(&gSaveBlock1Ptr->playerParty[playerMonId], MON_DATA_HELD_ITEM, NULL);
         SetMonData(&gPlayerParty[i], MON_DATA_HELD_ITEM, &item);
     }
 }
 
-static void sub_8194EB4(void)
+static void ReduceDomePlayerPartyTo3Mons(void)
 {
-    sub_80F94E8();
+    ReducePlayerPartyToSelectedMons();
 }
 
-static void sub_8194EC0(void)
+static void GetPlayerSeededBeforeOpponent(void)
 {
     if (TrainerIdToTournamentId(gTrainerBattleOpponent_A) > TrainerIdToTournamentId(TRAINER_PLAYER))
         gSpecialVar_Result = 1;
@@ -6143,11 +5990,11 @@ static void sub_8194EC0(void)
         gSpecialVar_Result = 2;
 }
 
-static void sub_8194EF8(void)
+static void BufferLastDomeWinnerName(void)
 {
-    s32 i;
+    int i;
 
-    sub_8194D48();
+    InitDomeFacilityTrainersAndMons();
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
     {
         if (!gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated)
@@ -6158,15 +6005,15 @@ static void sub_8194EF8(void)
 
 static void sub_8194F58(void)
 {
-    s32 i, j, k;
-    s32 monLevel;
-    s32 species[3];
-    s32 monTypesBits;
-    s32 trainerId;
-    s32 monTournamentId;
+    int i, j, k;
+    int monLevel;
+    int species[3];
+    int monTypesBits;
+    int trainerId;
+    int monSetId;
     u8 lvlMode;
     u16 *statSums;
-    s32 *statValues;
+    int *statValues;
     u8 ivs = 0;
 
     species[0] = 0;
@@ -6176,7 +6023,7 @@ static void sub_8194F58(void)
         return;
 
     statSums = AllocZeroed(sizeof(u16) * DOME_TOURNAMENT_TRAINERS_COUNT);
-    statValues = AllocZeroed(sizeof(s32) * 6);
+    statValues = AllocZeroed(sizeof(int) * 6);
     lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
     gSaveBlock2Ptr->frontier.lvlMode = 0;
     // This one, I'd like to call a 'C fakematching'.
@@ -6210,20 +6057,20 @@ static void sub_8194F58(void)
             // Make sure the mon is valid.
             do
             {
-                monTournamentId = RandomizeFacilityTrainerMonId(trainerId);
+                monSetId = RandomizeFacilityTrainerMonSet(trainerId);
                 for (k = 0; k < j; k++)
                 {
-                    s32 checkingMonId = gSaveBlock2Ptr->frontier.domeMonId[i][k];
-                    if (checkingMonId == monTournamentId
-                        || species[0] == gFacilityTrainerMons[monTournamentId].species
-                        || species[1] == gFacilityTrainerMons[monTournamentId].species
-                        || gFacilityTrainerMons[checkingMonId].itemTableId == gFacilityTrainerMons[monTournamentId].itemTableId)
+                    int checkingMonId = gSaveBlock2Ptr->frontier.domeMonIds[i][k];
+                    if (checkingMonId == monSetId
+                        || species[0] == gFacilityTrainerMons[monSetId].species
+                        || species[1] == gFacilityTrainerMons[monSetId].species
+                        || gFacilityTrainerMons[checkingMonId].itemTableId == gFacilityTrainerMons[monSetId].itemTableId)
                         break;
                 }
             } while (k != j);
 
-            gSaveBlock2Ptr->frontier.domeMonId[i][j] = monTournamentId;
-            species[j] = gFacilityTrainerMons[monTournamentId].species;
+            gSaveBlock2Ptr->frontier.domeMonIds[i][j] = monSetId;
+            species[j] = gFacilityTrainerMons[monSetId].species;
         }
         gSaveBlock2Ptr->frontier.domeTrainers[i].isEliminated = 0;
         gSaveBlock2Ptr->frontier.domeTrainers[i].eliminatedAt = 0;
@@ -6232,66 +6079,66 @@ static void sub_8194F58(void)
 
     monLevel = 50;
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
-	{
-		monTypesBits = 0;
-		statSums[i] = 0;
-		ivs = GetDomeTrainerMonIvs(gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId);
-		for (j = 0; j < 3; j++)
-		{
-			CalcDomeMonStats(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species,
-							 monLevel, ivs,
-							 gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].evSpread,
-							 gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].nature,
-							 statValues);
+    {
+        monTypesBits = 0;
+        statSums[i] = 0;
+        ivs = GetDomeTrainerMonIvs(gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId);
+        for (j = 0; j < 3; j++)
+        {
+            CalcDomeMonStats(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species,
+                             monLevel, ivs,
+                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].evSpread,
+                             gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].nature,
+                             statValues);
 
-			statSums[i] += statValues[STAT_ATK];
-			statSums[i] += statValues[STAT_DEF];
-			statSums[i] += statValues[STAT_SPATK];
-			statSums[i] += statValues[STAT_SPDEF];
-			statSums[i] += statValues[STAT_SPEED];
-			statSums[i] += statValues[STAT_HP];
-			monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species].type1];
-			monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[i][j]].species].type2];
-		}
+            statSums[i] += statValues[STAT_ATK];
+            statSums[i] += statValues[STAT_DEF];
+            statSums[i] += statValues[STAT_SPATK];
+            statSums[i] += statValues[STAT_SPDEF];
+            statSums[i] += statValues[STAT_SPEED];
+            statSums[i] += statValues[STAT_HP];
+            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species].type1];
+            monTypesBits |= gBitTable[gBaseStats[gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[i][j]].species].type2];
+        }
 
-		// Because GF hates temporary vars, trainerId acts like monTypesCount here.
-		for (trainerId = 0, j = 0; j < 32; j++)
-		{
-			if (monTypesBits & 1)
-				trainerId++;
-			monTypesBits >>= 1;
-		}
-		statSums[i] += (trainerId * monLevel) / 20;
-	}
+        // Because GF hates temporary vars, trainerId acts like monTypesCount here.
+        for (trainerId = 0, j = 0; j < 32; j++)
+        {
+            if (monTypesBits & 1)
+                trainerId++;
+            monTypesBits >>= 1;
+        }
+        statSums[i] += (trainerId * monLevel) / 20;
+    }
 
-	for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT - 1; i++)
-	{
-		for (j = i + 1; j < DOME_TOURNAMENT_TRAINERS_COUNT; j++)
-		{
-			if (statSums[i] < statSums[j])
-			{
-				SwapDomeTrainers(i, j, statSums);
-			}
-			else if (statSums[i] == statSums[j])
-			{
+    for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT - 1; i++)
+    {
+        for (j = i + 1; j < DOME_TOURNAMENT_TRAINERS_COUNT; j++)
+        {
+            if (statSums[i] < statSums[j])
+            {
+                SwapDomeTrainers(i, j, statSums);
+            }
+            else if (statSums[i] == statSums[j])
+            {
                 if (gSaveBlock2Ptr->frontier.domeTrainers[i].trainerId > gSaveBlock2Ptr->frontier.domeTrainers[j].trainerId)
                     SwapDomeTrainers(i, j, statSums);
-			}
-		}
-	}
+            }
+        }
+    }
 
-	Free(statSums);
-	Free(statValues);
+    Free(statSums);
+    Free(statValues);
 
-	for (i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++)
         DecideRoundWinners(i);
 
     gSaveBlock2Ptr->frontier.lvlMode = lvlMode;
 }
 
-static s32 TrainerIdToTournamentId(u16 trainerId)
+static int TrainerIdToTournamentId(u16 trainerId)
 {
-    s32 i;
+    int i;
 
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
     {
@@ -6303,9 +6150,9 @@ static s32 TrainerIdToTournamentId(u16 trainerId)
 }
 
 // The same as the above one, but has global scope.
-s32 TrainerIdToDomeTournamentId(u16 trainerId)
+int TrainerIdToDomeTournamentId(u16 trainerId)
 {
-    s32 i;
+    int i;
 
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
     {
@@ -6316,10 +6163,10 @@ s32 TrainerIdToDomeTournamentId(u16 trainerId)
     return i;
 }
 
-static u8 sub_81953E8(u8 tournamentId, u8 arg1)
+static u8 sub_81953E8(u8 tournamentId, u8 round)
 {
     u8 arr[2];
-    sub_8192F08(gUnknown_0860D1A0[gUnknown_0860D1C0[tournamentId] / 2][arg1] - 16, arr);
+    sub_8192F08(gUnknown_0860D1A0[gUnknown_0860D1C0[tournamentId] / 2][round] - 16, arr);
     if (tournamentId == arr[0])
         return arr[1];
     else
@@ -6328,11 +6175,11 @@ static u8 sub_81953E8(u8 tournamentId, u8 arg1)
 
 static void DecideRoundWinners(u8 roundId)
 {
-    s32 i;
-    s32 moveSlot, monId1, monId2;
-    s32 tournamentId1, tournamentId2;
-    s32 species;
-    s32 points1 = 0, points2 = 0;
+    int i;
+    int moveSlot, monId1, monId2;
+    int tournamentId1, tournamentId2;
+    int species;
+    int points1 = 0, points2 = 0;
 
     for (i = 0; i < DOME_TOURNAMENT_TRAINERS_COUNT; i++)
     {
@@ -6363,15 +6210,15 @@ static void DecideRoundWinners(u8 roundId)
             // Calculate points for both trainers.
             for (monId1 = 0; monId1 < 3; monId1++)
             {
-                for (moveSlot = 0; moveSlot < 4; moveSlot++)
+                for (moveSlot = 0; moveSlot < MAX_MON_MOVES; moveSlot++)
                 {
                     for (monId2 = 0; monId2 < 3; monId2++)
                     {
-                        points1 += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId1][monId1]].moves[moveSlot],
-                                                gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId2][monId2]].species, 2);
+                        points1 += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId1][monId1]].moves[moveSlot],
+                                                gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId2][monId2]].species, 2);
                     }
                 }
-                species = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId1][monId1]].species;
+                species = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId1][monId1]].species;
                 points1 += ( gBaseStats[species].baseHP
                            + gBaseStats[species].baseAttack
                            + gBaseStats[species].baseDefense
@@ -6386,15 +6233,15 @@ static void DecideRoundWinners(u8 roundId)
 
             for (monId1 = 0; monId1 < 3; monId1++)
             {
-                for (moveSlot = 0; moveSlot < 4; moveSlot++)
+                for (moveSlot = 0; moveSlot < MAX_MON_MOVES; moveSlot++)
                 {
                     for (monId2 = 0; monId2 < 3; monId2++)
                     {
-                        points2 += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId2][monId1]].moves[moveSlot],
-                                                gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId1][monId2]].species, 2);
+                        points2 += GetTypeEffectivenessPoints(gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId2][monId1]].moves[moveSlot],
+                                                gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId1][monId2]].species, 2);
                     }
                 }
-                species = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonId[tournamentId2][monId1]].species;
+                species = gFacilityTrainerMons[gSaveBlock2Ptr->frontier.domeMonIds[tournamentId2][monId1]].species;
                 points2 += ( gBaseStats[species].baseHP
                            + gBaseStats[species].baseAttack
                            + gBaseStats[species].baseDefense
@@ -6436,28 +6283,28 @@ static void DecideRoundWinners(u8 roundId)
     }
 }
 
-static void CopyDomeTrainerName(u8 *dst, u16 trainerId)
+static void CopyDomeTrainerName(u8 *str, u16 trainerId)
 {
-    s32 i = 0;
-    GetFacilityEnemyMonLevel(); // Unused return value.
+    int i = 0;
+    SetFacilityPtrsGetLevel();
 
     if (trainerId == TRAINER_FRONTIER_BRAIN)
     {
-        CopyDomeBrainTrainerName(dst);
+        CopyDomeBrainTrainerName(str);
     }
     else
     {
         if (trainerId == TRAINER_PLAYER)
         {
             for (i = 0; i < PLAYER_NAME_LENGTH; i++)
-                dst[i] = gSaveBlock2Ptr->playerName[i];
+                str[i] = gSaveBlock2Ptr->playerName[i];
         }
         else if (trainerId < 300)
         {
-            for (i = 0; i < FRONTIER_TRAINER_NAME_LENGTH; i++)
-                dst[i] = gFacilityTrainers[trainerId].trainerName[i];
+            for (i = 0; i < PLAYER_NAME_LENGTH; i++)
+                str[i] = gFacilityTrainers[trainerId].trainerName[i];
         }
-        dst[i] = EOS;
+        str[i] = EOS;
     }
 }
 
@@ -6471,11 +6318,11 @@ static u8 GetDomeBrainTrainerClass(void)
     return gTrainers[TRAINER_TUCKER].trainerClass;
 }
 
-static void CopyDomeBrainTrainerName(u8 *dst)
+static void CopyDomeBrainTrainerName(u8 *str)
 {
-    s32 i;
+    int i;
 
-    for (i = 0; i < FRONTIER_TRAINER_NAME_LENGTH; i++)
-        dst[i] = gTrainers[TRAINER_TUCKER].trainerName[i];
-    dst[i] = EOS;
+    for (i = 0; i < PLAYER_NAME_LENGTH; i++)
+        str[i] = gTrainers[TRAINER_TUCKER].trainerName[i];
+    str[i] = EOS;
 }

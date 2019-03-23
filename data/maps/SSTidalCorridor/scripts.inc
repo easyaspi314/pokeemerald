@@ -1,9 +1,9 @@
 SSTidalCorridor_MapScripts:: @ 823BFCF
-	map_script 2, SSTidalCorridor_MapScript2_23BFD5
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, SSTidalCorridor_MapScript2_23BFD5
 	.byte 0
 
 SSTidalCorridor_MapScript2_23BFD5: @ 823BFD5
-	map_script_2 VAR_0x40D4, 0, SSTidalCorridor_EventScript_23C219
+	map_script_2 VAR_SS_TIDAL_SCOTT_STATE, 0, SSTidalCorridor_EventScript_23C219
 	map_script_2 VAR_PORTHOLE_STATE, 1, SSTidalCorridor_EventScript_23BFFF
 	map_script_2 VAR_PORTHOLE_STATE, 5, SSTidalCorridor_EventScript_23C015
 	map_script_2 VAR_PORTHOLE_STATE, 9, SSTidalCorridor_EventScript_23C067
@@ -15,7 +15,7 @@ SSTidalCorridor_EventScript_23BFFF:: @ 823BFFF
 	setvar VAR_PORTHOLE_STATE, 2
 	lockall
 	playse SE_PINPON
-	msgbox SSTidalCorridor_Text_23C462, 4
+	msgbox SSTidalCorridor_Text_23C462, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -23,7 +23,7 @@ SSTidalCorridor_EventScript_23C015:: @ 823C015
 	setvar VAR_PORTHOLE_STATE, 6
 	lockall
 	playse SE_PINPON
-	msgbox SSTidalCorridor_Text_23C4E3, 4
+	msgbox SSTidalCorridor_Text_23C4E3, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -31,21 +31,21 @@ SSTidalRooms_EventScript_23C028:: @ 823C028
 	special SetSSTidalFlag
 	setvar VAR_PORTHOLE_STATE, 7
 	playse SE_PINPON
-	msgbox SSTidalRooms_Text_23C462, 4
+	msgbox SSTidalRooms_Text_23C462, MSGBOX_DEFAULT
 	return
 
 SSTidalRooms_EventScript_23C03C:: @ 823C03C
 	special ResetSSTidalFlag
 	setvar VAR_PORTHOLE_STATE, 4
 	playse SE_PINPON
-	msgbox SSTidalRooms_Text_23C553, 4
+	msgbox SSTidalRooms_Text_23C553, MSGBOX_DEFAULT
 	return
 
 SSTidalCorridor_EventScript_23C050:: @ 823C050
 	compare VAR_PORTHOLE_STATE, 2
-	goto_eq SSTidalCorridor_EventScript_23C067
+	goto_if_eq SSTidalCorridor_EventScript_23C067
 	compare VAR_PORTHOLE_STATE, 7
-	goto_eq SSTidalCorridor_EventScript_23C07D
+	goto_if_eq SSTidalCorridor_EventScript_23C07D
 	end
 
 SSTidalCorridor_EventScript_23C067:: @ 823C067
@@ -53,7 +53,7 @@ SSTidalCorridor_EventScript_23C067:: @ 823C067
 	setvar VAR_PORTHOLE_STATE, 3
 	lockall
 	playse SE_PINPON
-	msgbox SSTidalCorridor_Text_23C4E3, 4
+	msgbox SSTidalCorridor_Text_23C4E3, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -62,7 +62,7 @@ SSTidalCorridor_EventScript_23C07D:: @ 823C07D
 	setvar VAR_PORTHOLE_STATE, 8
 	lockall
 	playse SE_PINPON
-	msgbox SSTidalCorridor_Text_23C50F, 4
+	msgbox SSTidalCorridor_Text_23C50F, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -70,7 +70,7 @@ SSTidalRooms_EventScript_23C093:: @ 823C093
 	special ResetSSTidalFlag
 	setvar VAR_PORTHOLE_STATE, 8
 	playse SE_PINPON
-	msgbox SSTidalRooms_Text_23C50F, 4
+	msgbox SSTidalRooms_Text_23C50F, MSGBOX_DEFAULT
 	return
 
 SSTidalRooms_EventScript_23C0A7:: @ 823C0A7
@@ -82,7 +82,7 @@ SSTidalRooms_EventScript_23C0A7:: @ 823C0A7
 	return
 
 SSTidalCorridor_EventScript_23C0D9:: @ 823C0D9
-	msgbox SSTidalCorridor_Text_23C6EC, 2
+	msgbox SSTidalCorridor_Text_23C6EC, MSGBOX_NPC
 	end
 
 SSTidalCorridor_EventScript_23C0E2:: @ 823C0E2
@@ -90,43 +90,42 @@ SSTidalCorridor_EventScript_23C0E2:: @ 823C0E2
 	faceplayer
 	waitse
 	playmoncry SPECIES_WINGULL, 0
-	msgbox SSTidalCorridor_Text_23C7E1, 4
+	msgbox SSTidalCorridor_Text_23C7E1, MSGBOX_DEFAULT
 	waitmoncry
 	release
 	end
 
 SSTidalCorridor_EventScript_23C0F5:: @ 823C0F5
-	msgbox SSTidalCorridor_Text_23C7F8, 3
+	msgbox SSTidalCorridor_Text_23C7F8, MSGBOX_SIGN
 	end
 
 SSTidalCorridor_EventScript_23C0FE:: @ 823C0FE
-	msgbox SSTidalCorridor_Text_23C800, 3
+	msgbox SSTidalCorridor_Text_23C800, MSGBOX_SIGN
 	end
 
 SSTidalCorridor_EventScript_23C107:: @ 823C107
-	msgbox SSTidalCorridor_Text_23C808, 3
+	msgbox SSTidalCorridor_Text_23C808, MSGBOX_SIGN
 	end
 
 SSTidalCorridor_EventScript_23C110:: @ 823C110
-	msgbox SSTidalCorridor_Text_23C810, 3
+	msgbox SSTidalCorridor_Text_23C810, MSGBOX_SIGN
 	end
 
 SSTidalCorridor_EventScript_23C119:: @ 823C119
 	lock
 	faceplayer
 	compare VAR_PORTHOLE_STATE, 4
-	goto_eq SSTidalCorridor_EventScript_23C13B
+	goto_if_eq SSTidalCorridor_EventScript_23C13B
 	compare VAR_PORTHOLE_STATE, 8
-	goto_eq SSTidalCorridor_EventScript_23C15A
-	msgbox SSTidalCorridor_Text_23C596, 4
+	goto_if_eq SSTidalCorridor_EventScript_23C15A
+	msgbox SSTidalCorridor_Text_23C596, MSGBOX_DEFAULT
 	release
 	end
 
 SSTidalCorridor_EventScript_23C13B:: @ 823C13B
 	setrespawn HEAL_LOCATION_LILYCOVE_CITY
-	msgbox SSTidalCorridor_Text_23C64F, 4
-	checkflag FLAG_0x104
-	call_if 1, SSTidalCorridor_EventScript_23C179
+	msgbox SSTidalCorridor_Text_23C64F, MSGBOX_DEFAULT
+	call_if_set FLAG_RECEIVED_TM49, SSTidalCorridor_EventScript_23C179
 	warp MAP_LILYCOVE_CITY_HARBOR, 255, 8, 11
 	waitstate
 	release
@@ -134,25 +133,24 @@ SSTidalCorridor_EventScript_23C13B:: @ 823C13B
 
 SSTidalCorridor_EventScript_23C15A:: @ 823C15A
 	setrespawn HEAL_LOCATION_SLATEPORT_CITY
-	msgbox SSTidalCorridor_Text_23C64F, 4
-	checkflag FLAG_0x104
-	call_if 1, SSTidalCorridor_EventScript_23C179
+	msgbox SSTidalCorridor_Text_23C64F, MSGBOX_DEFAULT
+	call_if_set FLAG_RECEIVED_TM49, SSTidalCorridor_EventScript_23C179
 	warp MAP_SLATEPORT_CITY_HARBOR, 255, 8, 11
 	waitstate
 	release
 	end
 
 SSTidalCorridor_EventScript_23C179:: @ 823C179
-	setflag FLAG_0x3B7
+	setflag FLAG_HIDE_SS_TIDAL_ROOMS_SNATCH_GIVER
 	return
 
 SSTidalCorridor_EventScript_23C17D:: @ 823C17D
 	lockall
 	compare VAR_PORTHOLE_STATE, 2
-	goto_eq SSTidalCorridor_EventScript_23C19E
+	goto_if_eq SSTidalCorridor_EventScript_23C19E
 	compare VAR_PORTHOLE_STATE, 7
-	goto_eq SSTidalCorridor_EventScript_23C19E
-	msgbox SSTidalCorridor_Text_23C6C3, 4
+	goto_if_eq SSTidalCorridor_EventScript_23C19E
+	msgbox SSTidalCorridor_Text_23C6C3, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -164,36 +162,35 @@ SSTidalCorridor_EventScript_23C19E:: @ 823C19E
 SSTidalCorridor_EventScript_23C1A3:: @ 823C1A3
 	lock
 	faceplayer
-	checkflag FLAG_0x0F7
-	goto_eq SSTidalCorridor_EventScript_23C1BD
+	goto_if_set FLAG_DEFEATED_SS_TIDAL_TRAINERS, SSTidalCorridor_EventScript_23C1BD
 	call SSTidalCorridor_EventScript_23C1C7
-	msgbox SSTidalCorridor_Text_23C65E, 4
+	msgbox SSTidalCorridor_Text_23C65E, MSGBOX_DEFAULT
 	release
 	end
 
 SSTidalCorridor_EventScript_23C1BD:: @ 823C1BD
-	msgbox SSTidalCorridor_Text_23C6B0, 4
+	msgbox SSTidalCorridor_Text_23C6B0, MSGBOX_DEFAULT
 	release
 	end
 
 SSTidalCorridor_EventScript_23C1C7:: @ 823C1C7
 	checktrainerflag TRAINER_PHILLIP
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_LEONARD
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_COLTON
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_MICAH
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_THOMAS
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_LEA_AND_JED
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_GARRET
-	goto_if 0, SSTidalCorridor_EventScript_23C218
+	goto_if_lt SSTidalCorridor_EventScript_23C218
 	checktrainerflag TRAINER_NAOMI
-	goto_if 0, SSTidalCorridor_EventScript_23C218
-	setflag FLAG_0x0F7
+	goto_if_lt SSTidalCorridor_EventScript_23C218
+	setflag FLAG_DEFEATED_SS_TIDAL_TRAINERS
 	goto SSTidalCorridor_EventScript_23C1BD
 	return
 
@@ -204,11 +201,11 @@ SSTidalCorridor_EventScript_23C219:: @ 823C219
 	lockall
 	applymovement 5, SSTidalCorridor_Movement_23C26D
 	waitmovement 0
-	applymovement 255, SSTidalCorridor_Movement_2725A8
+	applymovement EVENT_OBJ_ID_PLAYER, Common_Movement_WalkInPlaceRight
 	waitmovement 0
-	msgbox SSTidalCorridor_Text_23C28F, 4
+	msgbox SSTidalCorridor_Text_23C28F, MSGBOX_DEFAULT
 	closemessage
-	applymovement 255, SSTidalCorridor_Movement_23C27D
+	applymovement EVENT_OBJ_ID_PLAYER, SSTidalCorridor_Movement_23C27D
 	applymovement 1, SSTidalCorridor_Movement_23C284
 	applymovement 5, SSTidalCorridor_Movement_23C275
 	waitmovement 0
@@ -218,8 +215,8 @@ SSTidalCorridor_EventScript_23C219:: @ 823C219
 	applymovement 1, SSTidalCorridor_Movement_23C28B
 	waitmovement 0
 	delay 30
-	setflag FLAG_0x1D0
-	setvar VAR_0x40D4, 1
+	setflag FLAG_MET_SCOTT_ON_SS_TIDAL
+	setvar VAR_SS_TIDAL_SCOTT_STATE, 1
 	releaseall
 	end
 
@@ -270,21 +267,21 @@ SSTidalCorridor_Movement_23C28B: @ 823C28B
 SSTidalCorridor_Text_23C28F: @ 823C28F
 	.string "SCOTT: Well, hi, hi!\n"
 	.string "{PLAYER}{KUN}, {PLAYER}{KUN}!\p"
-	.string "Something’s come up, so I have to\n"
+	.string "Something's come up, so I have to\n"
 	.string "disembark, but am I glad to see you!\p"
 	.string "Congratulations, LEAGUE CHAMPION!\p"
-	.string "There’s a place I’d like to invite\n"
+	.string "There's a place I'd like to invite\n"
 	.string "someone like you.\p"
-	.string "It’s the…\n"
+	.string "It's the…\n"
 	.string "BATTLE FRONTIER!\p"
-	.string "What’s the place like?\n"
-	.string "You’ll understand when you see it!\p"
-	.string "I’ve spoken with the ship’s CAPTAIN\n"
+	.string "What's the place like?\n"
+	.string "You'll understand when you see it!\p"
+	.string "I've spoken with the ship's CAPTAIN\n"
 	.string "about this.\p"
 	.string "The next time you take a ferry,\n"
 	.string "you should be able to sail to\l"
 	.string "the BATTLE FRONTIER.\p"
-	.string "Okay, {PLAYER}{KUN}, I’ll be waiting for you\n"
+	.string "Okay, {PLAYER}{KUN}, I'll be waiting for you\n"
 	.string "at the BATTLE FRONTIER!$"
 
 SSTidalCorridor_Text_23C462: @ 823C462
@@ -308,15 +305,15 @@ SSTidalRooms_Text_23C553: @ 823C553
 	.string "Thank you for sailing with us.$"
 
 SSTidalCorridor_Text_23C596: @ 823C596
-	.string "It’ll be some time before we make land,\n"
+	.string "It'll be some time before we make land,\n"
 	.string "I reckon.\p"
-	.string "You can rest up in your cabin if you’d\n"
-	.string "like. Your cabin’s No. 2.\p"
+	.string "You can rest up in your cabin if you'd\n"
+	.string "like. Your cabin's No. 2.\p"
 	.string "The bed in there is soft and plushy.\n"
 	.string "I can attest to how comfy it is!$"
 
 SSTidalCorridor_Text_23C64F: @ 823C64F
-	.string "We’ve arrived!$"
+	.string "We've arrived!$"
 
 SSTidalCorridor_Text_23C65E: @ 823C65E
 	.string "Go visit other cabins.\n"

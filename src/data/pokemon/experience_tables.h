@@ -1,6 +1,3 @@
-#ifndef POKEEMERALD_EXPERIENCE_TABLES_H
-#define POKEEMERALD_EXPERIENCE_TABLES_H
-
 #define SQUARE(n)(n * n)
 #define CUBE(n)(n * n * n)
 
@@ -18,7 +15,7 @@
     :(n <= 36) ? ((n + 14)           * CUBE(n) / 50)        \
     :            (((n / 2) + 32)     * CUBE(n) / 50)
 
-const u32 gExperienceTables[][MAX_MON_LEVEL + 1] =
+const u32 gExperienceTables[][MAX_LEVEL + 1] =
 {
     { // Medium Fast
         0, // 0
@@ -845,5 +842,3 @@ const u32 gExperienceTables[][MAX_MON_LEVEL + 1] =
         EXP_MEDIUM_FAST(100),
     }
 };
-
-#endif //POKEEMERALD_EXPERIENCE_TABLES_H

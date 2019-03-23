@@ -27,194 +27,34 @@
 #include "scaninc.h"
 #include "asm_file.h"
 
-AsmFile::AsmFile(std::string &path)
+
+// We can make searching faster by searching for .inc only,
+// then checking the matches.
+static const std::string inc_pat = ".inc";
+
+void AsmFile::Find()
 {
-    m_path = path;
-
-        FILE *fp;
-        if (path.empty() || path == "-")
-        {
-            path = "<stdin>";
-            fp = stdin;
-        }
-        else
-        {
-            fp = std::fopen(path.c_str(), "rb");
-        }
-
-        if (fp == NULL)
-            FATAL_ERROR("Failed to open \"%s\" for reading.\n", path.c_str());
-
-        m_size = 0;
-        std::vector<char> buf;
-        char tmp[1024];
-        ssize_t count;
-        while ((count = fread(tmp, 1, 1024, fp)) != 0)
-        {
-            if (ferror(fp))
-                FATAL_ERROR("Failed to read \"%s\".\n", path.c_str());
-
-            buf.insert(buf.end(), tmp, tmp + count);
-
-            m_size += count;
-
-            if (feof(fp))
-                break;
-        }
-        if (m_size == 0)
-            FATAL_ERROR("Empty input!");
-        m_buffer = new char[m_size + 1];
-        std::copy(buf.begin(), buf.end(), m_buffer);
-        m_buffer[m_size] = 0;
-
-        if (fp != stdin)
-            fclose(fp);
-
-    m_pos = 0;
-    m_lineNum = 1;
-}
-
-AsmFile::~AsmFile()
-{
-    delete[] m_buffer;
-}
-
-IncDirectiveType AsmFile::ReadUntilIncDirective(std::string &path)
-{
-    // At the beginning of each loop iteration, the current file position
-    // should be at the start of a line or at the end of the file.
-    for (;;)
+    while ((m_pos = search(m_pos, m_buffer.cend(),
+                                SEARCHER(inc_pat.cbegin(), inc_pat.cend())))
+           != m_buffer.cend())
     {
-        SkipTabsAndSpaces();
+        m_pos += 4;
 
-        IncDirectiveType incDirectiveType = IncDirectiveType::None;
-
-        if (PeekChar() == '.')
+        if (std::equal(m_pos, m_pos + 4, /*.inc*/"lude"))
         {
-            m_pos++;
-
-            if (MatchIncDirective("incbin", path))
-                incDirectiveType = IncDirectiveType::Incbin;
-            else if (MatchIncDirective("include", path))
-                incDirectiveType = IncDirectiveType::Include;
+            m_pos += 4;
+            const std::string path = ReadPath();
+            if (path.empty())
+                continue;
+            m_includes.emplace(path);
         }
-
-        for (;;)
+        else if (std::equal(m_pos, m_pos + 3, /*.inc*/"bin"))
         {
-            int c = GetChar();
-
-            if (c == -1)
-                return incDirectiveType;
-
-            if (c == ';')
-            {
-                SkipEndOfLineComment();
-                break;
-            }
-            else if (c == '/' && PeekChar() == '*')
-            {
-                m_pos++;
-                SkipMultiLineComment();
-            }
-            else if (c == '"')
-            {
-                SkipString();
-            }
-            else if (c == '\n')
-            {
-                break;
-            }
-        }
-
-        if (incDirectiveType != IncDirectiveType::None)
-            return incDirectiveType;
-    }
-}
-
-std::string AsmFile::ReadPath()
-{
-    int length = 0;
-    int startPos = m_pos;
-
-    for (;;)
-    {
-        int c = GetChar();
-
-        if (c == '"')
-            break;
-
-        if (c == -1)
-            FATAL_INPUT_ERROR("unexpected EOF in include string\n");
-
-        if (c == 0)
-            FATAL_INPUT_ERROR("unexpected NUL character in include string\n");
-
-        if (c == '\n')
-            FATAL_INPUT_ERROR("unexpected end of line character in include string\n");
-
-        // Don't bother allowing any escape sequences.
-        if (c == '\\')
-            FATAL_INPUT_ERROR("unexpected escape in include string\n");
-
-        length++;
-
-        if (length > SCANINC_MAX_PATH)
-            FATAL_INPUT_ERROR("path is too long");
-    }
-
-    // MPlayDef.s needs special treatment.
-    if (m_buffer[startPos] == 'M' && !strncmp(m_buffer + startPos, "MPlayDef.s", length))
-        return std::string("include/MPlayDef.s");
-    else
-        return std::string (m_buffer + startPos, length);
-}
-
-void AsmFile::SkipEndOfLineComment()
-{
-    int c;
-
-    do
-    {
-        c = GetChar();
-    } while (c != -1 && c != '\n');
-}
-
-void AsmFile::SkipMultiLineComment()
-{
-    for (;;)
-    {
-        int c = GetChar();
-
-        if (c == '*')
-        {
-            if (PeekChar() == '/')
-            {
-                m_pos++;
-                return;
-            }
-        }
-        else if (c == -1)
-        {
-            return;
-        }
-    }
-}
-
-void AsmFile::SkipString()
-{
-    for (;;)
-    {
-        int c = GetChar();
-
-        if (c == '"')
-            break;
-
-        if (c == -1)
-            FATAL_INPUT_ERROR("unexpected EOF in string\n");
-
-        if (c == '\\')
-        {
-            c = GetChar();
+            m_pos += 3;
+            const std::string path = ReadPath();
+            if (path.empty())
+                continue;
+            m_incbins.emplace(path);
         }
     }
 }

@@ -4,6 +4,12 @@ export AS  := $(PREFIX)as
 export LD := $(PREFIX)ld
 export OBJCOPY := $(PREFIX)objcopy
 
+ifeq ($(OS),Windows_NT)
+EXE := .exe
+else
+EXE :=
+endif
+
 TITLE       := POKEMON EMER
 GAME_CODE   := BPEE
 MAKER_CODE  := 01
@@ -21,15 +27,17 @@ C_SUBDIR = src
 ASM_SUBDIR = asm
 DATA_ASM_SUBDIR = data
 SONG_SUBDIR = sound/songs
+MID_SUBDIR = sound/songs/midi
 
 C_BUILDDIR = $(OBJ_DIR)/$(C_SUBDIR)
 ASM_BUILDDIR = $(OBJ_DIR)/$(ASM_SUBDIR)
 DATA_ASM_BUILDDIR = $(OBJ_DIR)/$(DATA_ASM_SUBDIR)
 SONG_BUILDDIR = $(OBJ_DIR)/$(SONG_SUBDIR)
+MID_BUILDDIR = $(OBJ_DIR)/$(MID_SUBDIR)
 
 ASFLAGS := -mcpu=arm7tdmi
 
-CC1             := tools/agbcc/bin/agbcc
+CC1             := tools/agbcc/bin/agbcc$(EXE)
 override CC1FLAGS += -mthumb-interwork -Wimplicit -Wparentheses -Werror -O2 -fhex-asm
 
 CPPFLAGS := -I tools/agbcc/include -I tools/agbcc -I include
@@ -38,17 +46,19 @@ LDFLAGS = -Map ../../$(MAP)
 
 LIB := -L ../../tools/agbcc/lib -lgcc -lc
 
+TOOLS_DIR := $(CURDIR)/tools
 SHA1 := $(shell { command -v sha1sum || command -v shasum; } 2>/dev/null) -c
-GFX := tools/gbagfx/gbagfx
-AIF := tools/aif2pcm/aif2pcm
-MID := $(abspath tools/mid2agb/mid2agb)
-SCANINC := tools/scaninc/scaninc
-PREPROC := tools/preproc/preproc
-RAMSCRGEN := tools/ramscrgen/ramscrgen
-FIX := tools/gbafix/gbafix
+GFX := $(TOOLS_DIR)/gbagfx/gbagfx$(EXE)
+AIF := $(TOOLS_DIR)/aif2pcm/aif2pcm$(EXE)
+MID := $(TOOLS_DIR)/mid2agb/mid2agb$(EXE)
+SCANINC := $(TOOLS_DIR)/scaninc/scaninc$(EXE)
+PREPROC := $(TOOLS_DIR)/preproc/preproc$(EXE)
+RAMSCRGEN := $(TOOLS_DIR)/ramscrgen/ramscrgen$(EXE)
+FIX := $(TOOLS_DIR)/gbafix/gbafix$(EXE)
+MAPJSON := $(TOOLS_DIR)/mapjson/mapjson$(EXE)
 
-ALL_TOOLS := $(GFX) $(SCANINC) $(PREPROC) $(BIN2C) $(RSFONT) $(AIF) $(RAMSCRGEN) $(MID) $(FIX)
-ALL_TOOL_NAMES := gbagfx scaninc preproc bin2c rsfont aif2pcm ramscrgen
+ALL_TOOLS := $(GFX) $(SCANINC) $(PREPROC) $(BIN2C) $(RSFONT) $(AIF) $(RAMSCRGEN) $(MID) $(FIX) $(MAPJSON)
+ALL_TOOL_NAMES := gbagfx scaninc preproc bin2c rsfont aif2pcm ramscrgen mapjson
 
 # Check agbcc's version. The '' prevents old agbcc versions
 # from eating stdin, they will simply fail with "No such file
@@ -57,6 +67,7 @@ ALL_TOOL_NAMES := gbagfx scaninc preproc bin2c rsfont aif2pcm ramscrgen
 CC1_REQ_VER := 1
 CC1_VER     := $(shell $(CC1) -agbcc-version '' 2>/dev/null || echo 0)
 
+$(shell mkdir -p $(OBJ_DIR) $(C_BUILDDIR) $(ASM_BUILDDIR) $(DATA_ASM_BUILDDIR) $(MID_BUILDDIR) $(SONG_BUILDDIR))
 ifneq ($(CC1_REQ_VER),$(CC1_VER))
     $(error Please update agbcc!)
 endif
@@ -73,9 +84,7 @@ endif
 
 .PHONY: rom clean compare tidy
 
-$(shell mkdir -p $(C_BUILDDIR) $(ASM_BUILDDIR) $(DATA_ASM_BUILDDIR) $(SONG_BUILDDIR))
-
-C_SRCS := $(wildcard $(C_SUBDIR)/*.c)
+C_SRCS := $(wildcard $(C_SUBDIR)/*.c $(C_SUBDIR)/*/*.c $(C_SUBDIR)/*/*/*.c)
 C_OBJS := $(patsubst $(C_SUBDIR)/%.c,$(C_BUILDDIR)/%.o,$(C_SRCS))
 
 ASM_SRCS := $(wildcard $(ASM_SUBDIR)/*.s)
@@ -87,7 +96,10 @@ DATA_ASM_OBJS := $(patsubst $(DATA_ASM_SUBDIR)/%.s,$(DATA_ASM_BUILDDIR)/%.o,$(DA
 SONG_SRCS := $(wildcard $(SONG_SUBDIR)/*.s)
 SONG_OBJS := $(patsubst $(SONG_SUBDIR)/%.s,$(SONG_BUILDDIR)/%.o,$(SONG_SRCS))
 
-OBJS := $(C_OBJS) $(ASM_OBJS) $(DATA_ASM_OBJS) $(SONG_OBJS)
+MID_SRCS := $(wildcard $(MID_SUBDIR)/*.mid)
+MID_OBJS := $(patsubst $(MID_SUBDIR)/%.mid,$(MID_BUILDDIR)/%.o,$(MID_SRCS))
+
+OBJS     := $(C_OBJS) $(ASM_OBJS) $(DATA_ASM_OBJS) $(SONG_OBJS) $(MID_OBJS)
 OBJS_REL := $(patsubst $(OBJ_DIR)/%,%,$(OBJS))
 
 ifeq (,$(filter-out rom,$(MAKECMDGOALS)))
@@ -126,9 +138,13 @@ compare: $(ROM)
 
 clean: tidy
 	rm -f sound/direct_sound_samples/*.bin
-	rm -f $(SONG_OBJS)
 	rm -rf $(DEPDIR)
+	rm -f $(SONG_OBJS) $(MID_OBJS) $(MID_SUBDIR)/*.s
 	find . \( -iname '*.1bpp' -o -iname '*.4bpp' -o -iname '*.8bpp' -o -iname '*.gbapal' -o -iname '*.lz' -o -iname '*.latfont' -o -iname '*.hwjpnfont' -o -iname '*.fwjpnfont' \) -exec rm {} +
+	rm -f $(DATA_ASM_SUBDIR)/layouts/layouts.inc $(DATA_ASM_SUBDIR)/layouts/layouts_table.inc
+	rm -f $(DATA_ASM_SUBDIR)/maps/connections.inc $(DATA_ASM_SUBDIR)/maps/events.inc $(DATA_ASM_SUBDIR)/maps/groups.inc $(DATA_ASM_SUBDIR)/maps/headers.inc
+	find $(DATA_ASM_SUBDIR)/maps \( -iname 'connections.inc' -o -iname 'events.inc' -o -iname 'header.inc' \) -exec rm {} +
+
 tidy:
 	rm -f $(ROM) $(ELF) $(MAP)
 	rm -r build/*
@@ -156,24 +172,25 @@ $(DEPDIR)/%.d: %.s
 -include $(DATA_DEPS)
 
 include graphics_file_rules.mk
-include event_obj_graphics_makefile_rules.mk
+include map_data_rules.mk
+include spritesheet_rules.mk
+include songs.mk
 
 %.s: ;
 %.png: ;
 %.pal: ;
 %.aif: ;
 
-%.1bpp: %.png  ; $(GFX) $< $@
-%.4bpp: %.png  ; $(GFX) $< $@
-%.8bpp: %.png  ; $(GFX) $< $@
-%.gbapal: %.pal ; $(GFX) $< $@
-%.gbapal: %.png ; $(GFX) $< $@
-%.lz: % ; $(GFX) $< $@
-%.rl: % ; $(GFX) $< $@
-sound/direct_sound_samples/cry_%.bin: sound/direct_sound_samples/cry_%.aif ; $(AIF) $< $@ --compress
-sound/%.bin: sound/%.aif ; $(AIF) $< $@
-sound/songs/%.s: sound/songs/%.mid
-	cd $(@D) && ../../$(MID) $(<F)
+%.1bpp: %.png | $(GFX) ; $(GFX) $< $@
+%.4bpp: %.png | $(GFX) ; $(GFX) $< $@
+%.8bpp: %.png | $(GFX) ; $(GFX) $< $@
+%.gbapal: %.pal | $(GFX) ; $(GFX) $< $@
+%.gbapal: %.png | $(GFX) ; $(GFX) $< $@
+%.lz: % | $(GFX); $(GFX) $< $@
+%.rl: % | $(GFX); $(GFX) $< $@
+sound/direct_sound_samples/cry_%.bin: sound/direct_sound_samples/cry_%.aif | $(AIF); $(AIF) $< $@ --compress
+sound/%.bin: sound/%.aif | $(AIF); $(AIF) $< $@
+
 
 $(C_BUILDDIR)/libc.o: CC1 := tools/agbcc/bin/old_agbcc
 $(C_BUILDDIR)/libc.o: CC1FLAGS := -O2
@@ -184,41 +201,41 @@ $(C_BUILDDIR)/agb_flash.o: CC1FLAGS := -O -mthumb-interwork
 $(C_BUILDDIR)/agb_flash_1m.o: CC1FLAGS := -O -mthumb-interwork
 $(C_BUILDDIR)/agb_flash_mx.o: CC1FLAGS := -O -mthumb-interwork
 
-$(C_BUILDDIR)/m4a_2.o: CC1 := tools/agbcc/bin/old_agbcc
-$(C_BUILDDIR)/m4a_4.o: CC1 := tools/agbcc/bin/old_agbcc
+$(C_BUILDDIR)/m4a.o: CC1 := tools/agbcc/bin/old_agbcc
 
 $(C_BUILDDIR)/record_mixing.o: CC1FLAGS += -ffreestanding
 
+ifeq ($(DINFO),1)
+override CFLAGS += -g
+endif
 
-$(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c $(C_DEP)
-	$(PREPROC) $(CPPFLAGS) $< -c charmap.txt | $(CC1) $(CC1FLAGS) | $(AS) $(ASFLAGS) -o $@
+$(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c $(C_DEP) | $(PREPROC)
+	$(PREPROC) $(CPPFLAGS) -c charmap.txt $< | $(CC1) $(CC1FLAGS) | $(AS) $(ASFLAGS) -o $@
 
 $(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s $(ASM_DEP)
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(DATA_ASM_BUILDDIR)/%.o: $(DATA_ASM_SUBDIR)/%.s $(DATA_DEP)
-	$(PREPROC) $< -n -c charmap.txt | $(CPP) -P -I include - | $(AS) $(ASFLAGS) -o $@
+$(DATA_ASM_BUILDDIR)/%.o: $(DATA_ASM_SUBDIR)/%.s $(DATA_DEP) | $(PREPROC)
+	$(PREPROC) -n -c charmap.txt $< | $(CPP) -P -I include - | $(AS) $(ASFLAGS) -o $@
 
 $(SONG_BUILDDIR)/%.o: $(SONG_SUBDIR)/%.s
 	$(AS) $(ASFLAGS) -I sound -o $@ $<
 
-$(OBJ_DIR)/sym_bss.ld: sym_bss.txt
+$(OBJ_DIR)/sym_bss.ld: sym_bss.txt | $(RAMSCRGEN)
 	$(RAMSCRGEN) .bss $< ENGLISH > $@
 
-$(OBJ_DIR)/sym_common.ld: sym_common.txt $(C_OBJS) $(wildcard common_syms/*.txt)
+$(OBJ_DIR)/sym_common.ld: sym_common.txt $(C_OBJS) $(wildcard common_syms/*.txt) | $(RAMSCRGEN)
 	$(RAMSCRGEN) COMMON $< ENGLISH -c $(C_BUILDDIR),common_syms > $@
 
-$(OBJ_DIR)/sym_ewram.ld: sym_ewram.txt
+$(OBJ_DIR)/sym_ewram.ld: sym_ewram.txt | $(RAMSCRGEN)
 	$(RAMSCRGEN) ewram_data $< ENGLISH > $@
 
 $(OBJ_DIR)/ld_script.ld: ld_script.txt $(OBJ_DIR)/sym_bss.ld $(OBJ_DIR)/sym_common.ld $(OBJ_DIR)/sym_ewram.ld
-	cd $(OBJ_DIR) && sed -f ../../ld_script.sed ../../$< | sed "s#tools/#../../tools/#g" > ld_script.ld
+	cd $(OBJ_DIR) && sed "s#tools/#../../tools/#g" ../../ld_script.txt > ld_script.ld
 
-$(ELF): $(OBJ_DIR)/ld_script.ld $(OBJS)
+$(ELF): $(OBJ_DIR)/ld_script.ld | $(OBJS)
 	cd $(OBJ_DIR) && $(LD) $(LDFLAGS) -T ld_script.ld -o ../../$@ $(OBJS_REL) $(LIB)
 
-$(ROM): $(ELF)
+$(ROM): $(ELF) | $(FIX)
 	$(OBJCOPY) -O binary $< $@
-	$(FIX) $@ -p -t"$(TITLE)" -c$(GAME_CODE) -m$(MAKER_CODE) -r$(REVISION) -silent
-
-
+	$(FIX) $@ -p -t"$(TITLE)" -c$(GAME_CODE) -m$(MAKER_CODE) -r$(REVISION) --silent

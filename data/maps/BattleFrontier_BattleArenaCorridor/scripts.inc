@@ -1,5 +1,5 @@
 BattleFrontier_BattleArenaCorridor_MapScripts:: @ 82573B9
-	map_script 2, BattleFrontier_BattleArenaCorridor_MapScript2_2573BF
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, BattleFrontier_BattleArenaCorridor_MapScript2_2573BF
 	.byte 0
 
 BattleFrontier_BattleArenaCorridor_MapScript2_2573BF: @ 82573BF
@@ -10,14 +10,14 @@ BattleFrontier_BattleArenaCorridor_EventScript_2573C9:: @ 82573C9
 	delay 16
 	setvar VAR_TEMP_0, 1
 	applymovement 1, BattleFrontier_BattleArenaCorridor_Movement_25742F
-	applymovement 255, BattleFrontier_BattleArenaCorridor_Movement_257417
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleArenaCorridor_Movement_257417
 	waitmovement 0
 	applymovement 1, BattleFrontier_BattleArenaCorridor_Movement_257444
 	waitmovement 0
-	msgbox BattleFrontier_BattleArenaCorridor_Text_257449, 3
+	msgbox BattleFrontier_BattleArenaCorridor_Text_257449, MSGBOX_SIGN
 	applymovement 1, BattleFrontier_BattleArenaCorridor_Movement_257446
 	waitmovement 0
-	applymovement 255, BattleFrontier_BattleArenaCorridor_Movement_25742C
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleArenaCorridor_Movement_25742C
 	waitmovement 0
 	setvar VAR_0x8006, 0
 	warp MAP_BATTLE_FRONTIER_BATTLE_ARENA_BATTLE_ROOM, 255, 7, 5

@@ -1,6 +1,9 @@
 #include "global.h"
+#include "alloc.h"
+#include "battle_pyramid.h"
 #include "berry.h"
 #include "decoration.h"
+#include "ereader.h"
 #include "event_data.h"
 #include "event_object_movement.h"
 #include "event_scripts.h"
@@ -9,22 +12,43 @@
 #include "field_effect_helpers.h"
 #include "field_player_avatar.h"
 #include "fieldmap.h"
-#include "malloc.h"
 #include "mauville_old_man.h"
 #include "metatile_behavior.h"
 #include "overworld.h"
 #include "palette.h"
-#include "pokenav.h"
 #include "random.h"
-#include "rom_818CFC8.h"
-#include "rom_81BE66C.h"
 #include "sprite.h"
+#include "task.h"
 #include "trainer_see.h"
+#include "trainer_hill.h"
 #include "util.h"
 #include "constants/event_object_movement_constants.h"
 #include "constants/event_objects.h"
+#include "constants/field_effects.h"
 
 // this file was known as evobjmv.c in Game Freak's original source
+
+#define movement_type_def(setup, table) \
+static u8 setup##_callback(struct EventObject *, struct Sprite *);\
+void setup(struct Sprite *sprite)\
+{\
+    UpdateEventObjectCurrentMovement(&gEventObjects[sprite->data[0]], sprite, setup##_callback);\
+}\
+static u8 setup##_callback(struct EventObject *eventObject, struct Sprite *sprite)\
+{\
+    return table[sprite->data[1]](eventObject, sprite);\
+}
+
+#define movement_type_empty_callback(setup) \
+static u8 setup##_callback(struct EventObject *, struct Sprite *);\
+void setup(struct Sprite *sprite)\
+{\
+    UpdateEventObjectCurrentMovement(&gEventObjects[sprite->data[0]], sprite, setup##_callback);\
+}\
+static u8 setup##_callback(struct EventObject *eventObject, struct Sprite *sprite)\
+{\
+    return 0;\
+}
 
 EWRAM_DATA u8 sCurrentReflectionType = 0;
 EWRAM_DATA u16 sCurrentSpecialObjectPaletteTag = 0;
@@ -43,7 +67,7 @@ static bool8 IsCoordOutsideEventObjectMovementRange(struct EventObject *, s16, s
 static bool8 IsMetatileDirectionallyImpassable(struct EventObject *, s16, s16, u8);
 static bool8 DoesObjectCollideWithObjectAt(struct EventObject *, s16, s16);
 static void sub_8096530(struct EventObject *, struct Sprite *);
-static void npc_update_obj_anim_flag(struct EventObject *, struct Sprite *);
+static void UpdateEventObjSpriteVisibility(struct EventObject *, struct Sprite *);
 static void EventObjectUpdateMetatileBehaviors(struct EventObject*);
 static void GetGroundEffectFlags_Reflection(struct EventObject*, u32*);
 static void GetGroundEffectFlags_TallGrassOnSpawn(struct EventObject*, u32*);
@@ -74,7 +98,7 @@ static void sub_8097D68(struct Sprite*);
 static void ApplyLevitateMovement(u8);
 static bool8 MovementType_Disguise_Callback(struct EventObject *, struct Sprite *);
 static bool8 MovementType_Hidden_Callback(struct EventObject *, struct Sprite *);
-static void sub_808D450(void);
+static void CreateReflectionEffectSprites(void);
 static u8 GetEventObjectIdByLocalId(u8);
 static u8 GetEventObjectIdByLocalIdAndMapInternal(u8, u8, u8);
 static bool8 GetAvailableEventObjectId(u16, u8, u8, u8 *);
@@ -85,7 +109,7 @@ static void UpdateEventObjectVisibility(struct EventObject *, struct Sprite *);
 static void MakeObjectTemplateFromEventObjectTemplate(struct EventObjectTemplate *, struct SpriteTemplate *, const struct SubspriteTable **);
 static void GetEventObjectMovingCameraOffset(s16 *, s16 *);
 static struct EventObjectTemplate *GetEventObjectTemplateByLocalIdAndMap(u8, u8, u8);
-static void sub_808E894(u16);
+static void LoadEventObjectPalette(u16);
 static void RemoveEventObjectIfOutsideView(struct EventObject *);
 static void sub_808E1B8(u8, s16, s16);
 static void SetPlayerAvatarEventObjectIdAndObjectId(u8, u8);
@@ -101,6 +125,8 @@ static void CameraObject_2(struct Sprite *);
 static struct EventObjectTemplate *FindEventObjectTemplateByLocalId(u8 localId, struct EventObjectTemplate *templates, u8 count);
 static void ClearEventObjectMovement(struct EventObject *, struct Sprite *);
 static void EventObjectSetSingleMovement(struct EventObject *, struct Sprite *, u8);
+static void oamt_npc_ministep_reset(struct Sprite *, u8, u8);
+static void UpdateEventObjectSpriteSubpriorityAndVisibility(struct Sprite *);
 
 const u8 gReflectionEffectPaletteMap[] = {1, 1, 6, 7, 8, 9, 6, 7, 8, 9, 11, 11, 0, 0, 0, 0};
 
@@ -117,255 +143,255 @@ void (*const gCameraObjectFuncs[])(struct Sprite *) = {
 // movement type callbacks
 static void (*const sMovementTypeCallbacks[])(struct Sprite *) =
 {
-    MovementType_None,                         // MOVEMENT_TYPE_NONE
-    MovementType_LookAround,                   // MOVEMENT_TYPE_LOOK_AROUND
-    MovementType_WanderAround,                 // MOVEMENT_TYPE_WANDER_AROUND
-    MovementType_WanderUpAndDown,              // MOVEMENT_TYPE_WANDER_UP_AND_DOWN
-    MovementType_WanderUpAndDown,              // MOVEMENT_TYPE_WANDER_DOWN_AND_UP
-    MovementType_WanderLeftAndRight,           // MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT
-    MovementType_WanderLeftAndRight,           // MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT
-    MovementType_FaceDirection,                // MOVEMENT_TYPE_FACE_UP
-    MovementType_FaceDirection,                // MOVEMENT_TYPE_FACE_DOWN
-    MovementType_FaceDirection,                // MOVEMENT_TYPE_FACE_LEFT
-    MovementType_FaceDirection,                // MOVEMENT_TYPE_FACE_RIGHT
-    MovementType_Player,                       // MOVEMENT_TYPE_PLAYER
-    MovementType_BerryTreeGrowth,              // MOVEMENT_TYPE_BERRY_TREE_GROWTH
-    MovementType_FaceDownAndUp,                // MOVEMENT_TYPE_FACE_DOWN_AND_UP
-    MovementType_FaceLeftAndRight,             // MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT
-    MovementType_FaceUpAndLeft,                // MOVEMENT_TYPE_FACE_UP_AND_LEFT
-    MovementType_FaceUpAndRight,               // MOVEMENT_TYPE_FACE_UP_AND_RIGHT
-    MovementType_FaceDownAndLeft,              // MOVEMENT_TYPE_FACE_DOWN_AND_LEFT
-    MovementType_FaceDownAndRight,             // MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT
-    MovementType_FaceDownUpAndLeft,            // MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT
-    MovementType_FaceDownUpAndRight,           // MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT
-    MovementType_FaceUpRightAndLeft,           // MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT
-    MovementType_FaceDownRightAndLeft,         // MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT
-    MovementType_RotateCounterclockwise,       // MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE
-    MovementType_RotateClockwise,              // MOVEMENT_TYPE_ROTATE_CLOCKWISE
-    MovementType_WalkBackAndForth,             // MOVEMENT_TYPE_WALK_UP_AND_DOWN
-    MovementType_WalkBackAndForth,             // MOVEMENT_TYPE_WALK_DOWN_AND_UP
-    MovementType_WalkBackAndForth,             // MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT
-    MovementType_WalkBackAndForth,             // MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT
-    MovementType_WalkSequenceUpRightLeftDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN
-    MovementType_WalkSequenceRightLeftDownUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP
-    MovementType_WalkSequenceDownUpRightLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT
-    MovementType_WalkSequenceLeftDownUpRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT
-    MovementType_WalkSequenceUpLeftRightDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN
-    MovementType_WalkSequenceLeftRightDownUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP
-    MovementType_WalkSequenceDownUpLeftRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT
-    MovementType_WalkSequenceRightDownUpLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT
-    MovementType_WalkSequenceLeftUpDownRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT
-    MovementType_WalkSequenceUpDownRightLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT
-    MovementType_WalkSequenceRightLeftUpDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN
-    MovementType_WalkSequenceDownRightLeftUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP
-    MovementType_WalkSequenceRightUpDownLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT
-    MovementType_WalkSequenceUpDownLeftRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT
-    MovementType_WalkSequenceLeftRightUpDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN
-    MovementType_WalkSequenceDownLeftRightUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP
-    MovementType_WalkSequenceUpLeftDownRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT
-    MovementType_WalkSequenceDownRightUpLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT
-    MovementType_WalkSequenceLeftDownRightUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP
-    MovementType_WalkSequenceRightUpLeftDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN
-    MovementType_WalkSequenceUpRightDownLeft,  // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT
-    MovementType_WalkSequenceDownLeftUpRight,  // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT
-    MovementType_WalkSequenceLeftUpRightDown,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN
-    MovementType_WalkSequenceRightDownLeftUp,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP
-    MovementType_CopyPlayer,                   // MOVEMENT_TYPE_COPY_PLAYER
-    MovementType_CopyPlayer,                   // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE
-    MovementType_CopyPlayer,                   // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE
-    MovementType_CopyPlayer,                   // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE
-    MovementType_TreeDisguise,                 // MOVEMENT_TYPE_TREE_DISGUISE
-    MovementType_MountainDisguise,             // MOVEMENT_TYPE_MOUNTAIN_DISGUISE
-    MovementType_CopyPlayerInGrass,            // MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS
-    MovementType_CopyPlayerInGrass,            // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS
-    MovementType_CopyPlayerInGrass,            // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS
-    MovementType_CopyPlayerInGrass,            // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS
-    MovementType_Hidden,                       // MOVEMENT_TYPE_HIDDEN
-    MovementType_WalkInPlace,                  // MOVEMENT_TYPE_WALK_IN_PLACE_DOWN
-    MovementType_WalkInPlace,                  // MOVEMENT_TYPE_WALK_IN_PLACE_UP
-    MovementType_WalkInPlace,                  // MOVEMENT_TYPE_WALK_IN_PLACE_LEFT
-    MovementType_WalkInPlace,                  // MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT
-    MovementType_JogInPlace,                   // MOVEMENT_TYPE_JOG_IN_PLACE_DOWN
-    MovementType_JogInPlace,                   // MOVEMENT_TYPE_JOG_IN_PLACE_UP
-    MovementType_JogInPlace,                   // MOVEMENT_TYPE_JOG_IN_PLACE_LEFT
-    MovementType_JogInPlace,                   // MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT
-    MovementType_RunInPlace,                   // MOVEMENT_TYPE_RUN_IN_PLACE_DOWN
-    MovementType_RunInPlace,                   // MOVEMENT_TYPE_RUN_IN_PLACE_UP
-    MovementType_RunInPlace,                   // MOVEMENT_TYPE_RUN_IN_PLACE_LEFT
-    MovementType_RunInPlace,                   // MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT
-    MovementType_Invisible,                    // MOVEMENT_TYPE_INVISIBLE
-    MovementType_WalkSlowlyInPlace,            // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN
-    MovementType_WalkSlowlyInPlace,            // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP
-    MovementType_WalkSlowlyInPlace,            // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT
-    MovementType_WalkSlowlyInPlace,            // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT
+    [MOVEMENT_TYPE_NONE] = MovementType_None,
+    [MOVEMENT_TYPE_LOOK_AROUND] = MovementType_LookAround,
+    [MOVEMENT_TYPE_WANDER_AROUND] = MovementType_WanderAround,
+    [MOVEMENT_TYPE_WANDER_UP_AND_DOWN] = MovementType_WanderUpAndDown,
+    [MOVEMENT_TYPE_WANDER_DOWN_AND_UP] = MovementType_WanderUpAndDown,
+    [MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT] = MovementType_WanderLeftAndRight,
+    [MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT] = MovementType_WanderLeftAndRight,
+    [MOVEMENT_TYPE_FACE_UP] = MovementType_FaceDirection,
+    [MOVEMENT_TYPE_FACE_DOWN] = MovementType_FaceDirection,
+    [MOVEMENT_TYPE_FACE_LEFT] = MovementType_FaceDirection,
+    [MOVEMENT_TYPE_FACE_RIGHT] = MovementType_FaceDirection,
+    [MOVEMENT_TYPE_PLAYER] = MovementType_Player,
+    [MOVEMENT_TYPE_BERRY_TREE_GROWTH] = MovementType_BerryTreeGrowth,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_UP] = MovementType_FaceDownAndUp,
+    [MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT] = MovementType_FaceLeftAndRight,
+    [MOVEMENT_TYPE_FACE_UP_AND_LEFT] = MovementType_FaceUpAndLeft,
+    [MOVEMENT_TYPE_FACE_UP_AND_RIGHT] = MovementType_FaceUpAndRight,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_LEFT] = MovementType_FaceDownAndLeft,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT] = MovementType_FaceDownAndRight,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT] = MovementType_FaceDownUpAndLeft,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT] = MovementType_FaceDownUpAndRight,
+    [MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT] = MovementType_FaceUpRightAndLeft,
+    [MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT] = MovementType_FaceDownRightAndLeft,
+    [MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE] = MovementType_RotateCounterclockwise,
+    [MOVEMENT_TYPE_ROTATE_CLOCKWISE] = MovementType_RotateClockwise,
+    [MOVEMENT_TYPE_WALK_UP_AND_DOWN] = MovementType_WalkBackAndForth,
+    [MOVEMENT_TYPE_WALK_DOWN_AND_UP] = MovementType_WalkBackAndForth,
+    [MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT] = MovementType_WalkBackAndForth,
+    [MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT] = MovementType_WalkBackAndForth,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN] = MovementType_WalkSequenceUpRightLeftDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP] = MovementType_WalkSequenceRightLeftDownUp,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT] = MovementType_WalkSequenceDownUpRightLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT] = MovementType_WalkSequenceLeftDownUpRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN] = MovementType_WalkSequenceUpLeftRightDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP] = MovementType_WalkSequenceLeftRightDownUp,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT] = MovementType_WalkSequenceDownUpLeftRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT] = MovementType_WalkSequenceRightDownUpLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT] = MovementType_WalkSequenceLeftUpDownRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT] = MovementType_WalkSequenceUpDownRightLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN] = MovementType_WalkSequenceRightLeftUpDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP] = MovementType_WalkSequenceDownRightLeftUp,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT] = MovementType_WalkSequenceRightUpDownLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT] = MovementType_WalkSequenceUpDownLeftRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN] = MovementType_WalkSequenceLeftRightUpDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP] = MovementType_WalkSequenceDownLeftRightUp,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT] = MovementType_WalkSequenceUpLeftDownRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT] = MovementType_WalkSequenceDownRightUpLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP] = MovementType_WalkSequenceLeftDownRightUp,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN] = MovementType_WalkSequenceRightUpLeftDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT] = MovementType_WalkSequenceUpRightDownLeft,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT] = MovementType_WalkSequenceDownLeftUpRight,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN] = MovementType_WalkSequenceLeftUpRightDown,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP] = MovementType_WalkSequenceRightDownLeftUp,
+    [MOVEMENT_TYPE_COPY_PLAYER] = MovementType_CopyPlayer,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE] = MovementType_CopyPlayer,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE] = MovementType_CopyPlayer,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE] = MovementType_CopyPlayer,
+    [MOVEMENT_TYPE_TREE_DISGUISE] = MovementType_TreeDisguise,
+    [MOVEMENT_TYPE_MOUNTAIN_DISGUISE] = MovementType_MountainDisguise,
+    [MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS] = MovementType_CopyPlayerInGrass,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS] = MovementType_CopyPlayerInGrass,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS] = MovementType_CopyPlayerInGrass,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS] = MovementType_CopyPlayerInGrass,
+    [MOVEMENT_TYPE_HIDDEN] = MovementType_Hidden,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_DOWN] = MovementType_WalkInPlace,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_UP] = MovementType_WalkInPlace,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_LEFT] = MovementType_WalkInPlace,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT] = MovementType_WalkInPlace,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_DOWN] = MovementType_JogInPlace,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_UP] = MovementType_JogInPlace,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_LEFT] = MovementType_JogInPlace,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT] = MovementType_JogInPlace,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_DOWN] = MovementType_RunInPlace,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_UP] = MovementType_RunInPlace,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_LEFT] = MovementType_RunInPlace,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT] = MovementType_RunInPlace,
+    [MOVEMENT_TYPE_INVISIBLE] = MovementType_Invisible,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN] = MovementType_WalkSlowlyInPlace,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP] = MovementType_WalkSlowlyInPlace,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT] = MovementType_WalkSlowlyInPlace,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT] = MovementType_WalkSlowlyInPlace,
 };
 
 const u8 gRangedMovementTypes[] = {
-    0, // MOVEMENT_TYPE_NONE
-    0, // MOVEMENT_TYPE_LOOK_AROUND
-    1, // MOVEMENT_TYPE_WANDER_AROUND
-    1, // MOVEMENT_TYPE_WANDER_UP_AND_DOWN
-    1, // MOVEMENT_TYPE_WANDER_DOWN_AND_UP
-    1, // MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT
-    1, // MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT
-    0, // MOVEMENT_TYPE_FACE_UP
-    0, // MOVEMENT_TYPE_FACE_DOWN
-    0, // MOVEMENT_TYPE_FACE_LEFT
-    0, // MOVEMENT_TYPE_FACE_RIGHT
-    0, // MOVEMENT_TYPE_PLAYER
-    0, // MOVEMENT_TYPE_BERRY_TREE_GROWTH
-    0, // MOVEMENT_TYPE_FACE_DOWN_AND_UP
-    0, // MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT
-    0, // MOVEMENT_TYPE_FACE_UP_AND_LEFT
-    0, // MOVEMENT_TYPE_FACE_UP_AND_RIGHT
-    0, // MOVEMENT_TYPE_FACE_DOWN_AND_LEFT
-    0, // MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT
-    0, // MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT
-    0, // MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT
-    0, // MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT
-    0, // MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT
-    0, // MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE
-    0, // MOVEMENT_TYPE_ROTATE_CLOCKWISE
-    1, // MOVEMENT_TYPE_WALK_UP_AND_DOWN
-    1, // MOVEMENT_TYPE_WALK_DOWN_AND_UP
-    1, // MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT
-    1, // MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN
-    1, // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP
-    1, // MOVEMENT_TYPE_COPY_PLAYER
-    1, // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE
-    1, // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE
-    1, // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE
-    0, // MOVEMENT_TYPE_TREE_DISGUISE
-    0, // MOVEMENT_TYPE_MOUNTAIN_DISGUISE
-    1, // MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS
-    1, // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS
-    1, // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS
-    1, // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS
-    0, // MOVEMENT_TYPE_HIDDEN
-    0, // MOVEMENT_TYPE_WALK_IN_PLACE_DOWN
-    0, // MOVEMENT_TYPE_WALK_IN_PLACE_UP
-    0, // MOVEMENT_TYPE_WALK_IN_PLACE_LEFT
-    0, // MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT
-    0, // MOVEMENT_TYPE_JOG_IN_PLACE_DOWN
-    0, // MOVEMENT_TYPE_JOG_IN_PLACE_UP
-    0, // MOVEMENT_TYPE_JOG_IN_PLACE_LEFT
-    0, // MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT
-    0, // MOVEMENT_TYPE_RUN_IN_PLACE_DOWN
-    0, // MOVEMENT_TYPE_RUN_IN_PLACE_UP
-    0, // MOVEMENT_TYPE_RUN_IN_PLACE_LEFT
-    0, // MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT
-    0, // MOVEMENT_TYPE_INVISIBLE
-    0, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN
-    0, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP
-    0, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT
-    0, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT
+    [MOVEMENT_TYPE_NONE] = 0,
+    [MOVEMENT_TYPE_LOOK_AROUND] = 0,
+    [MOVEMENT_TYPE_WANDER_AROUND] = 1,
+    [MOVEMENT_TYPE_WANDER_UP_AND_DOWN] = 1,
+    [MOVEMENT_TYPE_WANDER_DOWN_AND_UP] = 1,
+    [MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT] = 1,
+    [MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT] = 1,
+    [MOVEMENT_TYPE_FACE_UP] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN] = 0,
+    [MOVEMENT_TYPE_FACE_LEFT] = 0,
+    [MOVEMENT_TYPE_FACE_RIGHT] = 0,
+    [MOVEMENT_TYPE_PLAYER] = 0,
+    [MOVEMENT_TYPE_BERRY_TREE_GROWTH] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_UP] = 0,
+    [MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_FACE_UP_AND_LEFT] = 0,
+    [MOVEMENT_TYPE_FACE_UP_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_LEFT] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT] = 0,
+    [MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE] = 0,
+    [MOVEMENT_TYPE_ROTATE_CLOCKWISE] = 0,
+    [MOVEMENT_TYPE_WALK_UP_AND_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_DOWN_AND_UP] = 1,
+    [MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN] = 1,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE] = 1,
+    [MOVEMENT_TYPE_TREE_DISGUISE] = 0,
+    [MOVEMENT_TYPE_MOUNTAIN_DISGUISE] = 0,
+    [MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS] = 1,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS] = 1,
+    [MOVEMENT_TYPE_HIDDEN] = 0,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_DOWN] = 0,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_UP] = 0,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_LEFT] = 0,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT] = 0,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_DOWN] = 0,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_UP] = 0,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_LEFT] = 0,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT] = 0,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_DOWN] = 0,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_UP] = 0,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_LEFT] = 0,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT] = 0,
+    [MOVEMENT_TYPE_INVISIBLE] = 0,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN] = 0,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP] = 0,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT] = 0,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT] = 0,
 };
 
 const u8 gInitialMovementTypeFacingDirections[] = {
-    DIR_SOUTH, // MOVEMENT_TYPE_NONE
-    DIR_SOUTH, // MOVEMENT_TYPE_LOOK_AROUND
-    DIR_SOUTH, // MOVEMENT_TYPE_WANDER_AROUND
-    DIR_NORTH, // MOVEMENT_TYPE_WANDER_UP_AND_DOWN
-    DIR_SOUTH, // MOVEMENT_TYPE_WANDER_DOWN_AND_UP
-    DIR_WEST,  // MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT
-    DIR_EAST,  // MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT
-    DIR_NORTH, // MOVEMENT_TYPE_FACE_UP
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN
-    DIR_WEST,  // MOVEMENT_TYPE_FACE_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_FACE_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_PLAYER
-    DIR_SOUTH, // MOVEMENT_TYPE_BERRY_TREE_GROWTH
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_AND_UP
-    DIR_WEST,  // MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT
-    DIR_NORTH, // MOVEMENT_TYPE_FACE_UP_AND_LEFT
-    DIR_NORTH, // MOVEMENT_TYPE_FACE_UP_AND_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_AND_LEFT
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT
-    DIR_NORTH, // MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE
-    DIR_SOUTH, // MOVEMENT_TYPE_ROTATE_CLOCKWISE
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_UP_AND_DOWN
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_DOWN_AND_UP
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP
-    DIR_NORTH, // MOVEMENT_TYPE_COPY_PLAYER
-    DIR_SOUTH, // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE
-    DIR_WEST,  // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE
-    DIR_EAST,  // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE
-    DIR_SOUTH, // MOVEMENT_TYPE_TREE_DISGUISE
-    DIR_SOUTH, // MOVEMENT_TYPE_MOUNTAIN_DISGUISE
-    DIR_NORTH, // MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS
-    DIR_SOUTH, // MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS
-    DIR_WEST,  // MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS
-    DIR_EAST,  // MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS
-    DIR_SOUTH, // MOVEMENT_TYPE_HIDDEN
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_IN_PLACE_DOWN
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_IN_PLACE_UP
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_IN_PLACE_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_JOG_IN_PLACE_DOWN
-    DIR_NORTH, // MOVEMENT_TYPE_JOG_IN_PLACE_UP
-    DIR_WEST,  // MOVEMENT_TYPE_JOG_IN_PLACE_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_RUN_IN_PLACE_DOWN
-    DIR_NORTH, // MOVEMENT_TYPE_RUN_IN_PLACE_UP
-    DIR_WEST,  // MOVEMENT_TYPE_RUN_IN_PLACE_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT
-    DIR_SOUTH, // MOVEMENT_TYPE_INVISIBLE
-    DIR_SOUTH, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN
-    DIR_NORTH, // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP
-    DIR_WEST,  // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT
-    DIR_EAST,  // MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT
+    [MOVEMENT_TYPE_NONE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_LOOK_AROUND] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WANDER_AROUND] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WANDER_UP_AND_DOWN] = DIR_NORTH,
+    [MOVEMENT_TYPE_WANDER_DOWN_AND_UP] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WANDER_LEFT_AND_RIGHT] = DIR_WEST,
+    [MOVEMENT_TYPE_WANDER_RIGHT_AND_LEFT] = DIR_EAST,
+    [MOVEMENT_TYPE_FACE_UP] = DIR_NORTH,
+    [MOVEMENT_TYPE_FACE_DOWN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_LEFT] = DIR_WEST,
+    [MOVEMENT_TYPE_FACE_RIGHT] = DIR_EAST,
+    [MOVEMENT_TYPE_PLAYER] = DIR_SOUTH,
+    [MOVEMENT_TYPE_BERRY_TREE_GROWTH] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_UP] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_LEFT_AND_RIGHT] = DIR_WEST,
+    [MOVEMENT_TYPE_FACE_UP_AND_LEFT] = DIR_NORTH,
+    [MOVEMENT_TYPE_FACE_UP_AND_RIGHT] = DIR_NORTH,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_LEFT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_DOWN_AND_RIGHT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_LEFT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_DOWN_UP_AND_RIGHT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_FACE_UP_LEFT_AND_RIGHT] = DIR_NORTH,
+    [MOVEMENT_TYPE_FACE_DOWN_LEFT_AND_RIGHT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_ROTATE_COUNTERCLOCKWISE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_ROTATE_CLOCKWISE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_UP_AND_DOWN] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_DOWN_AND_UP] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_LEFT_AND_RIGHT] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_RIGHT_AND_LEFT] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_LEFT_DOWN] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_DOWN_UP] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_RIGHT_LEFT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_UP_RIGHT] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_RIGHT_DOWN] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_DOWN_UP] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_UP_LEFT_RIGHT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_UP_LEFT] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_DOWN_RIGHT] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_RIGHT_LEFT] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_LEFT_UP_DOWN] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_LEFT_UP] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_DOWN_LEFT] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_DOWN_LEFT_RIGHT] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_RIGHT_UP_DOWN] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_RIGHT_UP] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_LEFT_DOWN_RIGHT] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_RIGHT_UP_LEFT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_DOWN_RIGHT_UP] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_UP_LEFT_DOWN] = DIR_EAST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_UP_RIGHT_DOWN_LEFT] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_DOWN_LEFT_UP_RIGHT] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_LEFT_UP_RIGHT_DOWN] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SEQUENCE_RIGHT_DOWN_LEFT_UP] = DIR_EAST,
+    [MOVEMENT_TYPE_COPY_PLAYER] = DIR_NORTH,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE] = DIR_WEST,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE] = DIR_EAST,
+    [MOVEMENT_TYPE_TREE_DISGUISE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_MOUNTAIN_DISGUISE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_COPY_PLAYER_IN_GRASS] = DIR_NORTH,
+    [MOVEMENT_TYPE_COPY_PLAYER_OPPOSITE_IN_GRASS] = DIR_SOUTH,
+    [MOVEMENT_TYPE_COPY_PLAYER_COUNTERCLOCKWISE_IN_GRASS] = DIR_WEST,
+    [MOVEMENT_TYPE_COPY_PLAYER_CLOCKWISE_IN_GRASS] = DIR_EAST,
+    [MOVEMENT_TYPE_HIDDEN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_DOWN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_UP] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_LEFT] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_IN_PLACE_RIGHT] = DIR_EAST,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_DOWN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_UP] = DIR_NORTH,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_LEFT] = DIR_WEST,
+    [MOVEMENT_TYPE_JOG_IN_PLACE_RIGHT] = DIR_EAST,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_DOWN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_UP] = DIR_NORTH,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_LEFT] = DIR_WEST,
+    [MOVEMENT_TYPE_RUN_IN_PLACE_RIGHT] = DIR_EAST,
+    [MOVEMENT_TYPE_INVISIBLE] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_DOWN] = DIR_SOUTH,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_UP] = DIR_NORTH,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_LEFT] = DIR_WEST,
+    [MOVEMENT_TYPE_WALK_SLOWLY_IN_PLACE_RIGHT] = DIR_EAST,
 };
 
 #define EVENT_OBJ_PAL_TAG_0  0x1103
@@ -626,7 +652,6 @@ const u16 gObjectPaletteTags3[] = {
     EVENT_OBJ_PAL_TAG_7,
 };
 
-
 const u16 *const gObjectPaletteTagSets[] = {
     gObjectPaletteTags0,
     gObjectPaletteTags1,
@@ -644,181 +669,181 @@ const s16 gMovementDelaysShort[] =  {32, 48,  64,  80};
 #include "data/field_event_obj/movement_type_func_tables.h"
 
 const u8 gFaceDirectionAnimNums[] = {
-    0, // DIR_NONE
-    0, // DIR_SOUTH
-    1, // DIR_NORTH
-    2, // DIR_WEST
-    3, // DIR_EAST
-    0, // DIR_SOUTHWEST
-    0, // DIR_SOUTHEAST
-    1, // DIR_NORTHWEST
-    1, // DIR_NORTHEAST
+    [DIR_NONE] = 0,
+    [DIR_SOUTH] = 0,
+    [DIR_NORTH] = 1,
+    [DIR_WEST] = 2,
+    [DIR_EAST] = 3,
+    [DIR_SOUTHWEST] = 0,
+    [DIR_SOUTHEAST] = 0,
+    [DIR_NORTHWEST] = 1,
+    [DIR_NORTHEAST] = 1,
 };
 const u8 gMoveDirectionAnimNums[] = {
-    4, // DIR_NONE
-    4, // DIR_SOUTH
-    5, // DIR_NORTH
-    6, // DIR_WEST
-    7, // DIR_EAST
-    4, // DIR_SOUTHWEST
-    4, // DIR_SOUTHEAST
-    5, // DIR_NORTHWEST
-    5, // DIR_NORTHEAST
+    [DIR_NONE] = 4,
+    [DIR_SOUTH] = 4,
+    [DIR_NORTH] = 5,
+    [DIR_WEST] = 6,
+    [DIR_EAST] = 7,
+    [DIR_SOUTHWEST] = 4,
+    [DIR_SOUTHEAST] = 4,
+    [DIR_NORTHWEST] = 5,
+    [DIR_NORTHEAST] = 5,
 };
 const u8 gMoveDirectionFastAnimNums[] = {
-    8,  // DIR_NONE
-    8,  // DIR_SOUTH
-    9,  // DIR_NORTH
-    10, // DIR_WEST
-    11, // DIR_EAST
-    8,  // DIR_SOUTHWEST
-    8,  // DIR_SOUTHEAST
-    9,  // DIR_NORTHWEST
-    9,  // DIR_NORTHEAST
+    [DIR_NONE] = 8,
+    [DIR_SOUTH] = 8,
+    [DIR_NORTH] = 9,
+    [DIR_WEST] = 10,
+    [DIR_EAST] = 11,
+    [DIR_SOUTHWEST] = 8,
+    [DIR_SOUTHEAST] = 8,
+    [DIR_NORTHWEST] = 9,
+    [DIR_NORTHEAST] = 9,
 };
 const u8 gMoveDirectionFasterAnimNums[] = {
-    12, // DIR_NONE
-    12, // DIR_SOUTH
-    13, // DIR_NORTH
-    14, // DIR_WEST
-    15, // DIR_EAST
-    12, // DIR_SOUTHWEST
-    12, // DIR_SOUTHEAST
-    13, // DIR_NORTHWEST
-    13, // DIR_NORTHEAST
+    [DIR_NONE] = 12,
+    [DIR_SOUTH] = 12,
+    [DIR_NORTH] = 13,
+    [DIR_WEST] = 14,
+    [DIR_EAST] = 15,
+    [DIR_SOUTHWEST] = 12,
+    [DIR_SOUTHEAST] = 12,
+    [DIR_NORTHWEST] = 13,
+    [DIR_NORTHEAST] = 13,
 };
 const u8 gMoveDirectionFastestAnimNums[] = {
-    16, // DIR_NONE
-    16, // DIR_SOUTH
-    17, // DIR_NORTH
-    18, // DIR_WEST
-    19, // DIR_EAST
-    16, // DIR_SOUTHWEST
-    16, // DIR_SOUTHEAST
-    17, // DIR_NORTHWEST
-    17, // DIR_NORTHEAST
+    [DIR_NONE] = 16,
+    [DIR_SOUTH] = 16,
+    [DIR_NORTH] = 17,
+    [DIR_WEST] = 18,
+    [DIR_EAST] = 19,
+    [DIR_SOUTHWEST] = 16,
+    [DIR_SOUTHEAST] = 16,
+    [DIR_NORTHWEST] = 17,
+    [DIR_NORTHEAST] = 17,
 };
 const u8 gJumpSpecialDirectionAnimNums[] = { // used for jumping onto surf mon
-    20, // DIR_NONE
-    20, // DIR_SOUTH
-    21, // DIR_NORTH
-    22, // DIR_WEST
-    23, // DIR_EAST
-    20, // DIR_SOUTHWEST
-    20, // DIR_SOUTHEAST
-    21, // DIR_NORTHWEST
-    21, // DIR_NORTHEAST
+    [DIR_NONE] = 20,
+    [DIR_SOUTH] = 20,
+    [DIR_NORTH] = 21,
+    [DIR_WEST] = 22,
+    [DIR_EAST] = 23,
+    [DIR_SOUTHWEST] = 20,
+    [DIR_SOUTHEAST] = 20,
+    [DIR_NORTHWEST] = 21,
+    [DIR_NORTHEAST] = 21,
 };
 const u8 gAcroWheelieDirectionAnimNums[] = {
-    20, // DIR_NONE
-    20, // DIR_SOUTH
-    21, // DIR_NORTH
-    22, // DIR_WEST
-    23, // DIR_EAST
-    20, // DIR_SOUTHWEST
-    20, // DIR_SOUTHEAST
-    21, // DIR_NORTHWEST
-    21, // DIR_NORTHEAST
+    [DIR_NONE] = 20,
+    [DIR_SOUTH] = 20,
+    [DIR_NORTH] = 21,
+    [DIR_WEST] = 22,
+    [DIR_EAST] = 23,
+    [DIR_SOUTHWEST] = 20,
+    [DIR_SOUTHEAST] = 20,
+    [DIR_NORTHWEST] = 21,
+    [DIR_NORTHEAST] = 21,
 };
 const u8 gUnrefAnimNums_08375633[] = {
-    24, // DIR_NONE
-    24, // DIR_SOUTH
-    25, // DIR_NORTH
-    26, // DIR_WEST
-    27, // DIR_EAST
-    24, // DIR_SOUTHWEST
-    24, // DIR_SOUTHEAST
-    25, // DIR_NORTHWEST
-    25, // DIR_NORTHEAST
+    [DIR_NONE] = 24,
+    [DIR_SOUTH] = 24,
+    [DIR_NORTH] = 25,
+    [DIR_WEST] = 26,
+    [DIR_EAST] = 27,
+    [DIR_SOUTHWEST] = 24,
+    [DIR_SOUTHEAST] = 24,
+    [DIR_NORTHWEST] = 25,
+    [DIR_NORTHEAST] = 25,
 };
 const u8 gAcroEndWheelieDirectionAnimNums[] = {
-    28, // DIR_NONE
-    28, // DIR_SOUTH
-    29, // DIR_NORTH
-    30, // DIR_WEST
-    31, // DIR_EAST
-    28, // DIR_SOUTHWEST
-    28, // DIR_SOUTHEAST
-    29, // DIR_NORTHWEST
-    29, // DIR_NORTHEAST
+    [DIR_NONE] = 28,
+    [DIR_SOUTH] = 28,
+    [DIR_NORTH] = 29,
+    [DIR_WEST] = 30,
+    [DIR_EAST] = 31,
+    [DIR_SOUTHWEST] = 28,
+    [DIR_SOUTHEAST] = 28,
+    [DIR_NORTHWEST] = 29,
+    [DIR_NORTHEAST] = 29,
 };
 const u8 gAcroUnusedActionDirectionAnimNums[] = {
-    32, // DIR_NONE
-    32, // DIR_SOUTH
-    33, // DIR_NORTH
-    34, // DIR_WEST
-    35, // DIR_EAST
-    32, // DIR_SOUTHWEST
-    32, // DIR_SOUTHEAST
-    33, // DIR_NORTHWEST
-    33, // DIR_NORTHEAST
+    [DIR_NONE] = 32,
+    [DIR_SOUTH] = 32,
+    [DIR_NORTH] = 33,
+    [DIR_WEST] = 34,
+    [DIR_EAST] = 35,
+    [DIR_SOUTHWEST] = 32,
+    [DIR_SOUTHEAST] = 32,
+    [DIR_NORTHWEST] = 33,
+    [DIR_NORTHEAST] = 33,
 };
 const u8 gAcroWheeliePedalDirectionAnimNums[] = {
-    36, // DIR_NONE
-    36, // DIR_SOUTH
-    37, // DIR_NORTH
-    38, // DIR_WEST
-    39, // DIR_EAST
-    36, // DIR_SOUTHWEST
-    36, // DIR_SOUTHEAST
-    37, // DIR_NORTHWEST
-    37, // DIR_NORTHEAST
+    [DIR_NONE] = 36,
+    [DIR_SOUTH] = 36,
+    [DIR_NORTH] = 37,
+    [DIR_WEST] = 38,
+    [DIR_EAST] = 39,
+    [DIR_SOUTHWEST] = 36,
+    [DIR_SOUTHEAST] = 36,
+    [DIR_NORTHWEST] = 37,
+    [DIR_NORTHEAST] = 37,
 };
 const u8 gFishingDirectionAnimNums[] = {
-    0, // DIR_NONE
-    0, // DIR_SOUTH
-    1, // DIR_NORTH
-    2, // DIR_WEST
-    3, // DIR_EAST
-    0, // DIR_SOUTHWEST
-    0, // DIR_SOUTHEAST
-    1, // DIR_NORTHWEST
-    1, // DIR_NORTHEAST
+    [DIR_NONE] = 0,
+    [DIR_SOUTH] = 0,
+    [DIR_NORTH] = 1,
+    [DIR_WEST] = 2,
+    [DIR_EAST] = 3,
+    [DIR_SOUTHWEST] = 0,
+    [DIR_SOUTHEAST] = 0,
+    [DIR_NORTHWEST] = 1,
+    [DIR_NORTHEAST] = 1,
 };
 const u8 gFishingNoCatchDirectionAnimNums[] = {
-    4, // DIR_NONE
-    4, // DIR_SOUTH
-    5, // DIR_NORTH
-    6, // DIR_WEST
-    7, // DIR_EAST
-    4, // DIR_SOUTHWEST
-    4, // DIR_SOUTHEAST
-    5, // DIR_NORTHWEST
-    5, // DIR_NORTHEAST
+    [DIR_NONE] = 4,
+    [DIR_SOUTH] = 4,
+    [DIR_NORTH] = 5,
+    [DIR_WEST] = 6,
+    [DIR_EAST] = 7,
+    [DIR_SOUTHWEST] = 4,
+    [DIR_SOUTHEAST] = 4,
+    [DIR_NORTHWEST] = 5,
+    [DIR_NORTHEAST] = 5,
 };
 const u8 gFishingBiteDirectionAnimNums[] = {
-    8,  // DIR_NONE
-    8,  // DIR_SOUTH
-    9,  // DIR_NORTH
-    10, // DIR_WEST
-    11, // DIR_EAST
-    8,  // DIR_SOUTHWEST
-    8,  // DIR_SOUTHEAST
-    9,  // DIR_NORTHWEST
-    9,  // DIR_NORTHEAST
+    [DIR_NONE] = 8,
+    [DIR_SOUTH] = 8,
+    [DIR_NORTH] = 9,
+    [DIR_WEST] = 10,
+    [DIR_EAST] = 11,
+    [DIR_SOUTHWEST] = 8,
+    [DIR_SOUTHEAST] = 8,
+    [DIR_NORTHWEST] = 9,
+    [DIR_NORTHEAST] = 9,
 };
 const u8 gRunningDirectionAnimNums[] = {
-    20, // DIR_NONE
-    20, // DIR_SOUTH
-    21, // DIR_NORTH
-    22, // DIR_WEST
-    23, // DIR_EAST
-    20, // DIR_SOUTHWEST
-    20, // DIR_SOUTHEAST
-    21, // DIR_NORTHWEST
-    21, // DIR_NORTHEAST
+    [DIR_NONE] = 20,
+    [DIR_SOUTH] = 20,
+    [DIR_NORTH] = 21,
+    [DIR_WEST] = 22,
+    [DIR_EAST] = 23,
+    [DIR_SOUTHWEST] = 20,
+    [DIR_SOUTHEAST] = 20,
+    [DIR_NORTHWEST] = 21,
+    [DIR_NORTHEAST] = 21,
 };
 
 const u8 gTrainerFacingDirectionMovementTypes[] = {
-    MOVEMENT_TYPE_FACE_DOWN,  // DIR_NONE
-    MOVEMENT_TYPE_FACE_DOWN,  // DIR_SOUTH
-    MOVEMENT_TYPE_FACE_UP,    // DIR_NORTH
-    MOVEMENT_TYPE_FACE_LEFT,  // DIR_WEST
-    MOVEMENT_TYPE_FACE_RIGHT, // DIR_EAST
-    MOVEMENT_TYPE_FACE_DOWN,  // DIR_SOUTHWEST
-    MOVEMENT_TYPE_FACE_DOWN,  // DIR_SOUTHEAST
-    MOVEMENT_TYPE_FACE_UP,    // DIR_NORTHWEST
-    MOVEMENT_TYPE_FACE_UP,    // DIR_NORTHEAST
+    [DIR_NONE] = MOVEMENT_TYPE_FACE_DOWN,
+    [DIR_SOUTH] = MOVEMENT_TYPE_FACE_DOWN,
+    [DIR_NORTH] = MOVEMENT_TYPE_FACE_UP,
+    [DIR_WEST] = MOVEMENT_TYPE_FACE_LEFT,
+    [DIR_EAST] = MOVEMENT_TYPE_FACE_RIGHT,
+    [DIR_SOUTHWEST] = MOVEMENT_TYPE_FACE_DOWN,
+    [DIR_SOUTHEAST] = MOVEMENT_TYPE_FACE_DOWN,
+    [DIR_NORTHWEST] = MOVEMENT_TYPE_FACE_UP,
+    [DIR_NORTHEAST] = MOVEMENT_TYPE_FACE_UP,
 };
 
 bool8 (*const gOppositeDirectionBlockedMetatileFuncs[])(u8) = {
@@ -1079,19 +1104,19 @@ static void ClearAllEventObjects(void)
 {
     u8 i;
 
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
         ClearEventObject(&gEventObjects[i]);
 }
 
-void sub_808D438(void)
+void ResetEventObjects(void)
 {
     ClearLinkPlayerEventObjects();
     ClearAllEventObjects();
     ClearPlayerAvatarInfo();
-    sub_808D450();
+    CreateReflectionEffectSprites();
 }
 
-static void sub_808D450(void)
+static void CreateReflectionEffectSprites(void)
 {
     u8 spriteId = CreateSpriteAtEnd(gFieldEffectObjectTemplatePointers[21], 0, 0, 31);
     gSprites[spriteId].oam.affineMode = 1;
@@ -1109,7 +1134,7 @@ static void sub_808D450(void)
 u8 GetFirstInactiveEventObjectId(void)
 {
     u8 i;
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (!gEventObjects[i].active)
             break;
@@ -1120,7 +1145,7 @@ u8 GetFirstInactiveEventObjectId(void)
 
 u8 GetEventObjectIdByLocalIdAndMap(u8 localId, u8 mapNum, u8 mapGroupId)
 {
-    if (localId < 0xff)
+    if (localId < EVENT_OBJ_ID_PLAYER)
     {
         return GetEventObjectIdByLocalIdAndMapInternal(localId, mapNum, mapGroupId);
     }
@@ -1130,7 +1155,7 @@ u8 GetEventObjectIdByLocalIdAndMap(u8 localId, u8 mapNum, u8 mapGroupId)
 bool8 TryGetEventObjectIdByLocalIdAndMap(u8 localId, u8 mapNum, u8 mapGroupId, u8 *eventObjectId)
 {
     *eventObjectId = GetEventObjectIdByLocalIdAndMap(localId, mapNum, mapGroupId);
-    if (*eventObjectId == NUM_EVENT_OBJECTS)
+    if (*eventObjectId == EVENT_OBJECTS_COUNT)
         return TRUE;
     else
         return FALSE;
@@ -1139,7 +1164,7 @@ bool8 TryGetEventObjectIdByLocalIdAndMap(u8 localId, u8 mapNum, u8 mapGroupId, u
 u8 GetEventObjectIdByXY(s16 x, s16 y)
 {
     u8 i;
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (gEventObjects[i].active && gEventObjects[i].currentCoords.x == x && gEventObjects[i].currentCoords.y == y)
             break;
@@ -1151,25 +1176,25 @@ u8 GetEventObjectIdByXY(s16 x, s16 y)
 static u8 GetEventObjectIdByLocalIdAndMapInternal(u8 localId, u8 mapNum, u8 mapGroupId)
 {
     u8 i;
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (gEventObjects[i].active && gEventObjects[i].localId == localId && gEventObjects[i].mapNum == mapNum && gEventObjects[i].mapGroup == mapGroupId)
             return i;
     }
 
-    return NUM_EVENT_OBJECTS;
+    return EVENT_OBJECTS_COUNT;
 }
 
 static u8 GetEventObjectIdByLocalId(u8 localId)
 {
     u8 i;
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (gEventObjects[i].active && gEventObjects[i].localId == localId)
             return i;
     }
 
-    return NUM_EVENT_OBJECTS;
+    return EVENT_OBJECTS_COUNT;
 }
 
 // This function has the same nonmatching quirk as in Ruby/Sapphire.
@@ -1184,7 +1209,7 @@ static u8 InitEventObjectStateFromTemplate(struct EventObjectTemplate *template,
     // mapNum and mapGroup are in the wrong registers (r7/r6 instead of r6/r7)
     if (GetAvailableEventObjectId(template->localId, mapNum, mapGroup, &eventObjectId))
     {
-        return NUM_EVENT_OBJECTS;
+        return EVENT_OBJECTS_COUNT;
     }
     eventObject = &gEventObjects[eventObjectId];
     ClearEventObject(eventObject);
@@ -1388,24 +1413,24 @@ static NAKED u8 InitEventObjectStateFromTemplate(struct EventObjectTemplate *tem
 u8 Unref_TryInitLocalEventObject(u8 localId)
 {
     u8 i;
-    u8 nObjects;
+    u8 eventObjectCount;
     struct EventObjectTemplate *template;
 
     if (gMapHeader.events != NULL)
     {
         if (InBattlePyramid())
         {
-            nObjects = sub_81AAA40();
+            eventObjectCount = GetNumBattlePyramidEventObjects();
         }
         else if (InTrainerHill())
         {
-            nObjects = 2;
+            eventObjectCount = 2;
         }
         else
         {
-            nObjects = gMapHeader.events->eventObjectCount;
+            eventObjectCount = gMapHeader.events->eventObjectCount;
         }
-        for (i = 0; i < nObjects; i++)
+        for (i = 0; i < eventObjectCount; i++)
         {
             template = &gSaveBlock1Ptr->eventObjectTemplates[i];
             if (template->localId == localId && !FlagGet(template->flagId))
@@ -1414,7 +1439,7 @@ u8 Unref_TryInitLocalEventObject(u8 localId)
             }
         }
     }
-    return NUM_EVENT_OBJECTS;
+    return EVENT_OBJECTS_COUNT;
 }
 
 static bool8 GetAvailableEventObjectId(u16 localId, u8 mapNum, u8 mapGroup, u8 *eventObjectId)
@@ -1426,14 +1451,14 @@ static bool8 GetAvailableEventObjectId(u16 localId, u8 mapNum, u8 mapGroup, u8 *
 {
     u8 i = 0;
 
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (!gEventObjects[i].active)
             break;
         if (gEventObjects[i].localId == localId && gEventObjects[i].mapNum == mapNum && gEventObjects[i].mapGroup == mapGroup)
             return TRUE;
     }
-    if (i >= NUM_EVENT_OBJECTS)
+    if (i >= EVENT_OBJECTS_COUNT)
         return TRUE;
     *eventObjectId = i;
     do
@@ -1441,7 +1466,7 @@ static bool8 GetAvailableEventObjectId(u16 localId, u8 mapNum, u8 mapGroup, u8 *
         if (gEventObjects[i].active && gEventObjects[i].localId == localId && gEventObjects[i].mapNum == mapNum && gEventObjects[i].mapGroup == mapGroup)
             return TRUE;
         i++;
-    } while (i < NUM_EVENT_OBJECTS);
+    } while (i < EVENT_OBJECTS_COUNT);
     return FALSE;
 }
 
@@ -1473,7 +1498,7 @@ void RemoveAllEventObjectsExceptPlayer(void)
 {
     u8 i;
 
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (i != gPlayerAvatar.eventObjectId)
             RemoveEventObject(&gEventObjects[i]);
@@ -1482,16 +1507,16 @@ void RemoveAllEventObjectsExceptPlayer(void)
 
 static u8 TrySetupEventObjectSprite(struct EventObjectTemplate *eventObjectTemplate, struct SpriteTemplate *spriteTemplate, u8 mapNum, u8 mapGroup, s16 cameraX, s16 cameraY)
 {
+    u8 spriteId;
+    u8 paletteSlot;
+    u8 eventObjectId;
+    struct Sprite *sprite;
     struct EventObject *eventObject;
     const struct EventObjectGraphicsInfo *graphicsInfo;
-    struct Sprite *sprite;
-    u8 eventObjectId;
-    u8 paletteSlot;
-    u8 spriteId;
 
     eventObjectId = InitEventObjectStateFromTemplate(eventObjectTemplate, mapNum, mapGroup);
-    if (eventObjectId == NUM_EVENT_OBJECTS)
-        return NUM_EVENT_OBJECTS;
+    if (eventObjectId == EVENT_OBJECTS_COUNT)
+        return EVENT_OBJECTS_COUNT;
 
     eventObject = &gEventObjects[eventObjectId];
     graphicsInfo = GetEventObjectGraphicsInfo(eventObject->graphicsId);
@@ -1509,7 +1534,7 @@ static u8 TrySetupEventObjectSprite(struct EventObjectTemplate *eventObjectTempl
         paletteSlot -= 16;
         sub_808EAB0(graphicsInfo->paletteTag1, paletteSlot);
     }
-    if (eventObject->movementType == 0x4c)
+    if (eventObject->movementType == MOVEMENT_TYPE_INVISIBLE)
     {
         eventObject->invisible = TRUE;
     }
@@ -1518,7 +1543,7 @@ static u8 TrySetupEventObjectSprite(struct EventObjectTemplate *eventObjectTempl
     if (spriteId == MAX_SPRITES)
     {
         gEventObjects[eventObjectId].active = FALSE;
-        return NUM_EVENT_OBJECTS;
+        return EVENT_OBJECTS_COUNT;
     }
     sprite = &gSprites[spriteId];
     sub_8092FF0(eventObject->currentCoords.x + cameraX, eventObject->currentCoords.y + cameraY, &sprite->pos1.x, &sprite->pos1.y);
@@ -1542,21 +1567,20 @@ static u8 TrySetupEventObjectSprite(struct EventObjectTemplate *eventObjectTempl
 
 static u8 TrySpawnEventObject(struct EventObjectTemplate *eventObjectTemplate, u8 mapNum, u8 mapGroup, s16 cameraX, s16 cameraY)
 {
-    const struct EventObjectGraphicsInfo *graphicsInfo;
-    struct SpriteTemplate spriteTemplate;
-    const struct SubspriteTable *subspriteTables;
-    struct SpriteFrameImage spriteFrameImage;
     u8 eventObjectId;
+    struct SpriteTemplate spriteTemplate;
+    struct SpriteFrameImage spriteFrameImage;
+    const struct EventObjectGraphicsInfo *graphicsInfo;
+    const struct SubspriteTable *subspriteTables = NULL;
 
-    subspriteTables = NULL;
     graphicsInfo = GetEventObjectGraphicsInfo(eventObjectTemplate->graphicsId);
     MakeObjectTemplateFromEventObjectTemplate(eventObjectTemplate, &spriteTemplate, &subspriteTables);
     spriteFrameImage.size = graphicsInfo->size;
     spriteTemplate.images = &spriteFrameImage;
     eventObjectId = TrySetupEventObjectSprite(eventObjectTemplate, &spriteTemplate, mapNum, mapGroup, cameraX, cameraY);
-    if (eventObjectId == NUM_EVENT_OBJECTS)
+    if (eventObjectId == EVENT_OBJECTS_COUNT)
     {
-        return NUM_EVENT_OBJECTS;
+        return EVENT_OBJECTS_COUNT;
     }
     gSprites[gEventObjects[eventObjectId].spriteId].images = graphicsInfo->images;
     if (subspriteTables != NULL)
@@ -1604,29 +1628,29 @@ u8 show_sprite(u8 localId, u8 mapNum, u8 mapGroup)
     eventObjectTemplate = GetEventObjectTemplateByLocalIdAndMap(localId, mapNum, mapGroup);
     if (eventObjectTemplate == NULL)
     {
-        return NUM_EVENT_OBJECTS;
+        return EVENT_OBJECTS_COUNT;
     }
     GetEventObjectMovingCameraOffset(&cameraX, &cameraY);
     return TrySpawnEventObject(eventObjectTemplate, mapNum, mapGroup, cameraX, cameraY);
 }
 
-static void MakeObjectTemplateFromEventObjectGraphicsInfo(u16 graphicsId, void (*callback)(struct Sprite *), struct SpriteTemplate *sprTemplate, const struct SubspriteTable **subspriteTables)
+static void MakeObjectTemplateFromEventObjectGraphicsInfo(u16 graphicsId, void (*callback)(struct Sprite *), struct SpriteTemplate *spriteTemplate, const struct SubspriteTable **subspriteTables)
 {
-    const struct EventObjectGraphicsInfo *gfxInfo = GetEventObjectGraphicsInfo(graphicsId);
+    const struct EventObjectGraphicsInfo *graphicsInfo = GetEventObjectGraphicsInfo(graphicsId);
 
-    sprTemplate->tileTag = gfxInfo->tileTag;
-    sprTemplate->paletteTag = gfxInfo->paletteTag1;
-    sprTemplate->oam = gfxInfo->oam;
-    sprTemplate->anims = gfxInfo->anims;
-    sprTemplate->images = gfxInfo->images;
-    sprTemplate->affineAnims = gfxInfo->affineAnims;
-    sprTemplate->callback = callback;
-    *subspriteTables = gfxInfo->subspriteTables;
+    spriteTemplate->tileTag = graphicsInfo->tileTag;
+    spriteTemplate->paletteTag = graphicsInfo->paletteTag1;
+    spriteTemplate->oam = graphicsInfo->oam;
+    spriteTemplate->anims = graphicsInfo->anims;
+    spriteTemplate->images = graphicsInfo->images;
+    spriteTemplate->affineAnims = graphicsInfo->affineAnims;
+    spriteTemplate->callback = callback;
+    *subspriteTables = graphicsInfo->subspriteTables;
 }
 
-static void MakeObjectTemplateFromEventObjectGraphicsInfoWithCallbackIndex(u16 graphicsId, u16 callbackIndex, struct SpriteTemplate *sprTemplate, const struct SubspriteTable **subspriteTables)
+static void MakeObjectTemplateFromEventObjectGraphicsInfoWithCallbackIndex(u16 graphicsId, u16 callbackIndex, struct SpriteTemplate *spriteTemplate, const struct SubspriteTable **subspriteTables)
 {
-    MakeObjectTemplateFromEventObjectGraphicsInfo(graphicsId, sMovementTypeCallbacks[callbackIndex], sprTemplate, subspriteTables);
+    MakeObjectTemplateFromEventObjectGraphicsInfo(graphicsId, sMovementTypeCallbacks[callbackIndex], spriteTemplate, subspriteTables);
 }
 
 static void MakeObjectTemplateFromEventObjectTemplate(struct EventObjectTemplate *eventObjectTemplate, struct SpriteTemplate *spriteTemplate, const struct SubspriteTable **subspriteTables)
@@ -1639,37 +1663,37 @@ u8 AddPseudoEventObject(u16 graphicsId, void (*callback)(struct Sprite *), s16 x
     struct SpriteTemplate *spriteTemplate;
     const struct SubspriteTable *subspriteTables;
     struct Sprite *sprite;
-    u8 spriteIdx;
+    u8 spriteId;
 
     spriteTemplate = malloc(sizeof(struct SpriteTemplate));
     MakeObjectTemplateFromEventObjectGraphicsInfo(graphicsId, callback, spriteTemplate, &subspriteTables);
-    if (spriteTemplate->paletteTag != 0xffff)
+    if (spriteTemplate->paletteTag != 0xFFFF)
     {
-        sub_808E894(spriteTemplate->paletteTag);
+        LoadEventObjectPalette(spriteTemplate->paletteTag);
     }
-    spriteIdx = CreateSprite(spriteTemplate, x, y, subpriority);
+    spriteId = CreateSprite(spriteTemplate, x, y, subpriority);
     free(spriteTemplate);
 
-    if (spriteIdx != MAX_SPRITES && subspriteTables != NULL)
+    if (spriteId != MAX_SPRITES && subspriteTables != NULL)
     {
-        sprite = &gSprites[spriteIdx];
+        sprite = &gSprites[spriteId];
         SetSubspriteTables(sprite, subspriteTables);
         sprite->subspriteMode = 2;
     }
-    return spriteIdx;
+    return spriteId;
 }
 
 u8 sprite_new(u8 graphicsId, u8 a1, s16 x, s16 y, u8 z, u8 direction)
 {
-    const struct EventObjectGraphicsInfo *graphicsInfo;
-    struct SpriteTemplate spriteTemplate;
-    const struct SubspriteTable *subspriteTables;
     u8 spriteId;
     struct Sprite *sprite;
+    struct SpriteTemplate spriteTemplate;
+    const struct SubspriteTable *subspriteTables;
+    const struct EventObjectGraphicsInfo *graphicsInfo;
 
     graphicsInfo = GetEventObjectGraphicsInfo(graphicsId);
     MakeObjectTemplateFromEventObjectGraphicsInfo(graphicsId, UpdateEventObjectSpriteSubpriorityAndVisibility, &spriteTemplate, &subspriteTables);
-    *(u16 *)&spriteTemplate.paletteTag = 0xffff;
+    *(u16 *)&spriteTemplate.paletteTag = 0xFFFF;
     x += 7;
     y += 7;
     sub_80930E0(&x, &y, 8, 16);
@@ -1711,24 +1735,18 @@ u8 sprite_new(u8 graphicsId, u8 a1, s16 x, s16 y, u8 z, u8 direction)
 void TrySpawnEventObjects(s16 cameraX, s16 cameraY)
 {
     u8 i;
-    s16 left;
-    s16 right;
-    s16 top;
-    s16 bottom;
     u8 objectCount;
-    s16 npcX;
-    s16 npcY;
 
     if (gMapHeader.events != NULL)
     {
-        left = gSaveBlock1Ptr->pos.x - 2;
-        right = gSaveBlock1Ptr->pos.x + 17;
-        top = gSaveBlock1Ptr->pos.y;
-        bottom = gSaveBlock1Ptr->pos.y + 16;
+        s16 left = gSaveBlock1Ptr->pos.x - 2;
+        s16 right = gSaveBlock1Ptr->pos.x + 17;
+        s16 top = gSaveBlock1Ptr->pos.y;
+        s16 bottom = gSaveBlock1Ptr->pos.y + 16;
 
         if (InBattlePyramid())
         {
-            objectCount = sub_81AAA40();
+            objectCount = GetNumBattlePyramidEventObjects();
         }
         else if (InTrainerHill())
         {
@@ -1742,8 +1760,8 @@ void TrySpawnEventObjects(s16 cameraX, s16 cameraY)
         for (i = 0; i < objectCount; i++)
         {
             struct EventObjectTemplate *template = &gSaveBlock1Ptr->eventObjectTemplates[i];
-            npcX = template->x + 7;
-            npcY = template->y + 7;
+            s16 npcX = template->x + 7;
+            s16 npcY = template->y + 7;
 
             if (top <= npcY && bottom >= npcY && left <= npcX && right >= npcX
                 && !FlagGet(template->flagId))
@@ -1754,12 +1772,10 @@ void TrySpawnEventObjects(s16 cameraX, s16 cameraY)
 
 void RemoveEventObjectsOutsideView(void)
 {
-    u8 i;
-    u8 j;
+    u8 i, j;
     bool8 isActiveLinkPlayer;
-    struct EventObject *eventObject;
 
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         for (j = 0, isActiveLinkPlayer = FALSE; j < ARRAY_COUNT(gLinkPlayerEventObjects); j++)
         {
@@ -1768,7 +1784,7 @@ void RemoveEventObjectsOutsideView(void)
         }
         if (!isActiveLinkPlayer)
         {
-            eventObject = &gEventObjects[i];
+            struct EventObject *eventObject = &gEventObjects[i];
 
             if (eventObject->active && !eventObject->isPlayer)
                 RemoveEventObjectIfOutsideView(eventObject);
@@ -1778,21 +1794,16 @@ void RemoveEventObjectsOutsideView(void)
 
 static void RemoveEventObjectIfOutsideView(struct EventObject *eventObject)
 {
-    s16 left;
-    s16 right;
-    s16 top;
-    s16 bottom;
-
-    left = gSaveBlock1Ptr->pos.x - 2;
-    right = gSaveBlock1Ptr->pos.x + 17;
-    top = gSaveBlock1Ptr->pos.y;
-    bottom = gSaveBlock1Ptr->pos.y + 16;
+    s16 left =   gSaveBlock1Ptr->pos.x - 2;
+    s16 right =  gSaveBlock1Ptr->pos.x + 17;
+    s16 top =    gSaveBlock1Ptr->pos.y;
+    s16 bottom = gSaveBlock1Ptr->pos.y + 16;
 
     if (eventObject->currentCoords.x >= left && eventObject->currentCoords.x <= right
-        && eventObject->currentCoords.y >= top && eventObject->currentCoords.y <= bottom)
+     && eventObject->currentCoords.y >= top && eventObject->currentCoords.y <= bottom)
         return;
     if (eventObject->initialCoords.x >= left && eventObject->initialCoords.x <= right
-        && eventObject->initialCoords.y >= top && eventObject->initialCoords.y <= bottom)
+     && eventObject->initialCoords.y >= top && eventObject->initialCoords.y <= bottom)
         return;
     RemoveEventObject(eventObject);
 }
@@ -1802,26 +1813,26 @@ void sub_808E16C(s16 x, s16 y)
     u8 i;
 
     ClearPlayerAvatarInfo();
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (gEventObjects[i].active)
         {
             sub_808E1B8(i, x, y);
         }
     }
-    sub_808D450();
+    CreateReflectionEffectSprites();
 }
 
 static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
 {
     u8 spriteId;
     u8 paletteSlot;
+    struct Sprite *sprite;
     struct EventObject *eventObject;
+    struct SpriteTemplate spriteTemplate;
+    struct SpriteFrameImage spriteFrameImage;
     const struct SubspriteTable *subspriteTables;
     const struct EventObjectGraphicsInfo *graphicsInfo;
-    struct SpriteFrameImage spriteFrameImage;
-    struct SpriteTemplate spriteTemplate;
-    struct Sprite *sprite;
 
 #define i spriteId
     for (i = 0; i < ARRAY_COUNT(gLinkPlayerEventObjects); i++)
@@ -1839,7 +1850,7 @@ static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
     spriteFrameImage.size = graphicsInfo->size;
     MakeObjectTemplateFromEventObjectGraphicsInfoWithCallbackIndex(eventObject->graphicsId, eventObject->movementType, &spriteTemplate, &subspriteTables);
     spriteTemplate.images = &spriteFrameImage;
-    *(u16 *)&spriteTemplate.paletteTag = 0xffff;
+    *(u16 *)&spriteTemplate.paletteTag = 0xFFFF;
     paletteSlot = graphicsInfo->paletteSlot;
     if (paletteSlot == 0)
     {
@@ -1854,7 +1865,7 @@ static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
         paletteSlot -= 16;
         sub_808EAB0(graphicsInfo->paletteTag1, paletteSlot);
     }
-    *(u16 *)&spriteTemplate.paletteTag = 0xffff;
+    *(u16 *)&spriteTemplate.paletteTag = 0xFFFF;
     spriteId = CreateSprite(&spriteTemplate, 0, 0, 0);
     if (spriteId != MAX_SPRITES)
     {
@@ -1865,10 +1876,10 @@ static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
         sprite->pos1.x += 8;
         sprite->pos1.y += 16 + sprite->centerToCornerVecY;
         sprite->images = graphicsInfo->images;
-        if (eventObject->movementType == 0x0b)
+        if (eventObject->movementType == MOVEMENT_TYPE_PLAYER)
         {
             SetPlayerAvatarEventObjectIdAndObjectId(eventObjectId, spriteId);
-            eventObject->warpArrowSpriteId = sub_8154228();
+            eventObject->warpArrowSpriteId = CreateWarpArrowSprite();
         }
         if (subspriteTables != NULL)
         {
@@ -1878,7 +1889,7 @@ static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
         sprite->coordOffsetEnabled = TRUE;
         sprite->data[0] = eventObjectId;
         eventObject->spriteId = spriteId;
-        if (!eventObject->inanimate && eventObject->movementType != 0x0b)
+        if (!eventObject->inanimate && eventObject->movementType != MOVEMENT_TYPE_PLAYER)
         {
             StartSpriteAnim(sprite, GetFaceDirectionAnimNum(eventObject->facingDirection));
         }
@@ -1889,7 +1900,7 @@ static void sub_808E1B8(u8 eventObjectId, s16 x, s16 y)
 
 static void sub_808E38C(struct EventObject *eventObject)
 {
-    eventObject->singleMovementActive = 0;
+    eventObject->singleMovementActive = FALSE;
     eventObject->triggerGroundEffectsOnMove = TRUE;
     eventObject->hasShadow = FALSE;
     eventObject->hasReflection = FALSE;
@@ -1984,7 +1995,7 @@ void PlayerObjectTurn(struct PlayerAvatar *playerAvatar, u8 direction)
     EventObjectTurn(&gEventObjects[playerAvatar->eventObjectId], direction);
 }
 
-/*static*/ void get_berry_tree_graphics(struct EventObject *eventObject, struct Sprite *sprite)
+static void get_berry_tree_graphics(struct EventObject *eventObject, struct Sprite *sprite)
 {
     u8 berryStage;
     u8 berryId;
@@ -1997,7 +2008,7 @@ void PlayerObjectTurn(struct PlayerAvatar *playerAvatar, u8 direction)
         eventObject->invisible = FALSE;
         sprite->invisible = FALSE;
         berryId = GetBerryTypeByBerryTreeId(eventObject->trainerRange_berryTreeId) - 1;
-        berryStage -= 1;
+        berryStage--;
         if (berryId >= NUM_BERRIES)
         {
             berryId = 0;
@@ -2024,7 +2035,7 @@ const struct EventObjectGraphicsInfo *GetEventObjectGraphicsInfo(u8 graphicsId)
     }
     if (graphicsId >= NUM_OBJECT_GRAPHICS_INFO)
     {
-        graphicsId = EVENT_OBJ_GFX_LITTLE_BOY_1;
+        graphicsId = EVENT_OBJ_GFX_NINJA_BOY;
     }
     return gEventObjectGraphicsInfoPointers[graphicsId];
 }
@@ -2060,7 +2071,7 @@ void sub_808E75C(s16 x, s16 y)
     struct EventObject *eventObject;
 
     eventObjectId = GetEventObjectIdByXY(x, y);
-    if (eventObjectId != NUM_EVENT_OBJECTS)
+    if (eventObjectId != EVENT_OBJECTS_COUNT)
     {
         eventObject = &gEventObjects[eventObjectId];
         eventObject->triggerGroundEffectsOnMove = TRUE;
@@ -2114,42 +2125,40 @@ void FreeAndReserveObjectSpritePalettes(void)
     gReservedSpritePaletteCount = 12;
 }
 
-static void sub_808E894(u16 paletteTag)
+static void LoadEventObjectPalette(u16 paletteTag)
 {
-    u16 paletteSlot;
+    u16 i = FindEventObjectPaletteIndexByTag(paletteTag);
 
-    paletteSlot = FindEventObjectPaletteIndexByTag(paletteTag);
-    if (paletteSlot != EVENT_OBJ_PAL_TAG_NONE) // always true
+    if (i != EVENT_OBJ_PAL_TAG_NONE) // always true
     {
-        sub_808E8F4(&sEventObjectSpritePalettes[paletteSlot]);
+        sub_808E8F4(&sEventObjectSpritePalettes[i]);
     }
 }
 
-void sub_808E8C0(u16 *paletteTags)
+void Unused_LoadEventObjectPaletteSet(u16 *paletteTags)
 {
     u8 i;
 
     for (i = 0; paletteTags[i] != EVENT_OBJ_PAL_TAG_NONE; i++)
     {
-        sub_808E894(paletteTags[i]);
+        LoadEventObjectPalette(paletteTags[i]);
     }
 }
 
 static u8 sub_808E8F4(const struct SpritePalette *spritePalette)
 {
-    if (IndexOfSpritePaletteTag(spritePalette->tag) != 0xff)
+    if (IndexOfSpritePaletteTag(spritePalette->tag) != 0xFF)
     {
-        return 0xff;
+        return 0xFF;
     }
     return LoadSpritePalette(spritePalette);
 }
 
 void PatchObjectPalette(u16 paletteTag, u8 paletteSlot)
 {
-    u16 paletteIdx;
+    u8 paletteIndex = FindEventObjectPaletteIndexByTag(paletteTag);
 
-    paletteIdx = FindEventObjectPaletteIndexByTag(paletteTag);
-    LoadPalette(sEventObjectSpritePalettes[paletteIdx].data, 16 * paletteSlot + 256, 0x20);
+    LoadPalette(sEventObjectSpritePalettes[paletteIndex].data, 16 * paletteSlot + 0x100, 0x20);
 }
 
 void PatchObjectPaletteRange(const u16 *paletteTags, u8 minSlot, u8 maxSlot)
@@ -2173,7 +2182,7 @@ static u8 FindEventObjectPaletteIndexByTag(u16 tag)
             return i;
         }
     }
-    return 0xff;
+    return 0xFF;
 }
 
 void LoadPlayerObjectReflectionPalette(u16 tag, u8 slot)
@@ -2228,7 +2237,7 @@ void ShiftEventObjectCoords(struct EventObject *eventObject, s16 x, s16 y)
     eventObject->currentCoords.y = y;
 }
 
-/*static*/ void SetEventObjectCoords(struct EventObject *eventObject, s16 x, s16 y)
+static void SetEventObjectCoords(struct EventObject *eventObject, s16 x, s16 y)
 {
     eventObject->previousCoords.x = x;
     eventObject->previousCoords.y = y;
@@ -2283,7 +2292,7 @@ void UpdateEventObjectCoordsForCameraUpdate(void)
     {
         dx = gCamera.x;
         dy = gCamera.y;
-        for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+        for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
         {
             if (gEventObjects[i].active)
             {
@@ -2301,7 +2310,8 @@ void UpdateEventObjectCoordsForCameraUpdate(void)
 u8 GetEventObjectIdByXYZ(u16 x, u16 y, u8 z)
 {
     u8 i;
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         if (gEventObjects[i].active)
         {
@@ -2311,7 +2321,7 @@ u8 GetEventObjectIdByXYZ(u16 x, u16 y, u8 z)
             }
         }
     }
-    return NUM_EVENT_OBJECTS;
+    return EVENT_OBJECTS_COUNT;
 }
 
 static bool8 EventObjectDoesZCoordMatch(struct EventObject *eventObject, u8 z)
@@ -2332,9 +2342,8 @@ void UpdateEventObjectsForCameraUpdate(s16 x, s16 y)
 
 u8 AddCameraObject(u8 linkedSpriteId)
 {
-    u8 spriteId;
+    u8 spriteId = CreateSprite(&gCameraSpriteTemplate, 0, 0, 4);
 
-    spriteId = CreateSprite(&gCameraSpriteTemplate, 0, 0, 4);
     gSprites[spriteId].invisible = TRUE;
     gSprites[spriteId].data[0] = linkedSpriteId;
     return spriteId;
@@ -2359,11 +2368,9 @@ static void CameraObject_0(struct Sprite *sprite)
 
 static void CameraObject_1(struct Sprite *sprite)
 {
-    s16 x;
-    s16 y;
+    s16 x = gSprites[sprite->data[0]].pos1.x;
+    s16 y = gSprites[sprite->data[0]].pos1.y;
 
-    y = gSprites[sprite->data[0]].pos1.y;
-    x = gSprites[sprite->data[0]].pos1.x;
     sprite->data[2] = x - sprite->pos1.x;
     sprite->data[3] = y - sprite->pos1.y;
     sprite->pos1.x = x;
@@ -2380,13 +2387,13 @@ static void CameraObject_2(struct Sprite *sprite)
 
 static struct Sprite *FindCameraObject(void)
 {
-    u8 spriteId;
+    u8 i;
 
-    for (spriteId = 0; spriteId < MAX_SPRITES; spriteId++)
+    for (i = 0; i < MAX_SPRITES; i++)
     {
-        if (gSprites[spriteId].inUse && gSprites[spriteId].callback == ObjectCB_CameraObject)
+        if (gSprites[i].inUse && gSprites[i].callback == ObjectCB_CameraObject)
         {
-            return &gSprites[spriteId];
+            return &gSprites[i];
         }
     }
     return NULL;
@@ -2455,7 +2462,7 @@ u8 CreateCopySpriteAt(struct Sprite *sprite, s16 x, s16 y, u8 subpriority)
 {
     s16 i;
 
-    for (i = MAX_SPRITES - 1; i > -1; i --)
+    for (i = MAX_SPRITES - 1; i > -1; i--)
     {
         if (!gSprites[i].inUse)
         {
@@ -2575,7 +2582,7 @@ struct EventObjectTemplate *GetBaseTemplateForEventObject(const struct EventObje
     {
         return NULL;
     }
-    for (i = 0; i < 64; i++) // Using ARRAY_COUNT here results in the wrong conditional branch instruction (bls instead of ble)
+    for (i = 0; i < EVENT_OBJECT_TEMPLATES_COUNT; i++)
     {
         if (eventObject->localId == gSaveBlock1Ptr->eventObjectTemplates[i].localId)
         {
@@ -2638,10 +2645,10 @@ void sub_808F28C(u8 localId, u8 mapNum, u8 mapGroup, u8 decorCat)
         switch (decorCat)
         {
             case DECORCAT_DOLL:
-                OverrideMovementTypeForEventObject(&gEventObjects[eventObjectId], EventScript_2766A2);
+                OverrideMovementTypeForEventObject(&gEventObjects[eventObjectId], EventScript_SecretPower1);
                 break;
             case DECORCAT_CUSHION:
-                OverrideMovementTypeForEventObject(&gEventObjects[eventObjectId], EventScript_2766A6);
+                OverrideMovementTypeForEventObject(&gEventObjects[eventObjectId], EventScript_SecretPower2);
                 break;
         }
     }
@@ -2979,10 +2986,8 @@ u8 GetLimitedVectorDirection_SouthWestEast(s16 dx, s16 dy, s16 absdx, s16 absdy)
 
 u8 TryGetTrainerEncounterDirection(struct EventObject *eventObject, u8 movementType)
 {
-    s16 dx;
-    s16 dy;
-    s16 absdx;
-    s16 absdy;
+    s16 dx, dy;
+    s16 absdx, absdy;
 
     if (!EventObjectIsTrainerAndCloseToPlayer(eventObject))
     {
@@ -4450,7 +4455,7 @@ bool8 CopyablePlayerMovement_GoSpeed1(struct EventObject *eventObject, struct Sp
     {
         EventObjectSetSingleMovement(eventObject, sprite, GetFaceDirectionMovementAction(direction));
     }
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4469,7 +4474,7 @@ bool8 CopyablePlayerMovement_GoSpeed2(struct EventObject *eventObject, struct Sp
     {
         EventObjectSetSingleMovement(eventObject, sprite, GetFaceDirectionMovementAction(direction));
     }
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4488,7 +4493,7 @@ bool8 CopyablePlayerMovement_Slide(struct EventObject *eventObject, struct Sprit
     {
         EventObjectSetSingleMovement(eventObject, sprite, GetFaceDirectionMovementAction(direction));
     }
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4500,7 +4505,7 @@ bool8 cph_IM_DIFFERENT(struct EventObject *eventObject, struct Sprite *sprite, u
     direction = playerDirection;
     direction = state_to_direction(gInitialMovementTypeFacingDirections[eventObject->movementType], eventObject->directionSequenceIndex, direction);
     EventObjectSetSingleMovement(eventObject, sprite, GetJumpInPlaceMovementAction(direction));
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4519,7 +4524,7 @@ bool8 CopyablePlayerMovement_GoSpeed4(struct EventObject *eventObject, struct Sp
     {
         EventObjectSetSingleMovement(eventObject, sprite, GetFaceDirectionMovementAction(direction));
     }
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4540,7 +4545,7 @@ bool8 CopyablePlayerMovement_Jump(struct EventObject *eventObject, struct Sprite
     {
         EventObjectSetSingleMovement(eventObject, sprite, GetFaceDirectionMovementAction(direction));
     }
-    eventObject->singleMovementActive = 1;
+    eventObject->singleMovementActive = TRUE;
     sprite->data[1] = 2;
     return TRUE;
 }
@@ -4952,7 +4957,7 @@ static bool8 DoesObjectCollideWithObjectAt(struct EventObject *eventObject, s16 
     u8 i;
     struct EventObject *curObject;
 
-    for (i = 0; i < NUM_EVENT_OBJECTS; i++)
+    for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
     {
         curObject = &gEventObjects[i];
         if (curObject->active && curObject != eventObject)
@@ -5023,8 +5028,8 @@ void sub_8092FF0(s16 x, s16 y, s16 *dest_x, s16 *dest_y)
 {
     *dest_x = (x - gSaveBlock1Ptr->pos.x) << 4;
     *dest_y = (y - gSaveBlock1Ptr->pos.y) << 4;
-    *dest_x -= gUnknown_03005DEC;
-    *dest_y -= gUnknown_03005DE8;
+    *dest_x -= gTotalCameraPixelOffsetX;
+    *dest_y -= gTotalCameraPixelOffsetY;
 }
 
 void sub_8093038(s16 x, s16 y, s16 *dest_x, s16 *dest_y)
@@ -5032,21 +5037,21 @@ void sub_8093038(s16 x, s16 y, s16 *dest_x, s16 *dest_y)
     s16 dx;
     s16 dy;
 
-    dx = -gUnknown_03005DEC - gUnknown_03005DD0.x;
-    dy = -gUnknown_03005DE8 - gUnknown_03005DD0.y;
-    if (gUnknown_03005DD0.x > 0)
+    dx = -gTotalCameraPixelOffsetX - gFieldCamera.x;
+    dy = -gTotalCameraPixelOffsetY - gFieldCamera.y;
+    if (gFieldCamera.x > 0)
     {
         dx += 0x10;
     }
-    if (gUnknown_03005DD0.x < 0)
+    if (gFieldCamera.x < 0)
     {
         dx -= 0x10;
     }
-    if (gUnknown_03005DD0.y > 0)
+    if (gFieldCamera.y > 0)
     {
         dy += 0x10;
     }
-    if (gUnknown_03005DD0.y < 0)
+    if (gFieldCamera.y < 0)
     {
         dy -= 0x10;
     }
@@ -5065,19 +5070,19 @@ static void GetEventObjectMovingCameraOffset(s16 *x, s16 *y)
 {
     *x = 0;
     *y = 0;
-    if (gUnknown_03005DD0.x > 0)
+    if (gFieldCamera.x > 0)
     {
         (*x)++;
     }
-    if (gUnknown_03005DD0.x < 0)
+    if (gFieldCamera.x < 0)
     {
         (*x) --;
     }
-    if (gUnknown_03005DD0.y > 0)
+    if (gFieldCamera.y > 0)
     {
         (*y)++;
     }
-    if (gUnknown_03005DD0.y < 0)
+    if (gFieldCamera.y < 0)
     {
         (*y) --;
     }
@@ -5333,7 +5338,7 @@ void npc_apply_direction(struct EventObject *eventObject, struct Sprite *sprite,
     ShiftEventObjectCoords(eventObject, x, y);
     oamt_npc_ministep_reset(sprite, direction, speed);
     sprite->animPaused = FALSE;
-    if (gLockedAnimEventObjects != NULL && FindLockedEventObjectIndex(eventObject) != NUM_EVENT_OBJECTS)
+    if (gLockedAnimEventObjects != NULL && FindLockedEventObjectIndex(eventObject) != EVENT_OBJECTS_COUNT)
     {
         sprite->animPaused = TRUE;
     }
@@ -6416,7 +6421,7 @@ bool8 MovementAction_FacePlayer_Step0(struct EventObject *eventObject, struct Sp
 {
     u8 playerObjectId;
 
-    if (!TryGetEventObjectIdByLocalIdAndMap(0xFF, 0, 0, &playerObjectId))
+    if (!TryGetEventObjectIdByLocalIdAndMap(EVENT_OBJ_ID_PLAYER, 0, 0, &playerObjectId))
     {
         FaceDirection(eventObject, sprite, GetDirectionToFace(eventObject->currentCoords.x, eventObject->currentCoords.y, gEventObjects[playerObjectId].currentCoords.x, gEventObjects[playerObjectId].currentCoords.y));
     }
@@ -6428,7 +6433,7 @@ bool8 MovementAction_FaceAwayPlayer_Step0(struct EventObject *eventObject, struc
 {
     u8 playerObjectId;
 
-    if (!TryGetEventObjectIdByLocalIdAndMap(0xFF, 0, 0, &playerObjectId))
+    if (!TryGetEventObjectIdByLocalIdAndMap(EVENT_OBJ_ID_PLAYER, 0, 0, &playerObjectId))
     {
         FaceDirection(eventObject, sprite, GetOppositeDirection(GetDirectionToFace(eventObject->currentCoords.x, eventObject->currentCoords.y, gEventObjects[playerObjectId].currentCoords.x, gEventObjects[playerObjectId].currentCoords.y)));
     }
@@ -7436,7 +7441,7 @@ bool8 MovementAction_AcroWheelieMoveLeft_Step1(struct EventObject *eventObject, 
 
 bool8 MovementAction_AcroWheelieMoveRight_Step0(struct EventObject *eventObject, struct Sprite *sprite)
 {
-    sub_8096200(eventObject, sprite, DIR_EAST,  1);
+    sub_8096200(eventObject, sprite, DIR_EAST, 1);
     return MovementAction_AcroWheelieMoveRight_Step1(eventObject, sprite);
 }
 
@@ -7491,7 +7496,7 @@ bool8 MovementAction_AcroEndWheelieMoveUp_Step1(struct EventObject *eventObject,
 
 bool8 MovementAction_AcroEndWheelieMoveLeft_Step0(struct EventObject *eventObject, struct Sprite *sprite)
 {
-    sub_8096330(eventObject, sprite, DIR_WEST,  1);
+    sub_8096330(eventObject, sprite, DIR_WEST, 1);
     return MovementAction_AcroEndWheelieMoveLeft_Step1(eventObject, sprite);
 }
 
@@ -7507,7 +7512,7 @@ bool8 MovementAction_AcroEndWheelieMoveLeft_Step1(struct EventObject *eventObjec
 
 bool8 MovementAction_AcroEndWheelieMoveRight_Step0(struct EventObject *eventObject, struct Sprite *sprite)
 {
-    sub_8096330(eventObject, sprite, DIR_EAST,  1);
+    sub_8096330(eventObject, sprite, DIR_EAST, 1);
     return MovementAction_AcroEndWheelieMoveRight_Step1(eventObject, sprite);
 }
 
@@ -7579,15 +7584,13 @@ static void TryEnableEventObjectAnim(struct EventObject *eventObject, struct Spr
 static void UpdateEventObjectVisibility(struct EventObject *eventObject, struct Sprite *sprite)
 {
     sub_8096530(eventObject, sprite);
-    npc_update_obj_anim_flag(eventObject, sprite);
+    UpdateEventObjSpriteVisibility(eventObject, sprite);
 }
 
 static void sub_8096530(struct EventObject *eventObject, struct Sprite *sprite)
 {
-    u16 x;
-    u16 y;
-    u16 x2;
-    u16 y2;
+    u16 x, y;
+    u16 x2, y2;
     const struct EventObjectGraphicsInfo *graphicsInfo;
 
     eventObject->offScreen = FALSE;
@@ -7616,7 +7619,7 @@ static void sub_8096530(struct EventObject *eventObject, struct Sprite *sprite)
     }
 }
 
-static void npc_update_obj_anim_flag(struct EventObject *eventObject, struct Sprite *sprite)
+static void UpdateEventObjSpriteVisibility(struct EventObject *eventObject, struct Sprite *sprite)
 {
     sprite->invisible = FALSE;
     if (eventObject->invisible || eventObject->offScreen)
@@ -7625,7 +7628,7 @@ static void npc_update_obj_anim_flag(struct EventObject *eventObject, struct Spr
     }
 }
 
-/*static*/ void GetAllGroundEffectFlags_OnSpawn(struct EventObject *eventObj, u32 *flags)
+static void GetAllGroundEffectFlags_OnSpawn(struct EventObject *eventObj, u32 *flags)
 {
     EventObjectUpdateMetatileBehaviors(eventObj);
     GetGroundEffectFlags_Reflection(eventObj, flags);
@@ -7651,7 +7654,7 @@ static void GetAllGroundEffectFlags_OnBeginStep(struct EventObject *eventObj, u3
     GetGroundEffectFlags_HotSprings(eventObj, flags);
 }
 
-/*static*/ void GetAllGroundEffectFlags_OnFinishStep(struct EventObject *eventObj, u32 *flags)
+static void GetAllGroundEffectFlags_OnFinishStep(struct EventObject *eventObj, u32 *flags)
 {
     EventObjectUpdateMetatileBehaviors(eventObj);
     GetGroundEffectFlags_ShallowFlowingWater(eventObj, flags);
@@ -7721,7 +7724,7 @@ static void GetGroundEffectFlags_Tracks(struct EventObject *eventObj, u32 *flags
         *flags |= GROUND_EFFECT_FLAG_DEEP_SAND;
     }
     else if (MetatileBehavior_IsSandOrDeepSand(eventObj->previousMetatileBehavior)
-             || MetatileBehavior_IsUnusedFootprintMetatile(eventObj->previousMetatileBehavior))
+             || MetatileBehavior_IsFootprints(eventObj->previousMetatileBehavior))
     {
         *flags |= GROUND_EFFECT_FLAG_SAND;
     }
@@ -7931,7 +7934,7 @@ u8 GetLedgeJumpDirection(s16 x, s16 y, u8 z)
     return 0;
 }
 
-void EventObjectSetSpriteOamTableForLongGrass(struct EventObject *eventObj, struct Sprite *sprite)
+static void SetEventObjectSpriteOamTableForLongGrass(struct EventObject *eventObj, struct Sprite *sprite)
 {
     if (eventObj->disableCoveringGroundEffects)
         return;
@@ -7984,7 +7987,7 @@ static const u8 sEventObjectPriorities_08376070[] = {
     1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 0, 0, 1,
 };
 
-void EventObjectUpdateZCoordAndPriority(struct EventObject *eventObj, struct Sprite *sprite)
+void UpdateEventObjectZCoordAndPriority(struct EventObject *eventObj, struct Sprite *sprite)
 {
     if (eventObj->fixedPriority)
         return;
@@ -8206,8 +8209,12 @@ void GroundEffect_JumpOnTallGrass(struct EventObject *eventObj, struct Sprite *s
     gFieldEffectArguments[3] = 2;
     FieldEffectStart(FLDEFF_JUMP_TALL_GRASS);
 
-    spriteId = sub_81546C8(
-        eventObj->localId, eventObj->mapNum, eventObj->mapGroup, eventObj->currentCoords.x, eventObj->currentCoords.y);
+    spriteId = FindTallGrassFieldEffectSpriteId(
+        eventObj->localId,
+        eventObj->mapNum,
+        eventObj->mapGroup,
+        eventObj->currentCoords.x,
+        eventObj->currentCoords.y);
 
     if (spriteId == MAX_SPRITES)
         GroundEffect_SpawnOnTallGrass(eventObj, sprite);
@@ -8289,7 +8296,7 @@ static void (*const sGroundEffectFuncs[])(struct EventObject *eventObj, struct S
     GroundEffect_Seaweed
 };
 
-/*static*/ void DoFlaggedGroundEffects(struct EventObject *eventObj, struct Sprite *sprite, u32 flags)
+static void DoFlaggedGroundEffects(struct EventObject *eventObj, struct Sprite *sprite, u32 flags)
 {
     u8 i;
 
@@ -8330,9 +8337,9 @@ static void DoGroundEffects_OnSpawn(struct EventObject *eventObj, struct Sprite 
     if (eventObj->triggerGroundEffectsOnMove)
     {
         flags = 0;
-        EventObjectUpdateZCoordAndPriority(eventObj, sprite);
+        UpdateEventObjectZCoordAndPriority(eventObj, sprite);
         GetAllGroundEffectFlags_OnSpawn(eventObj, &flags);
-        EventObjectSetSpriteOamTableForLongGrass(eventObj, sprite);
+        SetEventObjectSpriteOamTableForLongGrass(eventObj, sprite);
         DoFlaggedGroundEffects(eventObj, sprite, flags);
         eventObj->triggerGroundEffectsOnMove = 0;
         eventObj->disableCoveringGroundEffects = 0;
@@ -8346,9 +8353,9 @@ static void DoGroundEffects_OnBeginStep(struct EventObject *eventObj, struct Spr
     if (eventObj->triggerGroundEffectsOnMove)
     {
         flags = 0;
-        EventObjectUpdateZCoordAndPriority(eventObj, sprite);
+        UpdateEventObjectZCoordAndPriority(eventObj, sprite);
         GetAllGroundEffectFlags_OnBeginStep(eventObj, &flags);
-        EventObjectSetSpriteOamTableForLongGrass(eventObj, sprite);
+        SetEventObjectSpriteOamTableForLongGrass(eventObj, sprite);
         filters_out_some_ground_effects(eventObj, &flags);
         DoFlaggedGroundEffects(eventObj, sprite, flags);
         eventObj->triggerGroundEffectsOnMove = 0;
@@ -8363,9 +8370,9 @@ static void DoGroundEffects_OnFinishStep(struct EventObject *eventObj, struct Sp
     if (eventObj->triggerGroundEffectsOnStop)
     {
         flags = 0;
-        EventObjectUpdateZCoordAndPriority(eventObj, sprite);
+        UpdateEventObjectZCoordAndPriority(eventObj, sprite);
         GetAllGroundEffectFlags_OnFinishStep(eventObj, &flags);
-        EventObjectSetSpriteOamTableForLongGrass(eventObj, sprite);
+        SetEventObjectSpriteOamTableForLongGrass(eventObj, sprite);
         FilterOutStepOnPuddleGroundEffectIfJumping(eventObj, &flags);
         DoFlaggedGroundEffects(eventObj, sprite, flags);
         eventObj->triggerGroundEffectsOnStop = 0;
@@ -8398,11 +8405,11 @@ void FreezeEventObjects(void)
             FreezeEventObject(&gEventObjects[i]);
 }
 
-void FreezeEventObjectsExceptOne(u8 a1)
+void FreezeEventObjectsExceptOne(u8 eventObjectId)
 {
     u8 i;
     for (i = 0; i < EVENT_OBJECTS_COUNT; i++)
-        if (i != a1 && gEventObjects[i].active && i != gPlayerAvatar.eventObjectId)
+        if (i != eventObjectId && gEventObjects[i].active && i != gPlayerAvatar.eventObjectId)
             FreezeEventObject(&gEventObjects[i]);
 }
 
@@ -8424,44 +8431,44 @@ void UnfreezeEventObjects(void)
             UnfreezeEventObject(&gEventObjects[i]);
 }
 
-void Step1(struct Sprite *sprite, u8 dir)
+static void Step1(struct Sprite *sprite, u8 dir)
 {
     sprite->pos1.x += sDirectionToVectors[dir].x;
     sprite->pos1.y += sDirectionToVectors[dir].y;
 }
 
-void Step2(struct Sprite *sprite, u8 dir)
+static void Step2(struct Sprite *sprite, u8 dir)
 {
     sprite->pos1.x += 2 * (u16) sDirectionToVectors[dir].x;
     sprite->pos1.y += 2 * (u16) sDirectionToVectors[dir].y;
 }
 
-void Step3(struct Sprite *sprite, u8 dir)
+static void Step3(struct Sprite *sprite, u8 dir)
 {
     sprite->pos1.x += 2 * (u16) sDirectionToVectors[dir].x + (u16) sDirectionToVectors[dir].x;
     sprite->pos1.y += 2 * (u16) sDirectionToVectors[dir].y + (u16) sDirectionToVectors[dir].y;
 }
 
-void Step4(struct Sprite *sprite, u8 dir)
+static void Step4(struct Sprite *sprite, u8 dir)
 {
     sprite->pos1.x += 4 * (u16) sDirectionToVectors[dir].x;
     sprite->pos1.y += 4 * (u16) sDirectionToVectors[dir].y;
 }
 
-void Step8(struct Sprite *sprite, u8 dir)
+static void Step8(struct Sprite *sprite, u8 dir)
 {
     sprite->pos1.x += 8 * (u16) sDirectionToVectors[dir].x;
     sprite->pos1.y += 8 * (u16) sDirectionToVectors[dir].y;
 }
 
-void oamt_npc_ministep_reset(struct Sprite *sprite, u8 a2, u8 a3)
+static void oamt_npc_ministep_reset(struct Sprite *sprite, u8 direction, u8 a3)
 {
-    sprite->data[3] = a2;
+    sprite->data[3] = direction;
     sprite->data[4] = a3;
     sprite->data[5] = 0;
 }
 
-typedef void (*SpriteStepFunc)(struct Sprite *sprite, u8 dir);
+typedef void (*SpriteStepFunc)(struct Sprite *sprite, u8 direction);
 
 static const SpriteStepFunc gUnknown_0850E6C4[] = {
     Step1,
@@ -8541,9 +8548,9 @@ bool8 obj_npc_ministep(struct Sprite *sprite)
     return TRUE;
 }
 
-void sub_80976DC(struct Sprite *sprite, u8 a2)
+void sub_80976DC(struct Sprite *sprite, u8 direction)
 {
-    sprite->data[3] = a2;
+    sprite->data[3] = direction;
     sprite->data[4] = 0;
     sprite->data[5] = 0;
 }
@@ -8564,7 +8571,7 @@ bool8 sub_80976EC(struct Sprite *sprite)
         return FALSE;
 }
 
-const s8 gUnknown_0850E772[] = {
+static const s8 gUnknown_0850E772[] = {
     1, 2, 2, 2, 2, 2, 2, 2,
     2, 2, 2, 1, 2, 2, 1, 2,
     2, 1, 2, 2, 1, 2, 1, 1,
@@ -8576,7 +8583,7 @@ const s8 gUnknown_0850E772[] = {
     0, 1, 0, 0, 0, 0, 0, 0,
 };
 
-const s8 gUnknown_0850E7BA[] = {
+static const s8 gUnknown_0850E7BA[] = {
      0,  0,  1,  0,  0,  1,  0,  0,
      1,  0,  1,  1,  0,  1,  1,  0,
      1,  1,  0,  1,  1,  0,  1,  1,
@@ -8746,7 +8753,7 @@ u8 sub_80978E4(struct Sprite *sprite)
     return v2;
 }
 
-void SetMovementDelay(struct Sprite *sprite, s16 timer)
+static void SetMovementDelay(struct Sprite *sprite, s16 timer)
 {
     sprite->data[3] = timer;
 }
@@ -8761,11 +8768,11 @@ static bool8 WaitForMovementDelay(struct Sprite *sprite)
         return FALSE;
 }
 
-void SetAndStartSpriteAnim(struct Sprite *sprite, u8 a2, u8 a3)
+void SetAndStartSpriteAnim(struct Sprite *sprite, u8 animNum, u8 animCmdIndex)
 {
-    sprite->animNum = a2;
-    sprite->animPaused = 0 ;
-    SeekSpriteAnim(sprite, a3);
+    sprite->animNum = animNum;
+    sprite->animPaused = FALSE;
+    SeekSpriteAnim(sprite, animCmdIndex);
 }
 
 bool8 SpriteAnimEnded(struct Sprite *sprite)
@@ -8803,7 +8810,7 @@ void UpdateEventObjectSpriteVisibility(struct Sprite *sprite, bool8 invisible)
         sprite->invisible = TRUE;
 }
 
-void UpdateEventObjectSpriteSubpriorityAndVisibility(struct Sprite *sprite)
+static void UpdateEventObjectSpriteSubpriorityAndVisibility(struct Sprite *sprite)
 {
     sub_8097D68(sprite);
     SetObjectSubpriorityByZCoord(sprite->data[1], sprite, 1);
@@ -8843,22 +8850,22 @@ void sub_8097B78(u8 var1, u8 var2)
         StartSpriteAnim(&gSprites[spriteId], GetFaceDirectionAnimNum(var2));
 }
 
-void sub_8097BB4(u8 var1, u8 var2)
+void sub_8097BB4(u8 var1, u8 graphicsId)
 {
     int spriteId = sub_8097B2C(var1);
 
     if(spriteId != MAX_SPRITES)
     {
         struct Sprite *sprite = &gSprites[spriteId];
-        const struct EventObjectGraphicsInfo *gfxInfo = GetEventObjectGraphicsInfo(var2);
+        const struct EventObjectGraphicsInfo *graphicsInfo = GetEventObjectGraphicsInfo(graphicsId);
         u16 tileNum = sprite->oam.tileNum;
 
-        sprite->oam = *gfxInfo->oam;
+        sprite->oam = *graphicsInfo->oam;
         sprite->oam.tileNum = tileNum;
-        sprite->oam.paletteNum = gfxInfo->paletteSlot;
-        sprite->images = gfxInfo->images;
+        sprite->oam.paletteNum = graphicsInfo->paletteSlot;
+        sprite->images = graphicsInfo->images;
 
-        if(gfxInfo->subspriteTables == NULL)
+        if(graphicsInfo->subspriteTables == NULL)
         {
             sprite->subspriteTables = NULL;
             sprite->subspriteTableNum = 0;
@@ -8866,7 +8873,7 @@ void sub_8097BB4(u8 var1, u8 var2)
         }
         else
         {
-            SetSubspriteTables(sprite, gfxInfo->subspriteTables);
+            SetSubspriteTables(sprite, graphicsInfo->subspriteTables);
             sprite->subspriteMode = 2;
         }
         StartSpriteAnim(sprite, 0);
@@ -8991,9 +8998,9 @@ void DoShadowFieldEffect(struct EventObject *eventObject)
 
 static void DoRippleFieldEffect(struct EventObject *eventObject, struct Sprite *sprite)
 {
-    const struct EventObjectGraphicsInfo *gfxInfo = GetEventObjectGraphicsInfo(eventObject->graphicsId);
+    const struct EventObjectGraphicsInfo *graphicsInfo = GetEventObjectGraphicsInfo(eventObject->graphicsId);
     gFieldEffectArguments[0] = sprite->pos1.x;
-    gFieldEffectArguments[1] = sprite->pos1.y + (gfxInfo->height >> 1) - 2;
+    gFieldEffectArguments[1] = sprite->pos1.y + (graphicsInfo->height >> 1) - 2;
     gFieldEffectArguments[2] = 151;
     gFieldEffectArguments[3] = 3;
     FieldEffectStart(FLDEFF_RIPPLE);

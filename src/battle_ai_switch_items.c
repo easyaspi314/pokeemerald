@@ -1,13 +1,13 @@
 #include "global.h"
 #include "battle.h"
 #include "battle_controllers.h"
-#include "constants/abilities.h"
-#include "constants/moves.h"
 #include "pokemon.h"
-#include "constants/species.h"
 #include "random.h"
 #include "util.h"
+#include "constants/abilities.h"
 #include "constants/items.h"
+#include "constants/moves.h"
+#include "constants/species.h"
 
 // this file's functions
 static bool8 HasSuperEffectiveMoveAgainstOpponents(bool8 noRng);
@@ -17,7 +17,7 @@ static bool8 ShouldUseItem(void);
 static bool8 ShouldSwitchIfPerishSong(void)
 {
     if (gStatuses3[gActiveBattler] & STATUS3_PERISH_SONG
-        && gDisableStructs[gActiveBattler].perishSongTimer1 == 0)
+        && gDisableStructs[gActiveBattler].perishSongTimer == 0)
     {
         *(gBattleStruct->AI_monToSwitchIntoId + gActiveBattler) = PARTY_SIZE;
         BtlController_EmitTwoReturnValues(1, B_ACTION_SWITCH, 0);
@@ -49,7 +49,7 @@ static bool8 ShouldSwitchIfWonderGuard(void)
         return FALSE;
 
     // Check if Pokemon has a super effective move.
-    for (opposingBattler = GetBattlerAtPosition(opposingPosition), i = 0; i < 4; i++)
+    for (opposingBattler = GetBattlerAtPosition(opposingPosition), i = 0; i < MAX_MON_MOVES; i++)
     {
         move = gBattleMons[gActiveBattler].moves[i];
         if (move == MOVE_NONE)
@@ -93,7 +93,7 @@ static bool8 ShouldSwitchIfWonderGuard(void)
         GetMonData(&party[i], MON_DATA_SPECIES); // Unused return value.
         GetMonData(&party[i], MON_DATA_ALT_ABILITY); // Unused return value.
 
-        for (opposingBattler = GetBattlerAtPosition(opposingPosition), j = 0; j < 4; j++)
+        for (opposingBattler = GetBattlerAtPosition(opposingPosition), j = 0; j < MAX_MON_MOVES; j++)
         {
             move = GetMonData(&party[i], MON_DATA_MOVE1 + j);
             if (move == MOVE_NONE)
@@ -262,7 +262,7 @@ static bool8 HasSuperEffectiveMoveAgainstOpponents(bool8 noRng)
 
     if (!(gAbsentBattlerFlags & gBitTable[opposingBattler]))
     {
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < MAX_MON_MOVES; i++)
         {
             move = gBattleMons[gActiveBattler].moves[i];
             if (move == MOVE_NONE)
@@ -285,7 +285,7 @@ static bool8 HasSuperEffectiveMoveAgainstOpponents(bool8 noRng)
 
     if (!(gAbsentBattlerFlags & gBitTable[opposingBattler]))
     {
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < MAX_MON_MOVES; i++)
         {
             move = gBattleMons[gActiveBattler].moves[i];
             if (move == MOVE_NONE)
@@ -310,7 +310,7 @@ static bool8 AreStatsRaised(void)
     u8 buffedStatsValue = 0;
     s32 i;
 
-    for (i = 0; i < BATTLE_STATS_NO; i++)
+    for (i = 0; i < NUM_BATTLE_STATS; i++)
     {
         if (gBattleMons[gActiveBattler].statStages[i] > 6)
             buffedStatsValue += gBattleMons[gActiveBattler].statStages[i] - 6;
@@ -400,7 +400,7 @@ static bool8 FindMonWithFlagsAndSuperEffective(u8 flags, u8 moduloPercent)
         {
             battlerIn1 = gLastHitBy[gActiveBattler];
 
-            for (j = 0; j < 4; j++)
+            for (j = 0; j < MAX_MON_MOVES; j++)
             {
                 move = GetMonData(&party[i], MON_DATA_MOVE1 + j);
                 if (move == 0)
@@ -715,14 +715,14 @@ u8 GetMostSuitableMonToSwitchInto(void)
         // Ok, we know the mon has the right typing but does it have at least one super effective move?
         if (bestMonId != PARTY_SIZE)
         {
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
             {
                 move = GetMonData(&party[bestMonId], MON_DATA_MOVE1 + i);
                 if (move != MOVE_NONE && TypeCalc(move, gActiveBattler, opposingBattler) & MOVE_RESULT_SUPER_EFFECTIVE)
                     break;
             }
 
-            if (i != 4)
+            if (i != MAX_MON_MOVES)
                 return bestMonId; // Has both the typing and at least one super effective move.
 
             invalidMons |= gBitTable[bestMonId]; // Sorry buddy, we want something better.
@@ -757,7 +757,7 @@ u8 GetMostSuitableMonToSwitchInto(void)
         if (i == *(gBattleStruct->monToSwitchIntoId + battlerIn2))
             continue;
 
-        for (j = 0; j < 4; j++)
+        for (j = 0; j < MAX_MON_MOVES; j++)
         {
             move = GetMonData(&party[i], MON_DATA_MOVE1 + j);
             gBattleMoveDamage = 0;

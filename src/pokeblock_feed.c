@@ -1,28 +1,28 @@
 #include "global.h"
-#include "pokeblock.h"
-#include "sprite.h"
-#include "task.h"
-#include "palette.h"
-#include "menu.h"
-#include "malloc.h"
-#include "pokemon.h"
-#include "blend_palette.h"
-#include "main.h"
-#include "menu_helpers.h"
+#include "battle.h" // to get rid of once gMonSpritesGfxPtr is put elsewhere
 #include "bg.h"
-#include "gpu_regs.h"
 #include "data2.h"
 #include "decompress.h"
 #include "event_data.h"
-#include "strings.h"
-#include "string_util.h"
-#include "party_menu.h"
-#include "m4a.h"
-#include "sound.h"
-#include "trig.h"
+#include "gpu_regs.h"
 #include "graphics.h"
+#include "main.h"
+#include "alloc.h"
+#include "menu.h"
+#include "menu_helpers.h"
+#include "m4a.h"
+#include "palette.h"
+#include "party_menu.h"
+#include "pokeblock.h"
+#include "pokemon.h"
+#include "sprite.h"
+#include "string_util.h"
+#include "strings.h"
+#include "sound.h"
+#include "task.h"
 #include "text_window.h"
-#include "battle.h" // to get rid of once gMonSpritesGfxPtr is put elsewhere
+#include "trig.h"
+#include "util.h"
 
 struct PokeblockFeedStruct
 {
@@ -52,13 +52,8 @@ struct PokeblockFeedStruct
 extern u16 gSpecialVar_ItemId;
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
 
-extern const u8 gBattleTerrainPalette_Frontier[];
-extern const u8 gBattleTerrainTiles_Building[];
-extern const u8 gUnknown_08D9BA44[];
 extern const struct CompressedSpriteSheet gMonFrontPicTable[];
 extern const u16 gUnknown_0860F074[];
-
-extern bool8 sub_81221EC(void);
 
 // this file's functions
 static void HandleInitBackgrounds(void);
@@ -91,31 +86,31 @@ EWRAM_DATA static struct CompressedSpritePalette sPokeblockSpritePal = {0};
 // const rom data
 static const u8 sNatureToMonPokeblockAnim[][2] =
 {
-    {  0, 0 }, // HARDY
-    {  3, 0 }, // LONELY
-    {  4, 1 }, // BRAVE
-    {  5, 0 }, // ADAMANT
-    { 10, 0 }, // NAUGHTY
-    { 13, 0 }, // BOLD
-    { 15, 0 }, // DOCILE
-    { 16, 2 }, // RELAXED
-    { 18, 0 }, // IMPISH
-    { 19, 0 }, // LAX
-    { 20, 0 }, // TIMID
-    { 25, 0 }, // HASTY
-    { 27, 3 }, // SERIOUS
-    { 28, 0 }, // JOLLY
-    { 29, 0 }, // NAIVE
-    { 33, 4 }, // MODEST
-    { 36, 0 }, // MILD
-    { 37, 0 }, // QUIET
-    { 39, 0 }, // BASHFUL
-    { 42, 0 }, // RASH
-    { 45, 0 }, // CALM
-    { 46, 5 }, // GENTLE
-    { 47, 6 }, // SASSY
-    { 48, 0 }, // CAREFUL
-    { 53, 0 }, // QUIRKY
+    [NATURE_HARDY] = {  0, 0 },
+    [NATURE_LONELY] = {  3, 0 },
+    [NATURE_BRAVE] = {  4, 1 },
+    [NATURE_ADAMANT] = {  5, 0 },
+    [NATURE_NAUGHTY] = { 10, 0 },
+    [NATURE_BOLD] = { 13, 0 },
+    [NATURE_DOCILE] = { 15, 0 },
+    [NATURE_RELAXED] = { 16, 2 },
+    [NATURE_IMPISH] = { 18, 0 },
+    [NATURE_LAX] = { 19, 0 },
+    [NATURE_TIMID] = { 20, 0 },
+    [NATURE_HASTY] = { 25, 0 },
+    [NATURE_SERIOUS] = { 27, 3 },
+    [NATURE_JOLLY] = { 28, 0 },
+    [NATURE_NAIVE] = { 29, 0 },
+    [NATURE_MODEST] = { 33, 4 },
+    [NATURE_MILD] = { 36, 0 },
+    [NATURE_QUIET] = { 37, 0 },
+    [NATURE_BASHFUL] = { 39, 0 },
+    [NATURE_RASH] = { 42, 0 },
+    [NATURE_CALM] = { 45, 0 },
+    [NATURE_GENTLE] = { 46, 5 },
+    [NATURE_SASSY] = { 47, 6 },
+    [NATURE_CAREFUL] = { 48, 0 },
+    [NATURE_QUIRKY] = { 53, 0 },
 };
 
 static const s16 sMonPokeblockAnims[][10] =
@@ -387,7 +382,7 @@ static const struct WindowTemplate sWindowTemplates[] =
     DUMMY_WIN_TEMPLATE
 };
 
-static const u8* const sPokeblocksPals[] =
+static const u32* const sPokeblocksPals[] =
 {
     gPokeblockRed_Pal,
     gPokeblockBlue_Pal,
@@ -468,10 +463,10 @@ static const struct OamData sThrownPokeblockOamData =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(8x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x8),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -584,7 +579,7 @@ static bool8 TransitionToPokeblockFeedScene(void)
         gMain.state++;
         break;
     case 10:
-        SetWindowBorderStyle(0, 1, 1, 14);
+        DrawStdFrameWithCustomTileAndPalette(0, 1, 1, 14);
         gMain.state++;
         break;
     case 11:
@@ -659,25 +654,25 @@ static bool8 LoadMonAndSceneGfx(struct Pokemon *mon)
         trainerId = GetMonData(mon, MON_DATA_OT_ID);
         palette = GetMonSpritePalStructFromOtIdPersonality(species, trainerId, personality);
 
-        LoadCompressedObjectPalette(palette);
+        LoadCompressedSpritePalette(palette);
         SetMultiuseSpriteTemplateToPokemon(palette->tag, 1);
         sPokeblockFeed->loadGfxState++;
         break;
     case 2:
-        LoadCompressedObjectPic(&gPokeblockCase_SpriteSheet);
+        LoadCompressedSpriteSheet(&gPokeblockCase_SpriteSheet);
         sPokeblockFeed->loadGfxState++;
         break;
     case 3:
-        LoadCompressedObjectPalette(&gPokeblockCase_SpritePal);
+        LoadCompressedSpritePalette(&gPokeblockCase_SpritePal);
         sPokeblockFeed->loadGfxState++;
         break;
     case 4:
-        LoadCompressedObjectPic(&sPokeblock_SpriteSheet);
+        LoadCompressedSpriteSheet(&sPokeblock_SpriteSheet);
         sPokeblockFeed->loadGfxState++;
         break;
     case 5:
         SetPokeblockSpritePal(gSpecialVar_ItemId);
-        LoadCompressedObjectPalette(&sPokeblockSpritePal);
+        LoadCompressedSpritePalette(&sPokeblockSpritePal);
         sPokeblockFeed->loadGfxState++;
         break;
     case 6:
@@ -707,7 +702,7 @@ static void HandleInitWindows(void)
     DeactivateAllTextPrinters();
     LoadUserWindowBorderGfx(0, 1, 0xE0);
     LoadPalette(gUnknown_0860F074, 0xF0, 0x20);
-    FillWindowPixelBuffer(0, 0);
+    FillWindowPixelBuffer(0, PIXEL_FILL(0));
     PutWindowTilemap(0);
     schedule_bg_copy_tilemap_to_vram(0);
 }
@@ -788,8 +783,8 @@ static void Task_HandleMonAtePokeblock(u8 taskId)
     else
         StringExpandPlaceholders(gStringVar4, gText_Var1DisdainfullyAteVar2);
 
-    gTextFlags.flag_0 = 1;
-    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeed(), NULL, 2, 1, 3);
+    gTextFlags.canABSpeedUpPrint = 1;
+    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeedDelay(), NULL, 2, 1, 3);
     gTasks[taskId].func = Task_WaitForAtePokeblockText;
 }
 

@@ -62,14 +62,14 @@ static const u8 * const sGiddyAdjectives[] = {
 };
 
 static const u8 * const sGiddyQuestions[] = {
-    gUnknown_08294313,
-    gUnknown_08294359,
-    gUnknown_08294398,
-    gUnknown_082943DA,
-    gUnknown_0829441C,
-    gUnknown_08294460,
-    gUnknown_082944A0,
-    gUnknown_082944D5
+    gMauvilleManText_ISoWantToGoOnAVacation,
+    gMauvilleManText_IBoughtCrayonsWith120Colors,
+    gMauvilleManText_WouldntItBeNiceIfWeCouldFloat,
+    gMauvilleManText_WhenYouWriteOnASandyBeach,
+    gMauvilleManText_WhatsTheBottomOfTheSeaLike,
+    gMauvilleManText_WhenYouSeeTheSettingSunDoesIt,
+    gMauvilleManText_LyingBackInTheGreenGrass,
+    gMauvilleManText_SecretBasesAreSoWonderful
 };
 
 static void SetupBard(void)
@@ -430,14 +430,14 @@ static void sub_81206F0(void)
     gUnknown_03002F84 = FALSE;
 }
 
-static void BardSong_TextSubPrinter(struct TextSubPrinter * printer, u16 a1)
+static void BardSong_TextSubPrinter(struct TextPrinterTemplate * printer, u16 a1)
 {
     gUnknown_03002F84 = TRUE;
 }
 
 static void sub_8120708(const u8 * src)
 {
-    NewMenuHelpers_DrawDialogueFrame(0, 0);
+    DrawDialogueFrame(0, 0);
     AddTextPrinterParameterized(0, 1, src, 0, 1, 1, BardSong_TextSubPrinter);
     gUnknown_03002F84 = TRUE;
     CopyWindowToVram(0, 3);
@@ -572,9 +572,6 @@ static void Task_BardSong(u8 taskId)
             struct MauvilleManBard *bard = &gSaveBlock1Ptr->oldMan.bard;
             u8 *str = gStringVar4 + task->tCharIndex;
             u16 wordLen = 0;
-            // Can't get it to match without hacking
-            u32 temp;
-            register s16 zero asm("r1");
 
             while (*str != CHAR_SPACE
                    && *str != CHAR_NEWLINE
@@ -588,17 +585,22 @@ static void Task_BardSong(u8 taskId)
                 sUnknownBardRelated = MACRO2(bard->songLyrics[task->tCurrWord]);
             else
                 sUnknownBardRelated = MACRO2(bard->temporaryLyrics[task->tCurrWord]);
-            temp = gBardSong.length / wordLen;
-            zero = 0;
-            gBardSong.length = temp;
+
+            gBardSong.length /= wordLen;
             if (gBardSong.length <= 0)
                 gBardSong.length = 1;
             task->tCurrWord++;
+
             if (task->data[2] == 0)
+            {
                 task->tState = 3;
+                task->data[1] = 0;
+            }
             else
+            {
                 task->tState = 5;
-            task->data[1] = zero;
+                task->data[1] = 0;
+            }
         }
             break;
         case 5:
@@ -668,7 +670,7 @@ static void Task_BardSong(u8 taskId)
                 task->tState = 3;
             break;
     }
-    sub_8197224();
+    RunTextPrintersAndIsPrinter0Active();
 }
 
 void ScrSpecial_SetMauvilleOldManEventObjGfx(void)
@@ -1179,10 +1181,10 @@ static void Task_StoryListMenu(u8 taskId) // Task_StoryListMenu
             task->data[0]++;
             break;
         case 1:
-            selection = ProcessMenuInput();
-            if (selection == -2)
+            selection = Menu_ProcessInput();
+            if (selection == MENU_NOTHING_CHOSEN)
                 break;
-            if (selection == -1 || selection == GetFreeStorySlot())
+            if (selection == MENU_B_PRESSED || selection == GetFreeStorySlot())
             {
                 gSpecialVar_Result = 0;
             }

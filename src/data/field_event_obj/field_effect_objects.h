@@ -1,6 +1,3 @@
-#ifndef GUARD_FIELD_EFFECT_OBJECTS_H
-#define GUARD_FIELD_EFFECT_OBJECTS_H
-
 const struct SpritePalette gFieldEffectObjectPaletteInfo0 = {gFieldEffectObjectPalette0, 0x1004};
 
 const struct SpritePalette gFieldEffectObjectPaletteInfo1 = {gFieldEffectObjectPalette1, 0x1005};
@@ -32,13 +29,13 @@ const struct SpriteFrameImage gFieldEffectObjectPicTable_ShadowExtraLarge[] = {
     obj_frame_tiles(gFieldEffectObjectPic_ShadowExtraLarge),
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowSmall = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_8x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowSmall, gDummySpriteAffineAnimTable, oamc_shadow};
+const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowSmall = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_8x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowSmall, gDummySpriteAffineAnimTable, UpdateShadowFieldEffect};
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowMedium = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowMedium, gDummySpriteAffineAnimTable, oamc_shadow};
+const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowMedium = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowMedium, gDummySpriteAffineAnimTable, UpdateShadowFieldEffect};
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowLarge = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_32x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowLarge, gDummySpriteAffineAnimTable, oamc_shadow};
+const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowLarge = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_32x8, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowLarge, gDummySpriteAffineAnimTable, UpdateShadowFieldEffect};
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowExtraLarge = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_64x32, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowExtraLarge, gDummySpriteAffineAnimTable, oamc_shadow};
+const struct SpriteTemplate gFieldEffectObjectTemplate_ShadowExtraLarge = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_64x32, gFieldEffectObjectImageAnimTable_Shadow, gFieldEffectObjectPicTable_ShadowExtraLarge, gDummySpriteAffineAnimTable, UpdateShadowFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_TallGrass[] = {
     overworld_frame(gFieldEffectObjectPic_TallGrass, 2, 2, 0),
@@ -63,7 +60,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_TallGrass[] =
     gFieldEffectObjectImageAnim_850CA84,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_TallGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_TallGrass, gFieldEffectObjectPicTable_TallGrass, gDummySpriteAffineAnimTable, unc_grass_normal};
+const struct SpriteTemplate gFieldEffectObjectTemplate_TallGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_TallGrass, gFieldEffectObjectPicTable_TallGrass, gDummySpriteAffineAnimTable, UpdateTallGrassFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Ripple[] = {
     overworld_frame(gFieldEffectObjectPic_Ripple, 2, 2, 0),
@@ -91,7 +88,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Ripple[] =
     gFieldEffectObjectImageAnim_850CAE0,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Ripple = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Ripple, gFieldEffectObjectPicTable_Ripple, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Ripple = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Ripple, gFieldEffectObjectPicTable_Ripple, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Ash[] = {
     overworld_frame(gFieldEffectObjectPic_Ash, 2, 2, 0),
@@ -116,7 +113,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Ash[] =
     gFieldEffectObjectImageAnim_850CB48,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Ash = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Ash, gFieldEffectObjectPicTable_Ash, gDummySpriteAffineAnimTable, sub_8155460};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Ash = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Ash, gFieldEffectObjectPicTable_Ash, gDummySpriteAffineAnimTable, UpdateAshFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_SurfBlob[] = {
     overworld_frame(gFieldEffectObjectPic_SurfBlob, 4, 4, 0),
@@ -124,25 +121,25 @@ const struct SpriteFrameImage gFieldEffectObjectPicTable_SurfBlob[] = {
     overworld_frame(gFieldEffectObjectPic_SurfBlob, 4, 4, 2),
 };
 
-const union AnimCmd gFieldEffectObjectImageAnim_850CB94[] =
+const union AnimCmd gSurfBlobAnim_FaceSouth[] =
 {
     ANIMCMD_FRAME(0, 1),
     ANIMCMD_JUMP(0),
 };
 
-const union AnimCmd gFieldEffectObjectImageAnim_850CB9C[] =
+const union AnimCmd gSurfBlobAnim_FaceNorth[] =
 {
     ANIMCMD_FRAME(1, 1),
     ANIMCMD_JUMP(0),
 };
 
-const union AnimCmd gFieldEffectObjectImageAnim_850CBA4[] =
+const union AnimCmd gSurfBlobAnim_FaceWest[] =
 {
     ANIMCMD_FRAME(2, 1),
     ANIMCMD_JUMP(0),
 };
 
-const union AnimCmd gFieldEffectObjectImageAnim_850CBAC[] =
+const union AnimCmd gSurfBlobAnim_FaceEast[] =
 {
     ANIMCMD_FRAME(2, 1, .hFlip = TRUE),
     ANIMCMD_JUMP(0),
@@ -150,13 +147,13 @@ const union AnimCmd gFieldEffectObjectImageAnim_850CBAC[] =
 
 const union AnimCmd *const gFieldEffectObjectImageAnimTable_SurfBlob[] =
 {
-    gFieldEffectObjectImageAnim_850CB94,
-    gFieldEffectObjectImageAnim_850CB9C,
-    gFieldEffectObjectImageAnim_850CBA4,
-    gFieldEffectObjectImageAnim_850CBAC,
+    gSurfBlobAnim_FaceSouth,
+    gSurfBlobAnim_FaceNorth,
+    gSurfBlobAnim_FaceWest,
+    gSurfBlobAnim_FaceEast,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_SurfBlob = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_32x32, gFieldEffectObjectImageAnimTable_SurfBlob, gFieldEffectObjectPicTable_SurfBlob, gDummySpriteAffineAnimTable, sub_8155658};
+const struct SpriteTemplate gFieldEffectObjectTemplate_SurfBlob = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_32x32, gFieldEffectObjectImageAnimTable_SurfBlob, gFieldEffectObjectPicTable_SurfBlob, gDummySpriteAffineAnimTable, UpdateSurfBlobFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Arrow[] = {
     overworld_frame(gFieldEffectObjectPic_Arrow, 2, 2, 0),
@@ -208,9 +205,9 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Arrow[] =
 const struct SpriteTemplate gFieldEffectObjectTemplate_Arrow = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Arrow, gFieldEffectObjectPicTable_Arrow, gDummySpriteAffineAnimTable, SpriteCallbackDummy};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_GroundImpactDust[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_GroundImpactDust_0),
-    obj_frame_tiles(gFieldEffectObjectPic_GroundImpactDust_1),
-    obj_frame_tiles(gFieldEffectObjectPic_GroundImpactDust_2),
+    overworld_frame(gFieldEffectObjectPic_GroundImpactDust, 2, 1, 0),
+    overworld_frame(gFieldEffectObjectPic_GroundImpactDust, 2, 1, 1),
+    overworld_frame(gFieldEffectObjectPic_GroundImpactDust, 2, 1, 2),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CC8C[] =
@@ -229,10 +226,10 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_GroundImpactDust[] =
 const struct SpriteTemplate gFieldEffectObjectTemplate_GroundImpactDust = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_GroundImpactDust, gFieldEffectObjectPicTable_GroundImpactDust, gDummySpriteAffineAnimTable, sub_8156194};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_BikeHopTallGrass[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_BikeHopTallGrass_0),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeHopTallGrass_1),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeHopTallGrass_2),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeHopTallGrass_3),
+    overworld_frame(gFieldEffectObjectPic_BikeHopTallGrass, 2, 1, 0),
+    overworld_frame(gFieldEffectObjectPic_BikeHopTallGrass, 2, 1, 1),
+    overworld_frame(gFieldEffectObjectPic_BikeHopTallGrass, 2, 1, 2),
+    overworld_frame(gFieldEffectObjectPic_BikeHopTallGrass, 2, 1, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CCD8[] =
@@ -252,8 +249,8 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_BikeHopTallGrass[] =
 const struct SpriteTemplate gFieldEffectObjectTemplate_BikeHopTallGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_BikeHopTallGrass, gFieldEffectObjectPicTable_BikeHopTallGrass, gDummySpriteAffineAnimTable, sub_8156194};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_SandFootprints[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_SandFootprints_0),
-    obj_frame_tiles(gFieldEffectObjectPic_SandFootprints_1),
+    overworld_frame(gFieldEffectObjectPic_SandFootprints, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_SandFootprints, 2, 2, 1),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CD18[] =
@@ -289,11 +286,11 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_SandFootprints[] =
     gFieldEffectObjectImageAnim_850CD30,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_SandFootprints = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_SandFootprints, gFieldEffectObjectPicTable_SandFootprints, gDummySpriteAffineAnimTable, sub_8154C60};
+const struct SpriteTemplate gFieldEffectObjectTemplate_SandFootprints = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_SandFootprints, gFieldEffectObjectPicTable_SandFootprints, gDummySpriteAffineAnimTable, UpdateFootprintsTireTracksFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_DeepSandFootprints[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_DeepSandFootprints_0),
-    obj_frame_tiles(gFieldEffectObjectPic_DeepSandFootprints_1),
+    overworld_frame(gFieldEffectObjectPic_DeepSandFootprints, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_DeepSandFootprints, 2, 2, 1),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CD74[] =
@@ -329,13 +326,13 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_DeepSandFootprints[]
     gFieldEffectObjectImageAnim_850CD8C,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_DeepSandFootprints = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_DeepSandFootprints, gFieldEffectObjectPicTable_DeepSandFootprints, gDummySpriteAffineAnimTable, sub_8154C60};
+const struct SpriteTemplate gFieldEffectObjectTemplate_DeepSandFootprints = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_DeepSandFootprints, gFieldEffectObjectPicTable_DeepSandFootprints, gDummySpriteAffineAnimTable, UpdateFootprintsTireTracksFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_BikeTireTracks[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_BikeTireTracks_0),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeTireTracks_1),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeTireTracks_2),
-    obj_frame_tiles(gFieldEffectObjectPic_BikeTireTracks_3),
+    overworld_frame(gFieldEffectObjectPic_BikeTireTracks, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_BikeTireTracks, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_BikeTireTracks, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_BikeTireTracks, 2, 2, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CDE0[] =
@@ -399,7 +396,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_BikeTireTracks[] =
     gFieldEffectObjectImageAnim_850CE18,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_BikeTireTracks = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_BikeTireTracks, gFieldEffectObjectPicTable_BikeTireTracks, gDummySpriteAffineAnimTable, sub_8154C60};
+const struct SpriteTemplate gFieldEffectObjectTemplate_BikeTireTracks = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_BikeTireTracks, gFieldEffectObjectPicTable_BikeTireTracks, gDummySpriteAffineAnimTable, UpdateFootprintsTireTracksFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_BikeHopBigSplash[] = {
     overworld_frame(gFieldEffectObjectPic_BikeHopBigSplash, 2, 2, 0),
@@ -455,7 +452,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Splash[] =
     gFieldEffectObjectImageAnim_850CEC8,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Splash = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Splash, gFieldEffectObjectPicTable_Splash, gDummySpriteAffineAnimTable, sub_8154D90};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Splash = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Splash, gFieldEffectObjectPicTable_Splash, gDummySpriteAffineAnimTable, UpdateSplashFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_BikeHopSmallSplash[] = {
     overworld_frame(gFieldEffectObjectPic_BikeHopSmallSplash, 2, 1, 0),
@@ -479,10 +476,10 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_BikeHopSmallSplash[]
 const struct SpriteTemplate gFieldEffectObjectTemplate_BikeHopSmallSplash = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_BikeHopSmallSplash, gFieldEffectObjectPicTable_BikeHopSmallSplash, gDummySpriteAffineAnimTable, sub_8156194};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_LongGrass[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_LongGrass_0),
-    obj_frame_tiles(gFieldEffectObjectPic_LongGrass_1),
-    obj_frame_tiles(gFieldEffectObjectPic_LongGrass_2),
-    obj_frame_tiles(gFieldEffectObjectPic_LongGrass_3),
+    overworld_frame(gFieldEffectObjectPic_LongGrass, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_LongGrass, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_LongGrass, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_LongGrass, 2, 2, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CF70[] =
@@ -502,15 +499,15 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_LongGrass[] =
     gFieldEffectObjectImageAnim_850CF70,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_LongGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_LongGrass, gFieldEffectObjectPicTable_LongGrass, gDummySpriteAffineAnimTable, unc_grass_tall};
+const struct SpriteTemplate gFieldEffectObjectTemplate_LongGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_LongGrass, gFieldEffectObjectPicTable_LongGrass, gDummySpriteAffineAnimTable, UpdateLongGrassFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown16[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_2),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_3),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_4),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_5),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 3),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 4),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 6),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850CFDC[] =
@@ -532,7 +529,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown16[] =
 const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown16 = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown16, gFieldEffectObjectPicTable_Unknown16, gDummySpriteAffineAnimTable, sub_8156194};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown17[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown16_5),
+    overworld_frame(gFieldEffectObjectPic_Unknown16, 2, 2, 6),
     overworld_frame(gFieldEffectObjectPic_Unknown17, 2, 2, 0),
     overworld_frame(gFieldEffectObjectPic_Unknown17, 2, 2, 1),
     overworld_frame(gFieldEffectObjectPic_Unknown17, 2, 2, 2),
@@ -562,13 +559,13 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown17[] =
     gFieldEffectObjectImageAnim_850D05C,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown17 = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown17, gFieldEffectObjectPicTable_Unknown17, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown17 = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown17, gFieldEffectObjectPicTable_Unknown17, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown18[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown18_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown18_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown18_2),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown18_3),
+    overworld_frame(gFieldEffectObjectPic_Unknown18, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown18, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown18, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_Unknown18, 2, 2, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D0C0[] =
@@ -587,13 +584,13 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown18[] =
     gFieldEffectObjectImageAnim_850D0C0,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown18 = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown18, gFieldEffectObjectPicTable_Unknown18, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown18 = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown18, gFieldEffectObjectPicTable_Unknown18, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown19[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown19_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown19_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown19_2),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown19_3),
+    overworld_frame(gFieldEffectObjectPic_Unknown19, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown19, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown19, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_Unknown19, 2, 2, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D118[] =
@@ -610,12 +607,12 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown19[] =
     gFieldEffectObjectImageAnim_850D118,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown19 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown19, gFieldEffectObjectPicTable_Unknown19, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown19 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown19, gFieldEffectObjectPicTable_Unknown19, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown29[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown29_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown29_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown29_2),
+    overworld_frame(gFieldEffectObjectPic_Unknown29, 2, 1, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown29, 2, 1, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown29, 2, 1, 2),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D160[] =
@@ -631,13 +628,13 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown29[] =
     gFieldEffectObjectImageAnim_850D160,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown29 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Unknown29, gFieldEffectObjectPicTable_Unknown29, gDummySpriteAffineAnimTable, sub_81559BC};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown29 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x8, gFieldEffectObjectImageAnimTable_Unknown29, gFieldEffectObjectPicTable_Unknown29, gDummySpriteAffineAnimTable, UpdateSandPileFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown20[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown20_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown20_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown20_2),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown20_3),
+    overworld_frame(gFieldEffectObjectPic_Unknown20, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown20, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown20, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_Unknown20, 2, 2, 3),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D1AC[] =
@@ -656,7 +653,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown20[] =
     gFieldEffectObjectImageAnim_850D1AC,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown20 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown20, gFieldEffectObjectPicTable_Unknown20, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown20 = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown20, gFieldEffectObjectPicTable_Unknown20, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const union AffineAnimCmd gFieldEffectObjectRotScalAnim_850D1E4[] =
 {
@@ -695,12 +692,12 @@ const union AffineAnimCmd *const gFieldEffectObjectRotScalAnimTable_Unknown21[] 
 const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown21 = {0x0, 0xFFFF, &gDummyOamData, gDummySpriteAnimTable, NULL, gFieldEffectObjectRotScalAnimTable_Unknown21, SpriteCallbackDummy};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_BerryTreeGrowthSparkle[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_0),
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_1),
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_2),
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_3),
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_4),
-    obj_frame_tiles(gFieldEffectObjectPic_BerryTreeGrowthSparkle_5),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 3),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 4),
+    overworld_frame(gFieldEffectObjectPic_BerryTreeGrowthSparkle, 2, 2, 5),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D2D4[] =
@@ -733,7 +730,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_BerryTreeGrowthSpark
     gFieldEffectObjectImageAnim_850D2D4,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_BerryTreeGrowthSparkle = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_BerryTreeGrowthSparkle, gFieldEffectObjectPicTable_BerryTreeGrowthSparkle, gDummySpriteAffineAnimTable, sub_81561D0};
+const struct SpriteTemplate gFieldEffectObjectTemplate_BerryTreeGrowthSparkle = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_BerryTreeGrowthSparkle, gFieldEffectObjectPicTable_BerryTreeGrowthSparkle, gDummySpriteAffineAnimTable, WaitFieldEffectSpriteAnim};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_TreeDisguise[] = {
     overworld_frame(gFieldEffectObjectPic_TreeDisguise, 2, 4, 0),
@@ -769,7 +766,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_TreeDisguise[] =
     gFieldEffectObjectImageAnim_850D384,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_TreeDisguise = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_TreeDisguise, gFieldEffectObjectPicTable_TreeDisguise, gDummySpriteAffineAnimTable, sub_8155C88};
+const struct SpriteTemplate gFieldEffectObjectTemplate_TreeDisguise = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_TreeDisguise, gFieldEffectObjectPicTable_TreeDisguise, gDummySpriteAffineAnimTable, UpdateDisguiseFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_MountainDisguise[] = {
     overworld_frame(gFieldEffectObjectPic_MountainDisguise, 2, 4, 0),
@@ -805,7 +802,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_MountainDisguise[] =
     gFieldEffectObjectImageAnim_850D404,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_MountainDisguise = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_MountainDisguise, gFieldEffectObjectPicTable_MountainDisguise, gDummySpriteAffineAnimTable, sub_8155C88};
+const struct SpriteTemplate gFieldEffectObjectTemplate_MountainDisguise = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_MountainDisguise, gFieldEffectObjectPicTable_MountainDisguise, gDummySpriteAffineAnimTable, UpdateDisguiseFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_SandDisguisePlaceholder[] = {
     overworld_frame(gFieldEffectObjectPic_SandDisguisePlaceholder, 2, 4, 0),
@@ -817,7 +814,7 @@ const struct SpriteFrameImage gFieldEffectObjectPicTable_SandDisguisePlaceholder
     overworld_frame(gFieldEffectObjectPic_SandDisguisePlaceholder, 2, 4, 6),
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_SandDisguisePlaceholder = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_TreeDisguise, gFieldEffectObjectPicTable_SandDisguisePlaceholder, gDummySpriteAffineAnimTable, sub_8155C88};
+const struct SpriteTemplate gFieldEffectObjectTemplate_SandDisguisePlaceholder = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_TreeDisguise, gFieldEffectObjectPicTable_SandDisguisePlaceholder, gDummySpriteAffineAnimTable, UpdateDisguiseFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Bird[] = {
     obj_frame_tiles(gFieldEffectObjectPic_Bird),
@@ -853,7 +850,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_ShortGrass[] =
     gFieldEffectObjectImageAnim_850D4D0,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_ShortGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_ShortGrass, gFieldEffectObjectPicTable_ShortGrass, gDummySpriteAffineAnimTable, sub_8154A10};
+const struct SpriteTemplate gFieldEffectObjectTemplate_ShortGrass = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_ShortGrass, gFieldEffectObjectPicTable_ShortGrass, gDummySpriteAffineAnimTable, UpdateShortGrassFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_HotSpringsWater[] = {
     obj_frame_tiles(gFieldEffectObjectPic_HotSpringsWater),
@@ -870,7 +867,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_HotSpringsWater[] =
     gFieldEffectObjectImageAnim_850D500,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_HotSpringsWater = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_HotSpringsWater, gFieldEffectObjectPicTable_HotSpringsWater, gDummySpriteAffineAnimTable, sub_8155158};
+const struct SpriteTemplate gFieldEffectObjectTemplate_HotSpringsWater = {0xFFFF, 0x1005, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_HotSpringsWater, gFieldEffectObjectPicTable_HotSpringsWater, gDummySpriteAffineAnimTable, UpdateHotSpringsWaterFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_JumpOutOfAsh[] = {
     overworld_frame(gFieldEffectObjectPic_JumpOutOfAsh, 2, 2, 0),
@@ -900,11 +897,11 @@ const struct SpriteTemplate gFieldEffectObjectTemplate_JumpOutOfAsh = {0xFFFF, 0
 const struct SpritePalette gFieldEffectObjectPaletteInfo2 = {gFieldEffectObjectPalette2, 0x100D};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown33[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown33_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown33_1),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown33_2),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown33_3),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown33_4),
+    overworld_frame(gFieldEffectObjectPic_Unknown33, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown33, 2, 2, 1),
+    overworld_frame(gFieldEffectObjectPic_Unknown33, 2, 2, 2),
+    overworld_frame(gFieldEffectObjectPic_Unknown33, 2, 2, 3),
+    overworld_frame(gFieldEffectObjectPic_Unknown33, 2, 2, 4),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D5B0[] =
@@ -953,11 +950,11 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Bubbles[] =
     gFieldEffectObjectImageAnim_850D624,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Bubbles = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_Bubbles, gFieldEffectObjectPicTable_Bubbles, gDummySpriteAffineAnimTable, sub_8155AEC};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Bubbles = {0xFFFF, 0x1004, &gEventObjectBaseOam_16x32, gFieldEffectObjectImageAnimTable_Bubbles, gFieldEffectObjectPicTable_Bubbles, gDummySpriteAffineAnimTable, UpdateBubblesFieldEffect};
 
 const struct SpriteFrameImage gFieldEffectObjectPicTable_Unknown35[] = {
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown35_0),
-    obj_frame_tiles(gFieldEffectObjectPic_Unknown35_1),
+    overworld_frame(gFieldEffectObjectPic_Unknown35, 2, 2, 0),
+    overworld_frame(gFieldEffectObjectPic_Unknown35, 2, 2, 1),
 };
 
 const union AnimCmd gFieldEffectObjectImageAnim_850D674[] =
@@ -973,7 +970,7 @@ const union AnimCmd *const gFieldEffectObjectImageAnimTable_Unknown35[] =
     gFieldEffectObjectImageAnim_850D674,
 };
 
-const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown35 = {0xFFFF, 0x100F, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown35, gFieldEffectObjectPicTable_Unknown35, gDummySpriteAffineAnimTable, sub_8155E50};
+const struct SpriteTemplate gFieldEffectObjectTemplate_Unknown35 = {0xFFFF, 0x100F, &gEventObjectBaseOam_16x16, gFieldEffectObjectImageAnimTable_Unknown35, gFieldEffectObjectPicTable_Unknown35, gDummySpriteAffineAnimTable, UpdateSparkleFieldEffect};
 
 const struct SpritePalette gFieldEffectObjectPaletteInfo3 = {gFieldEffectObjectPalette3, 0x100F};
 
@@ -993,5 +990,3 @@ const struct SpriteFrameImage  gFieldEffectObjectPicTable_Rayquaza[] = {
 const struct SpriteTemplate gFieldEffectObjectTemplate_Rayquaza = {0xFFFF, 0xFFFF, &gEventObjectBaseOam_32x32, gFieldEffectObjectImageAnimTable_Rayquaza, gFieldEffectObjectPicTable_Rayquaza, gDummySpriteAffineAnimTable, sub_8155F80};
 
 const struct SpritePalette gFieldEffectObjectPaletteInfoUnused = {gEventObjectPalette2, 0x1011};
-
-#endif //GUARD_FIELD_EFFECT_OBJECTS_H

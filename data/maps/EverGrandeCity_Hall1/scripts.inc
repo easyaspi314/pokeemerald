@@ -1,5 +1,5 @@
 EverGrandeCity_Hall1_MapScripts:: @ 8229569
-	map_script 4, EverGrandeCity_Hall1_MapScript2_22956F
+	map_script MAP_SCRIPT_ON_WARP_INTO_MAP_TABLE, EverGrandeCity_Hall1_MapScript2_22956F
 	.byte 0
 
 EverGrandeCity_Hall1_MapScript2_22956F: @ 822956F
@@ -7,6 +7,6 @@ EverGrandeCity_Hall1_MapScript2_22956F: @ 822956F
 	.2byte 0
 
 EverGrandeCity_Hall1_EventScript_229579:: @ 8229579
-	turnobject 255, 2
+	turnobject EVENT_OBJ_ID_PLAYER, 2
 	end
 

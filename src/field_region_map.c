@@ -1,18 +1,16 @@
-
-// Includes
 #include "global.h"
-#include "main.h"
-#include "malloc.h"
-#include "gpu_regs.h"
 #include "bg.h"
-#include "text.h"
-#include "window.h"
-#include "text_window.h"
-#include "palette.h"
-#include "menu.h"
-#include "strings.h"
+#include "gpu_regs.h"
 #include "international_string_util.h"
+#include "main.h"
+#include "alloc.h"
+#include "menu.h"
+#include "palette.h"
 #include "region_map.h"
+#include "strings.h"
+#include "text.h"
+#include "text_window.h"
+#include "window.h"
 
 // Static type declarations
 
@@ -58,7 +56,7 @@ static const struct BgTemplate gUnknown_085E5068[] = {
 static const struct WindowTemplate gUnknown_085E5070[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 17,
         .tilemapTop = 17,
         .width = 12,
@@ -67,7 +65,7 @@ static const struct WindowTemplate gUnknown_085E5070[] =
         .baseBlock = 1
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 22,
         .tilemapTop = 1,
         .width = 7,
@@ -141,11 +139,11 @@ static void FieldUpdateRegionMap(void)
             sFieldRegionMapHandler->state++;
             break;
         case 1:
-            SetWindowBorderStyle(1, 0, 0x27, 0xd);
+            DrawStdFrameWithCustomTileAndPalette(1, 0, 0x27, 0xd);
             offset = GetStringCenterAlignXOffset(1, gText_Hoenn, 0x38);
             AddTextPrinterParameterized(1, 1, gText_Hoenn, offset, 1, 0, NULL);
             schedule_bg_copy_tilemap_to_vram(0);
-            SetWindowBorderStyle(0, 0, 0x27, 0xd);
+            DrawStdFrameWithCustomTileAndPalette(0, 0, 0x27, 0xd);
             PrintRegionMapSecName();
             BeginNormalPaletteFade(0xFFFFFFFF, 0, 16, 0, 0);
             sFieldRegionMapHandler->state++;
@@ -198,13 +196,13 @@ static void PrintRegionMapSecName(void)
 {
     if (sFieldRegionMapHandler->regionMap.iconDrawType != MAPSECTYPE_NONE)
     {
-        FillWindowPixelBuffer(0, 0x11);
+        FillWindowPixelBuffer(0, PIXEL_FILL(1));
         AddTextPrinterParameterized(0, 1, sFieldRegionMapHandler->regionMap.mapSecName, 0, 1, 0, NULL);
         schedule_bg_copy_tilemap_to_vram(0);
     }
     else
     {
-        FillWindowPixelBuffer(0, 0x11);
+        FillWindowPixelBuffer(0, PIXEL_FILL(1));
         CopyWindowToVram(0, 3);
     }
 }

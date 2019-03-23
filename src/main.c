@@ -1,6 +1,6 @@
 #include "global.h"
 #include "crt0.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "link.h"
 #include "link_rfu.h"
 #include "librfu.h"
@@ -22,10 +22,7 @@
 #include "text.h"
 #include "intro.h"
 #include "main.h"
-
-extern void sub_800B9B8(void);
-extern u8 gUnknown_03002748;
-extern u32 *gUnknown_0203CF5C;
+#include "trainer_hill.h"
 
 static void VBlankIntr(void);
 static void HBlankIntr(void);
@@ -33,7 +30,7 @@ static void VCountIntr(void);
 static void SerialIntr(void);
 static void IntrDummy(void);
 
-const u8 gGameVersion = VERSION_EMERALD;
+const u8 gGameVersion = GAME_VERSION;
 
 const u8 gGameLanguage = GAME_LANGUAGE; // English
 
@@ -69,7 +66,7 @@ bool8 gSoftResetDisabled;
 IntrFunc gIntrTable[INTR_COUNT];
 u8 gLinkVSyncDisabled;
 u32 IntrMain_Buffer[0x200];
-u8 gPcmDmaCounter;
+s8 gPcmDmaCounter;
 
 static EWRAM_DATA u16 gTrainerId = 0;
 
@@ -163,7 +160,7 @@ static void UpdateLinkAndCallCallbacks(void)
 static void InitMainCallbacks(void)
 {
     gMain.vblankCounter1 = 0;
-    gUnknown_0203CF5C = NULL;
+    gTrainerHillVBlankCounter = NULL;
     gMain.vblankCounter2 = 0;
     gMain.callback1 = NULL;
     SetMainCallback2(CB2_InitCopyrightScreenAfterBootup);
@@ -313,8 +310,6 @@ void SetSerialCallback(IntrCallback callback)
     gMain.serialCallback = callback;
 }
 
-extern void CopyBufferedValuesToGpuRegs(void);
-
 static void VBlankIntr(void)
 {
     if (gWirelessCommType != 0)
@@ -324,8 +319,8 @@ static void VBlankIntr(void)
 
     gMain.vblankCounter1++;
 
-    if (gUnknown_0203CF5C && *gUnknown_0203CF5C < 0xFFFFFFFF)
-        (*gUnknown_0203CF5C)++;
+    if (gTrainerHillVBlankCounter && *gTrainerHillVBlankCounter < 0xFFFFFFFF)
+        (*gTrainerHillVBlankCounter)++;
 
     if (gMain.vblankCallback)
         gMain.vblankCallback();
@@ -393,14 +388,14 @@ static void WaitForVBlank(void)
         ;
 }
 
-void sub_80008DC(u32 *var)
+void SetTrainerHillVBlankCounter(u32 *counter)
 {
-    gUnknown_0203CF5C = var;
+    gTrainerHillVBlankCounter = counter;
 }
 
-void sub_80008E8(void)
+void ClearTrainerHillVBlankCounter(void)
 {
-    gUnknown_0203CF5C = NULL;
+    gTrainerHillVBlankCounter = NULL;
 }
 
 void DoSoftReset(void)

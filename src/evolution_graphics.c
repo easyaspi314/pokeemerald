@@ -32,7 +32,7 @@ static void PreEvoInvisible_PostEvoVisible_KillTask(u8 taskID);
 static void sub_817C560(u8 taskID);
 
 static const u16 sEvoSparklePalette[] = INCBIN_U16("graphics/misc/evo_sparkle.gbapal");
-static const u8 sEvoSparkleTiles[] = INCBIN_U8("graphics/misc/evo_sparkle.4bpp.lz");
+static const u32 sEvoSparkleTiles[] = INCBIN_U32("graphics/misc/evo_sparkle.4bpp.lz");
 
 static const struct CompressedSpriteSheet sEvoSparkleSpriteSheets[] =
 {
@@ -53,10 +53,10 @@ static const struct OamData sOamData_EvoSparkle =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(8x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x8),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -251,7 +251,7 @@ static void CreatePostEvoSparkleSet2(u8 arg0)
 
 void LoadEvoSparkleSpriteAndPal(void)
 {
-    LoadCompressedObjectPicUsingHeap(&sEvoSparkleSpriteSheets[0]);
+    LoadCompressedSpriteSheetUsingHeap(&sEvoSparkleSpriteSheets[0]);
     LoadSpritePalettes(sEvoSparkleSpritePals);
 }
 

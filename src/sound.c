@@ -28,21 +28,38 @@ IWRAM_DATA static u16 sFanfareCounter;
 // iwram common
 bool8 gDisableMusic;
 
-extern u32 gBattleTypeFlags;
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
 extern struct MusicPlayerInfo gMPlayInfo_SE1;
 extern struct MusicPlayerInfo gMPlayInfo_SE2;
 extern struct MusicPlayerInfo gMPlayInfo_SE3;
 extern struct ToneData gCryTable[];
 extern struct ToneData gCryTable2[];
-extern const struct Fanfare sFanfares[];
-
-extern u16 SpeciesToCryId(u16);
 
 static void Task_Fanfare(u8 taskId);
 static void CreateFanfareTask(void);
 static void Task_DuckBGMForPokemonCry(u8 taskId);
 static void RestoreBGMVolumeAfterPokemonCry(void);
+
+static const struct Fanfare sFanfares[] = {
+    { MUS_FANFA1,        80 },
+    { MUS_FANFA4,       160 },
+    { MUS_FANFA5,       220 },
+    { MUS_ME_WAZA,      220 },
+    { MUS_ME_ASA,       160 },
+    { MUS_ME_BACHI,     340 },
+    { MUS_ME_WASURE,    180 },
+    { MUS_ME_KINOMI,    120 },
+    { MUS_ME_TAMA,      710 },
+    { MUS_ME_B_BIG,     250 },
+    { MUS_ME_B_SMALL,   150 },
+    { MUS_ME_ZANNEN,    160 },
+    { MUS_RG_POKEFUE,   450 },
+    { MUS_RG_FAN5,      170 },
+    { MUS_RG_FAN2,      196 },
+    { MUS_ME_POINTGET,  313 },
+    { MUS_ME_SYMBOLGET, 318 },
+    { MUS_ME_TORE_EYE,  135 },
+};
 
 #define CRY_VOLUME  120 // was 125 in R/S
 
@@ -247,7 +264,7 @@ void FadeInNewBGM(u16 songNum, u8 speed)
 {
     if (gDisableMusic)
         songNum = 0;
-    if (songNum == 0xFFFF)
+    if (songNum == MUS_NONE)
         songNum = 0;
     m4aSongNumStart(songNum);
     m4aMPlayImmInit(&gMPlayInfo_BGM);
@@ -544,7 +561,7 @@ void PlayBGM(u16 songNum)
 {
     if (gDisableMusic)
         songNum = 0;
-    if (songNum == 0xFFFF)
+    if (songNum == MUS_NONE)
         songNum = 0;
     m4aSongNumStart(songNum);
 }

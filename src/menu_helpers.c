@@ -7,6 +7,7 @@
 #include "bg.h"
 #include "main.h"
 #include "text.h"
+#include "graphics.h"
 #include "link.h"
 #include "string_util.h"
 #include "sound.h"
@@ -16,11 +17,6 @@
 #include "constants/songs.h"
 #include "constants/items.h"
 #include "constants/maps.h"
-
-extern bool32 sub_800B504(void);
-
-extern const u8 gBagSwapLineGfx[];
-extern const u8 gBagSwapLinePal[];
 
 // this file's functions
 static void Task_ContinueTaskAfterMessagePrints(u8 taskId);
@@ -41,10 +37,10 @@ static const struct OamData sOamData_859F4E8 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(16x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 1,
+    .size = SPRITE_SIZE(16x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 0,
@@ -131,12 +127,12 @@ void SetVBlankHBlankCallbacksToNull(void)
 void DisplayMessageAndContinueTask(u8 taskId, u8 windowId, u16 arg2, u8 arg3, u8 fontId, u8 textSpeed, const u8 *string, void *taskFunc)
 {
     gUnknown_0203A140 = windowId;
-    sub_8197B1C(windowId, TRUE, arg2, arg3);
+    DrawDialogFrameWithCustomTileAndPalette(windowId, TRUE, arg2, arg3);
 
     if (string != gStringVar4)
         StringExpandPlaceholders(gStringVar4, string);
 
-    gTextFlags.flag_0 = 1;
+    gTextFlags.canABSpeedUpPrint = 1;
     AddTextPrinterParameterized2(windowId, fontId, gStringVar4, textSpeed, NULL, 2, 1, 3);
     gUnknown_0300117C = taskFunc;
     gTasks[taskId].func = Task_ContinueTaskAfterMessagePrints;
@@ -154,7 +150,7 @@ static void Task_ContinueTaskAfterMessagePrints(u8 taskId)
         gUnknown_0300117C(taskId);
 }
 
-void sub_8121F68(u8 taskId, const struct YesNoFuncTable *data)
+void DoYesNoFuncWithChoice(u8 taskId, const struct YesNoFuncTable *data)
 {
     gUnknown_0203A138 = *data;
     gTasks[taskId].func = Task_CallYesOrNoCallback;
@@ -169,7 +165,7 @@ void CreateYesNoMenuWithCallbacks(u8 taskId, const struct WindowTemplate *templa
 
 static void Task_CallYesOrNoCallback(u8 taskId)
 {
-    switch (Menu_ProcessInputNoWrap_())
+    switch (Menu_ProcessInputNoWrapClearOnChoose())
     {
     case 0:
         PlaySE(SE_SELECT);
@@ -295,7 +291,7 @@ bool8 sub_8122148(u16 itemId)
 
 bool8 itemid_80BF6D8_mail_related(u16 itemId)
 {
-    if (is_c1_link_related_active() != TRUE && InUnionRoom() != TRUE)
+    if (IsUpdateLinkStateCBActive() != TRUE && InUnionRoom() != TRUE)
         return TRUE;
     else if (ItemIsMail(itemId) != TRUE)
         return TRUE;
@@ -305,7 +301,7 @@ bool8 itemid_80BF6D8_mail_related(u16 itemId)
 
 bool8 sub_81221AC(void)
 {
-    if (is_c1_link_related_active() == TRUE || gReceivedRemoteLinkPlayers == 1)
+    if (IsUpdateLinkStateCBActive() == TRUE || gReceivedRemoteLinkPlayers == 1)
         return TRUE;
     else
         return FALSE;
@@ -396,8 +392,8 @@ void sub_8122298(u16 *arg0, u16 *arg1, u8 arg2, u8 arg3, u8 arg4)
 
 void LoadListMenuArrowsGfx(void)
 {
-    LoadCompressedObjectPic(&gUnknown_0859F514);
-    LoadCompressedObjectPalette(&gUnknown_0859F51C);
+    LoadCompressedSpriteSheet(&gUnknown_0859F514);
+    LoadCompressedSpritePalette(&gUnknown_0859F51C);
 }
 
 void sub_8122344(u8 *spriteIds, u8 count)

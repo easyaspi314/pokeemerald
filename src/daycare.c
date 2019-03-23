@@ -16,35 +16,15 @@
 #include "menu.h"
 #include "international_string_util.h"
 #include "script.h"
+#include "strings.h"
 #include "task.h"
 #include "window.h"
+#include "party_menu.h"
 #include "list_menu.h"
+#include "overworld.h"
 
 #define EGG_MOVES_ARRAY_COUNT           10
 #define EGG_LVL_UP_MOVES_ARRAY_COUNT    50
-
-// text
-extern const u8 gText_MaleSymbol4[];
-extern const u8 gText_FemaleSymbol4[];
-extern const u8 gText_GenderlessSymbol[];
-extern const u8 gText_NewLine2[];
-extern const u8 gText_Exit4[];
-extern const u8 gText_Lv[];
-extern const u8 gExpandedPlaceholder_Empty[];
-extern const u8 gText_Exit[];
-extern const u8 gDaycareText_GetAlongVeryWell[];
-extern const u8 gDaycareText_GetAlong[];
-extern const u8 gDaycareText_DontLikeOther[];
-extern const u8 gDaycareText_PlayOther[];
-
-extern u8 GetCursorSelectionMonId(void);
-extern u16 ItemIdToBattleMoveId(u16);
-extern s32 ListMenuHandleInputGetItemId(u8);
-extern void DestroyListMenuTask(u8, u16*, u16*);
-extern void sub_819746C(u8, bool8);
-extern void NewMenuHelpers_DrawStdWindowFrame(u8, bool8);
-extern void sub_81B9328(void);
-extern void CB2_ReturnToField(void);
 
 // this file's functions
 static void ClearDaycareMonMail(struct DayCareMail *mail);
@@ -63,7 +43,7 @@ EWRAM_DATA static u16 sHatchedEggMotherMoves[4] = {0};
 
 static const struct WindowTemplate sDaycareLevelMenuWindowTemplate =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 15,
     .tilemapTop = 1,
     .width = 14,
@@ -241,7 +221,7 @@ static void ApplyDaycareExperience(struct Pokemon *mon)
     bool8 firstMove;
     u16 learnedMove;
 
-    for (i = 0; i < MAX_MON_LEVEL; i++)
+    for (i = 0; i < MAX_LEVEL; i++)
     {
         // Add the mon's gained daycare experience level by level until it can't level up anymore.
         if (TryIncrementMonLevel(mon))
@@ -278,7 +258,7 @@ static u16 TakeSelectedPokemonFromDaycare(struct DaycareMon *daycareMon)
     species = GetBoxMonData(&daycareMon->mon, MON_DATA_SPECIES);
     BoxMonToMon(&daycareMon->mon, &pokemon);
 
-    if (GetMonData(&pokemon, MON_DATA_LEVEL) != MAX_MON_LEVEL)
+    if (GetMonData(&pokemon, MON_DATA_LEVEL) != MAX_LEVEL)
     {
         experience = GetMonData(&pokemon, MON_DATA_EXP) + daycareMon->steps;
         SetMonData(&pokemon, MON_DATA_EXP, &experience);
@@ -535,7 +515,7 @@ static void RemoveIVIndexFromList(u8 *ivs, u8 selectedIv)
     s32 i, j;
     u8 temp[NUM_STATS];
 
-    ivs[selectedIv] = 0xff;
+    ivs[selectedIv] = 0xFF;
     for (i = 0; i < NUM_STATS; i++)
     {
         temp[i] = ivs[i];
@@ -544,7 +524,7 @@ static void RemoveIVIndexFromList(u8 *ivs, u8 selectedIv)
     j = 0;
     for (i = 0; i < NUM_STATS; i++)
     {
-        if (temp[i] != 0xff)
+        if (temp[i] != 0xFF)
             ivs[j++] = temp[i];
     }
 }
@@ -656,7 +636,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
     u16 i, j;
 
     numSharedParentMoves = 0;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         sHatchedEggMotherMoves[i] = 0;
         sHatchedEggFatherMoves[i] = 0;
@@ -668,7 +648,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
         sHatchedEggLevelUpMoves[i] = 0;
 
     numLevelUpMoves = GetLevelUpMovesBySpecies(GetMonData(egg, MON_DATA_SPECIES), sHatchedEggLevelUpMoves);
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         sHatchedEggFatherMoves[i] = GetBoxMonData(father, MON_DATA_MOVE1 + i);
         sHatchedEggMotherMoves[i] = GetBoxMonData(mother, MON_DATA_MOVE1 + i);
@@ -676,7 +656,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
 
     numEggMoves = GetEggMoves(egg, sHatchedEggEggMoves);
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sHatchedEggFatherMoves[i] != MOVE_NONE)
         {
@@ -684,7 +664,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
             {
                 if (sHatchedEggFatherMoves[i] == sHatchedEggEggMoves[j])
                 {
-                    if (GiveMoveToMon(egg, sHatchedEggFatherMoves[i]) == 0xffff)
+                    if (GiveMoveToMon(egg, sHatchedEggFatherMoves[i]) == 0xFFFF)
                         DeleteFirstMoveAndGiveMoveToMon(egg, sHatchedEggFatherMoves[i]);
                     break;
                 }
@@ -695,7 +675,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
             break;
         }
     }
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sHatchedEggFatherMoves[i] != MOVE_NONE)
         {
@@ -703,24 +683,24 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
             {
                 if (sHatchedEggFatherMoves[i] == ItemIdToBattleMoveId(ITEM_TM01_FOCUS_PUNCH + j) && CanMonLearnTMHM(egg, j))
                 {
-                    if (GiveMoveToMon(egg, sHatchedEggFatherMoves[i]) == 0xffff)
+                    if (GiveMoveToMon(egg, sHatchedEggFatherMoves[i]) == 0xFFFF)
                         DeleteFirstMoveAndGiveMoveToMon(egg, sHatchedEggFatherMoves[i]);
                 }
             }
         }
     }
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sHatchedEggFatherMoves[i] == MOVE_NONE)
             break;
-        for (j = 0; j < 4; j++)
+        for (j = 0; j < MAX_MON_MOVES; j++)
         {
             if (sHatchedEggFatherMoves[i] == sHatchedEggMotherMoves[j] && sHatchedEggFatherMoves[i] != MOVE_NONE)
                 sHatchedEggFinalMoves[numSharedParentMoves++] = sHatchedEggFatherMoves[i];
         }
     }
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sHatchedEggFinalMoves[i] == MOVE_NONE)
             break;
@@ -728,7 +708,7 @@ static void BuildEggMoveset(struct Pokemon *egg, struct BoxPokemon *father, stru
         {
             if (sHatchedEggLevelUpMoves[j] != MOVE_NONE && sHatchedEggFinalMoves[i] == sHatchedEggLevelUpMoves[j])
             {
-                if (GiveMoveToMon(egg, sHatchedEggFinalMoves[i]) == 0xffff)
+                if (GiveMoveToMon(egg, sHatchedEggFinalMoves[i]) == 0xFFFF)
                     DeleteFirstMoveAndGiveMoveToMon(egg, sHatchedEggFinalMoves[i]);
                 break;
             }
@@ -904,7 +884,7 @@ static bool8 _DoEggActions_CheckHatch(struct DayCare *daycare)
 
     for (i = 0; i < DAYCARE_MON_COUNT; i++)
     {
-        if (GetBoxMonData(&daycare->mons[i].mon, MON_DATA_SANITY_BIT2))
+        if (GetBoxMonData(&daycare->mons[i].mon, MON_DATA_SANITY_HAS_SPECIES))
             daycare->mons[i].steps++, validEggs++;
     }
 
@@ -925,7 +905,7 @@ static bool8 _DoEggActions_CheckHatch(struct DayCare *daycare)
         {
             if (!GetMonData(&gPlayerParty[i], MON_DATA_IS_EGG))
                 continue;
-            if (GetMonData(&gPlayerParty[i], MON_DATA_SANITY_BIT1))
+            if (GetMonData(&gPlayerParty[i], MON_DATA_SANITY_IS_BAD_EGG))
                 continue;
 
             steps = GetMonData(&gPlayerParty[i], MON_DATA_FRIENDSHIP);
@@ -949,7 +929,7 @@ static bool8 _DoEggActions_CheckHatch(struct DayCare *daycare)
     return FALSE; // no hatching
 }
 
-bool8 DoEggActions_CheckHatch(void)
+bool8 ShouldEggHatch(void)
 {
     return _DoEggActions_CheckHatch(&gSaveBlock1Ptr->daycare);
 }
@@ -1206,17 +1186,17 @@ static void GetDaycareLevelMenuLevelText(struct DayCare *daycare, u8 *dest)
 
 static void DaycareAddTextPrinter(u8 windowId, const u8 *text, u32 x, u32 y)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    printer.current_text_offset = text;
+    printer.currentChar = text;
     printer.windowId = windowId;
     printer.fontId = 1;
     printer.x = x;
     printer.y = y;
     printer.currentX = x;
     printer.currentY = y;
-    printer.fontColor_l = 0;
-    gTextFlags.flag_1 = 0;
+    printer.unk = 0;
+    gTextFlags.useAlternateDownArrow = 0;
     printer.letterSpacing = 0;
     printer.lineSpacing = 1;
     printer.fgColor = 2;
@@ -1264,22 +1244,22 @@ static void DaycarePrintMonInfo(u8 windowId, s32 daycareSlotId, u8 y)
 
 static void Task_HandleDaycareLevelMenuInput(u8 taskId)
 {
-    u32 var = ListMenuHandleInputGetItemId(gTasks[taskId].tMenuListTaskId);
+    u32 input = ListMenu_ProcessInput(gTasks[taskId].tMenuListTaskId);
 
     if (gMain.newKeys & A_BUTTON)
     {
-        switch (var)
+        switch (input)
         {
         case 0:
         case 1:
-            gSpecialVar_Result = var;
+            gSpecialVar_Result = input;
             break;
         case 5:
             gSpecialVar_Result = 2;
             break;
         }
         DestroyListMenuTask(gTasks[taskId].tMenuListTaskId, NULL, NULL);
-        sub_819746C(gTasks[taskId].tWindowId, TRUE);
+        ClearStdWindowAndFrame(gTasks[taskId].tWindowId, TRUE);
         RemoveWindow(gTasks[taskId].tWindowId);
         DestroyTask(taskId);
         EnableBothScriptContexts();
@@ -1288,7 +1268,7 @@ static void Task_HandleDaycareLevelMenuInput(u8 taskId)
     {
         gSpecialVar_Result = 2;
         DestroyListMenuTask(gTasks[taskId].tMenuListTaskId, NULL, NULL);
-        sub_819746C(gTasks[taskId].tWindowId, TRUE);
+        ClearStdWindowAndFrame(gTasks[taskId].tWindowId, TRUE);
         RemoveWindow(gTasks[taskId].tWindowId);
         DestroyTask(taskId);
         EnableBothScriptContexts();
@@ -1303,7 +1283,7 @@ void ShowDaycareLevelMenu(void)
     u8 daycareMenuTaskId;
 
     windowId = AddWindow(&sDaycareLevelMenuWindowTemplate);
-    NewMenuHelpers_DrawStdWindowFrame(windowId, FALSE);
+    DrawStdWindowFrame(windowId, FALSE);
 
     menuTemplate = sDaycareListMenuLevelTemplate;
     menuTemplate.windowId = windowId;

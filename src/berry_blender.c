@@ -12,7 +12,7 @@
 #include "bg.h"
 #include "palette.h"
 #include "decompress.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "gpu_regs.h"
 #include "text.h"
 #include "text_window.h"
@@ -32,6 +32,10 @@
 #include "tv.h"
 #include "item_menu.h"
 #include "battle_records.h"
+#include "graphics.h"
+#include "new_game.h"
+#include "save.h"
+#include "link.h"
 
 #define BLENDER_SCORE_BEST      0
 #define BLENDER_SCORE_GOOD      1
@@ -131,36 +135,12 @@ struct BerryBlenderData
 
 extern struct MusicPlayerInfo gMPlayInfo_SE2;
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
-extern u8 gInGameOpponentsNo;
-extern u8 gUnknown_020322D5;
-
-// graphics
-extern const u8 gBerryBlenderArrowTiles[];
-extern const u8 gBerryBlenderStartTiles[];
-extern const u8 gBerryBlenderMarubatsuTiles[];
-extern const u8 gBerryBlenderParticlesTiles[];
-extern const u8 gBerryBlenderCountdownNumbersTiles[];
-extern const u16 gBerryBlenderMiscPalette[];
-extern const u16 gBerryBlenderArrowPalette[];
-extern const u8 sBlenderCenterGfx[];
-extern const u8 gUnknown_08D91DB8[];
-extern const u8 gUnknown_08D927EC[];
 
 // text
 extern const u8 gText_SavingDontTurnOff2[];
 extern const u8 gText_Space[];
 extern const u8 gText_BlenderMaxSpeedRecord[];
 extern const u8 gText_234Players[];
-
-extern void sub_800A418(void);
-extern u8 sub_800A9D8(void);
-extern void sub_81AABF0(void (*callback)(void));
-extern void sub_800B4C0(void);
-extern void ClearLinkCallback(void);
-extern void sub_8009F8C(void);
-extern void sub_8153430(void);
-extern bool8 sub_8153474(void);
-extern void sub_80EECEC(void);
 
 // this file's functions
 static void BerryBlender_SetBackgroundsPos(void);
@@ -206,17 +186,20 @@ static void sub_8083170(u16 a0, u16 a1);
 static void Blender_PrintMadePokeblockString(struct Pokeblock *pokeblock, u8 *dst);
 static bool32 TryAddContestLinkTvShow(struct Pokeblock *pokeblock, struct TvBlenderStruct *a1);
 
-// ewram
+// EWRAM
 EWRAM_DATA static struct BerryBlenderData *sBerryBlenderData = NULL;
 EWRAM_DATA static s32 sUnknown_020322A8[5] = {0};
 EWRAM_DATA static s32 sUnknown_020322BC[5] = {0};
 EWRAM_DATA static u32 sUnknown_020322D0 = 0;
 
-// iwram
+// IWRAM bss
 IWRAM_DATA static s16 sUnknown_03000DE8[8];
 IWRAM_DATA static s16 sUnknown_03000DF8[6];
 IWRAM_DATA static s16 sUnknown_03000E04;
 IWRAM_DATA static s16 sUnknown_03000E06;
+
+// IWRAM common
+u8 gInGameOpponentsNo;
 
 // rom
 
@@ -269,10 +252,10 @@ static const u8 sText_PressAToStart[] = _("Press the A Button to start.");
 static const u8 sText_PleaseWaitAWhile[] = _("Please wait a while.");
 static const u8 sText_CommunicationStandby[] = _("Communication standby…");
 static const u8 sText_WouldLikeToBlendAnotherBerry[] = _("Would you like to blend another BERRY?");
-static const u8 sText_RunOutOfBerriesForBlending[] = _("You’ve run out of BERRIES for\nblending in the BERRY BLENDER.\p");
+static const u8 sText_RunOutOfBerriesForBlending[] = _("You've run out of BERRIES for\nblending in the BERRY BLENDER.\p");
 static const u8 sText_YourPokeblockCaseIsFull[] = _("Your {POKEBLOCK} CASE is full.\p");
 static const u8 sText_HasNoBerriesToPut[] = _(" has no BERRIES to put in\nthe BERRY BLENDER.");
-static const u8 sText_ApostropheSPokeblockCaseIsFull[] = _("’s {POKEBLOCK} CASE is full.\p");
+static const u8 sText_ApostropheSPokeblockCaseIsFull[] = _("'s {POKEBLOCK} CASE is full.\p");
 static const u8 sText_BlendingResults[] = _("RESULTS OF BLENDING");
 static const u8 sText_BerryUsed[] = _("BERRY USED");
 static const u8 sText_SpaceBerry[] = _(" BERRY");
@@ -323,7 +306,7 @@ static const struct BgTemplate sBerryBlenderBgTemplates[3] =
 static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 1,
         .tilemapTop = 6,
         .width = 7,
@@ -332,7 +315,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
         .baseBlock = 0x28,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 22,
         .tilemapTop = 6,
         .width = 7,
@@ -341,7 +324,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
         .baseBlock = 0x36,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 1,
         .tilemapTop = 12,
         .width = 7,
@@ -350,7 +333,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
         .baseBlock = 0x44,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 22,
         .tilemapTop = 12,
         .width = 7,
@@ -359,7 +342,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
         .baseBlock = 0x52,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 15,
         .width = 27,
@@ -368,7 +351,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
         .baseBlock = 0x60,
     },
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 5,
         .tilemapTop = 3,
         .width = 21,
@@ -381,7 +364,7 @@ static const struct WindowTemplate sBerryBlender_WindowTemplates[] =
 
 static const struct WindowTemplate sBlender_YesNoWindowTemplate =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 21,
     .tilemapTop = 9,
     .width = 5,
@@ -421,10 +404,10 @@ static const struct OamData sOamData_8216314 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(32x32),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x32),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -564,10 +547,10 @@ static const struct OamData sOamData_821640C =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(16x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 1,
+    .size = SPRITE_SIZE(16x16),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 0,
@@ -633,10 +616,10 @@ static const struct OamData sOamData_8216474 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(8x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x8),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -720,10 +703,10 @@ static const struct OamData sOamData_8216514 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(32x32),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x32),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -778,10 +761,10 @@ static const struct OamData sOamData_8216560 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 1,
+    .shape = SPRITE_SHAPE(64x32),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x32),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -846,7 +829,7 @@ static const u8 sUnknown_08339CD2[] =
 
 static const struct WindowTemplate sBlenderRecordWindowTemplate =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 6,
     .tilemapTop = 4,
     .width = 18,
@@ -954,7 +937,7 @@ static void InitBerryBlenderWindows(void)
 
         DeactivateAllTextPrinters();
         for (i = 0; i < 5; i++)
-            FillWindowPixelBuffer(i, 0);
+            FillWindowPixelBuffer(i, PIXEL_FILL(0));
 
         FillBgTilemapBufferRect_Palette0(0, 0, 0, 0, 0x1E, 0x14);
         sub_81978B0(0xE0);
@@ -1031,7 +1014,7 @@ static void sub_807FAC8(void)
             sBerryBlenderData->mainState++;
         break;
     case 4:
-        if (Blender_PrintText(&sBerryBlenderData->textState, sText_BerryBlenderStart, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, sText_BerryBlenderStart, GetPlayerTextSpeedDelay()))
             sBerryBlenderData->mainState++;
         break;
     case 5:
@@ -1124,7 +1107,7 @@ static void Blender_SetPlayerNamesLocal(u8 opponentsNum)
         sBerryBlenderData->playersNo = 2;
         StringCopy(gLinkPlayers[0].name, gSaveBlock2Ptr->playerName);
 
-        if (!FlagGet(FLAG_0x340))
+        if (!FlagGet(FLAG_HIDE_LILYCOVE_CONTEST_HALL_BLEND_MASTER_ONLOOKERS))
             StringCopy(gLinkPlayers[1].name, sBlenderOpponentsNames[BLENDER_MASTER]);
         else
             StringCopy(gLinkPlayers[1].name, sBlenderOpponentsNames[BLENDER_MISTER]);
@@ -1249,7 +1232,7 @@ static void sub_8080018(void)
         sBerryBlenderData->framesToWait = 0;
         break;
     case 9:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             ResetBlockReceivedFlags();
             if (GetMultiplayerId() == 0)
@@ -1260,7 +1243,7 @@ static void sub_8080018(void)
     case 10:
         if (++sBerryBlenderData->framesToWait > 20)
         {
-            sub_8197DF8(4, TRUE);
+            ClearDialogWindowAndFrameToTransparent(4, TRUE);
             if (GetBlockReceivedStatus() == sub_800A9D8())
             {
                 for (i = 0; i < GetLinkPlayerCount(); i++)
@@ -1306,7 +1289,7 @@ static void sub_8080018(void)
         }
         break;
     case 13:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             sBerryBlenderData->mainState++;
             sub_8082CB4(&sBerryBlenderData->bgAffineSrc);
@@ -1351,7 +1334,7 @@ static void sub_8080018(void)
         sBerryBlenderData->mainState++;
         break;
     case 20:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             sub_800A418();
             sBerryBlenderData->mainState++;
@@ -1447,7 +1430,7 @@ static void Blender_SetOpponentsBerryData(u16 playerBerryItemId, u8 playersNum, 
     {
         opponentBerryId = sOpponentBerrySets[opponentSetId][i];
         var = playerBerryItemId - 163;
-        if (!FlagGet(0x340) && gSpecialVar_0x8004 == 1)
+        if (!FlagGet(FLAG_HIDE_LILYCOVE_CONTEST_HALL_BLEND_MASTER_ONLOOKERS) && gSpecialVar_0x8004 == 1)
         {
             opponentSetId %= 5;
             opponentBerryId = sSpecialOpponentBerrySets[opponentSetId];
@@ -1647,7 +1630,7 @@ static void sub_80808D4(void)
 
         if (gSpecialVar_0x8004 == 1)
         {
-            if (!FlagGet(FLAG_0x340))
+            if (!FlagGet(FLAG_HIDE_LILYCOVE_CONTEST_HALL_BLEND_MASTER_ONLOOKERS))
                 sBerryBlenderData->field_120[0] = CreateTask(sub_8081224, 10);
             else
                 sBerryBlenderData->field_120[0] = CreateTask(sUnknown_083399EC[0], 10);
@@ -2421,7 +2404,7 @@ static void CB2_HandleBlenderEndGame(void)
         {
             sBerryBlenderData->gameEndState++;
         }
-        else if (sub_800A520())
+        else if (IsLinkTaskFinished())
         {
             if (gReceivedRemoteLinkPlayers != 0 && gWirelessCommType)
             {
@@ -2490,7 +2473,7 @@ static void CB2_HandleBlenderEndGame(void)
         }
         break;
     case 7:
-        if (Blender_PrintText(&sBerryBlenderData->textState, sText_WouldLikeToBlendAnotherBerry, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, sText_WouldLikeToBlendAnotherBerry, GetPlayerTextSpeedDelay()))
             sBerryBlenderData->gameEndState++;
         break;
     case 9:
@@ -2499,7 +2482,7 @@ static void CB2_HandleBlenderEndGame(void)
         sBerryBlenderData->gameEndState++;
         break;
     case 10:
-        switch (Menu_ProcessInputNoWrap_())
+        switch (Menu_ProcessInputNoWrapClearOnChoose())
         {
         case 1:
         case -1:
@@ -2572,7 +2555,7 @@ static void CB2_HandleBlenderEndGame(void)
         sBerryBlenderData->gameEndState++;
         break;
     case 13:
-        if (Blender_PrintText(&sBerryBlenderData->textState, sText_CommunicationStandby, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, sText_CommunicationStandby, GetPlayerTextSpeedDelay()))
         {
             SetMainCallback2(CB2_HandlePlayerLinkPlayAgainChoice);
             sBerryBlenderData->gameEndState = 0;
@@ -2602,14 +2585,14 @@ static bool8 LinkPlayAgainHandleSaving(void)
         sBerryBlenderData->framesToWait = 0;
         break;
     case 1:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             sBerryBlenderData->field_1A0++;
             gSoftResetDisabled = TRUE;
         }
         break;
     case 2:
-        sub_8153430();
+        FullSaveGame();
         sBerryBlenderData->field_1A0++;
         sBerryBlenderData->framesToWait = 0;
         break;
@@ -2621,9 +2604,9 @@ static bool8 LinkPlayAgainHandleSaving(void)
         }
         break;
     case 4:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
-            if (sub_8153474())
+            if (CheckSaveFile())
             {
                 sBerryBlenderData->field_1A0 = 5;
             }
@@ -2680,7 +2663,7 @@ static void CB2_HandlePlayerLinkPlayAgainChoice(void)
         StringAppend(gStringVar4, sText_HasNoBerriesToPut);
         break;
     case 3:
-        if (Blender_PrintText(&sBerryBlenderData->textState, gStringVar4, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, gStringVar4, GetPlayerTextSpeedDelay()))
         {
             sBerryBlenderData->framesToWait = 0;
             sBerryBlenderData->gameEndState++;
@@ -2696,7 +2679,7 @@ static void CB2_HandlePlayerLinkPlayAgainChoice(void)
         sBerryBlenderData->gameEndState++;
         break;
     case 6:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             sBerryBlenderData->framesToWait = 0;
             sBerryBlenderData->gameEndState++;
@@ -2715,7 +2698,7 @@ static void CB2_HandlePlayerLinkPlayAgainChoice(void)
         sub_800ADF8();
         break;
     case 9:
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             BeginNormalPaletteFade(0xFFFFFFFF, 0, 0, 0x10, 0);
             sBerryBlenderData->gameEndState++;
@@ -2787,7 +2770,7 @@ static void CB2_HandlePlayerPlayAgainChoice(void)
         StringCopy(gStringVar4, sText_RunOutOfBerriesForBlending);
         break;
     case 3:
-        if (Blender_PrintText(&sBerryBlenderData->textState, gStringVar4, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, gStringVar4, GetPlayerTextSpeedDelay()))
             sBerryBlenderData->gameEndState = 9;
         break;
     case 9:
@@ -3113,7 +3096,7 @@ static void sub_8083170(u16 a0, u16 a1)
     s32 var1, var2, var3, var4;
     u16 *vram;
 
-    vram = (u16*)(VRAM + 0x6000);
+    vram = (u16*)(BG_SCREEN_ADDR(12));
     var1 = (a0 * 64) / a1;
     var2 = var1 / 8;
     for (var4 = 0; var4 < var2; var4++)
@@ -3334,7 +3317,7 @@ static bool8 Blender_PrintBlendingResults(void)
             sBerryBlenderData->mainState++;
         break;
     case 5:
-        sub_8198070(5, 1);
+        ClearStdWindowAndFrameToTransparent(5, 1);
 
         for (i = 0; i < BLENDER_MAX_PLAYERS; i++)
         {
@@ -3363,7 +3346,7 @@ static bool8 Blender_PrintBlendingResults(void)
         sBerryBlenderData->mainState++;
         break;
     case 6:
-        if (Blender_PrintText(&sBerryBlenderData->textState, sBerryBlenderData->stringVar, GetPlayerTextSpeed()))
+        if (Blender_PrintText(&sBerryBlenderData->textState, sBerryBlenderData->stringVar, GetPlayerTextSpeedDelay()))
         {
             TryUpdateBerryBlenderRecord();
             return TRUE;
@@ -3475,7 +3458,7 @@ static bool8 Blender_PrintBlendingRanking(void)
         }
         break;
     case 3:
-        SetWindowBorderStyle(5, 0, 1, 0xD);
+        DrawStdFrameWithCustomTileAndPalette(5, 0, 1, 0xD);
         xPos = GetStringCenterAlignXOffset(1, sText_Ranking, 0xA8);
         Blender_AddTextPrinter(5, sText_Ranking, xPos, 1, TEXT_SPEED_FF, 0);
 
@@ -3546,8 +3529,8 @@ void ShowBerryBlenderRecordWindow(void)
 
     winTemplate = sBlenderRecordWindowTemplate;
     gRecordsWindowId = AddWindow(&winTemplate);
-    NewMenuHelpers_DrawStdWindowFrame(gRecordsWindowId, 0);
-    FillWindowPixelBuffer(gRecordsWindowId, 0x11);
+    DrawStdWindowFrame(gRecordsWindowId, 0);
+    FillWindowPixelBuffer(gRecordsWindowId, PIXEL_FILL(1));
 
     xPos = GetStringCenterAlignXOffset(1, gText_BlenderMaxSpeedRecord, 0x90);
     AddTextPrinterParameterized(gRecordsWindowId, 1, gText_BlenderMaxSpeedRecord, xPos, 1, 0, NULL);
@@ -3656,7 +3639,7 @@ static void Blender_AddTextPrinter(u8 windowId, const u8 *string, u8 x, u8 y, s3
 
     if (caseId != 3)
     {
-        FillWindowPixelBuffer(windowId, txtColor[0] | (txtColor[0] << 4));
+        FillWindowPixelBuffer(windowId, PIXEL_FILL(txtColor[0]));
     }
 
     AddTextPrinterParameterized4(windowId, 1, x, y, letterSpacing, 1, txtColor, speed, string);
@@ -3667,7 +3650,7 @@ static bool32 Blender_PrintText(s16 *textState, const u8 *string, s32 textSpeed)
     switch (*textState)
     {
     case 0:
-        sub_8197B1C(4, FALSE, 0x14, 0xF);
+        DrawDialogFrameWithCustomTileAndPalette(4, FALSE, 0x14, 0xF);
         Blender_AddTextPrinter(4, string, 0, 1, textSpeed, 0);
         PutWindowTilemap(4);
         CopyWindowToVram(4, 3);

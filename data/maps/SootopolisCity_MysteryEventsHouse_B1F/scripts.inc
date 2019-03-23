@@ -1,10 +1,10 @@
 SootopolisCity_MysteryEventsHouse_B1F_MapScripts:: @ 8227E4F
-	map_script 3, SootopolisCity_MysteryEventsHouse_B1F_MapScript1_227E5A
-	map_script 2, SootopolisCity_MysteryEventsHouse_B1F_MapScript2_227E5E
+	map_script MAP_SCRIPT_ON_TRANSITION, SootopolisCity_MysteryEventsHouse_B1F_MapScript1_227E5A
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, SootopolisCity_MysteryEventsHouse_B1F_MapScript2_227E5E
 	.byte 0
 
 SootopolisCity_MysteryEventsHouse_B1F_MapScript1_227E5A: @ 8227E5A
-	special sub_8162794
+	special SetEReaderTrainerGfxId
 	end
 
 SootopolisCity_MysteryEventsHouse_B1F_MapScript2_227E5E: @ 8227E5E
@@ -13,24 +13,24 @@ SootopolisCity_MysteryEventsHouse_B1F_MapScript2_227E5E: @ 8227E5E
 
 SootopolisCity_MysteryEventsHouse_B1F_EventScript_227E68:: @ 8227E68
 	lockall
-	applymovement 255, SootopolisCity_MysteryEventsHouse_B1F_Movement_227EF3
+	applymovement EVENT_OBJ_ID_PLAYER, SootopolisCity_MysteryEventsHouse_B1F_Movement_227EF3
 	waitmovement 0
-	special sub_8165360
-	msgbox 0x2021fc4, 4
+	special CopyEReaderTrainerGreeting
+	msgbox gStringVar4, MSGBOX_DEFAULT
 	closemessage
-	setvar VAR_0x8004, 2
+	setvar VAR_0x8004, SPECIAL_BATTLE_EREADER
 	setvar VAR_0x8005, 0
-	special sub_8163AC4
+	special DoSpecialTrainerBattle
 	waitstate
 	compare VAR_RESULT, 3
-	call_if 1, SootopolisCity_MysteryEventsHouse_B1F_EventScript_227ECF
+	call_if_eq SootopolisCity_MysteryEventsHouse_B1F_EventScript_227ECF
 	compare VAR_RESULT, 1
-	call_if 1, SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EDD
+	call_if_eq SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EDD
 	compare VAR_RESULT, 2
-	call_if 1, SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EE8
+	call_if_eq SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EE8
 	closemessage
 	special HealPlayerParty
-	applymovement 255, SootopolisCity_MysteryEventsHouse_B1F_Movement_227EF9
+	applymovement EVENT_OBJ_ID_PLAYER, SootopolisCity_MysteryEventsHouse_B1F_Movement_227EF9
 	waitmovement 0
 	special LoadPlayerParty
 	setvar VAR_TEMP_1, 1
@@ -40,19 +40,19 @@ SootopolisCity_MysteryEventsHouse_B1F_EventScript_227E68:: @ 8227E68
 	end
 
 SootopolisCity_MysteryEventsHouse_B1F_EventScript_227ECF:: @ 8227ECF
-	setvar VAR_0x40C0, 3
-	msgbox SootopolisCity_MysteryEventsHouse_B1F_Text_227D40, 4
+	setvar VAR_SOOTOPOLIS_MYSTERY_EVENTS_STATE, 3
+	msgbox SootopolisCity_MysteryEventsHouse_B1F_Text_227D40, MSGBOX_DEFAULT
 	return
 
 SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EDD:: @ 8227EDD
-	setvar VAR_0x40C0, 1
+	setvar VAR_SOOTOPOLIS_MYSTERY_EVENTS_STATE, 1
 	special ShowFieldMessageStringVar4
 	waitmessage
 	waitbuttonpress
 	return
 
 SootopolisCity_MysteryEventsHouse_B1F_EventScript_227EE8:: @ 8227EE8
-	setvar VAR_0x40C0, 2
+	setvar VAR_SOOTOPOLIS_MYSTERY_EVENTS_STATE, 2
 	special ShowFieldMessageStringVar4
 	waitmessage
 	waitbuttonpress

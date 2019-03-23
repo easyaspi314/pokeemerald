@@ -1,19 +1,19 @@
 #include "global.h"
-#include "pokemon.h"
-#include "sprite.h"
-#include "pokeball.h"
 #include "battle.h"
 #include "battle_anim.h"
-#include "task.h"
-#include "sound.h"
-#include "constants/songs.h"
-#include "trig.h"
+#include "decompress.h"
+#include "graphics.h"
 #include "main.h"
 #include "m4a.h"
-#include "decompress.h"
-#include "constants/species.h"
+#include "pokeball.h"
+#include "pokemon.h"
+#include "sound.h"
+#include "sprite.h"
+#include "task.h"
+#include "trig.h"
 #include "util.h"
-#include "graphics.h"
+#include "constants/songs.h"
+#include "constants/species.h"
 
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
 
@@ -99,10 +99,10 @@ static const struct OamData sBallOamData =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(16x16),
     .x = 0,
     .matrixNum = 0,
-    .size = 1,
+    .size = SPRITE_SIZE(16x16),
     .tileNum = 0,
     .priority = 2,
     .paletteNum = 0,
@@ -378,8 +378,8 @@ static void Task_DoPokeballSendOutAnim(u8 taskId)
         gSprites[ballSpriteId].callback = SpriteCB_PlayerMonSendOut_1;
         break;
     case POKEBALL_OPPONENT_SENDOUT:
-        gSprites[ballSpriteId].pos1.x = GetBattlerSpriteCoord(battlerId, BANK_X_POS);
-        gSprites[ballSpriteId].pos1.y = GetBattlerSpriteCoord(battlerId, BANK_Y_POS) + 24;
+        gSprites[ballSpriteId].pos1.x = GetBattlerSpriteCoord(battlerId, BATTLER_COORD_X);
+        gSprites[ballSpriteId].pos1.y = GetBattlerSpriteCoord(battlerId, BATTLER_COORD_Y) + 24;
         gBattlerTarget = battlerId;
         gSprites[ballSpriteId].data[0] = 0;
         gSprites[ballSpriteId].callback = SpriteCB_OpponentMonSendOut;
@@ -399,10 +399,10 @@ static void Task_DoPokeballSendOutAnim(u8 taskId)
 
     // this will perform an unused ball throw animation
     gSprites[ballSpriteId].data[0] = 0x22;
-    gSprites[ballSpriteId].data[2] = GetBattlerSpriteCoord(gBattlerTarget, BANK_X_POS);
-    gSprites[ballSpriteId].data[4] = GetBattlerSpriteCoord(gBattlerTarget, BANK_Y_POS) - 16;
+    gSprites[ballSpriteId].data[2] = GetBattlerSpriteCoord(gBattlerTarget, BATTLER_COORD_X);
+    gSprites[ballSpriteId].data[4] = GetBattlerSpriteCoord(gBattlerTarget, BATTLER_COORD_Y) - 16;
     gSprites[ballSpriteId].data[5] = -40;
-    sub_80A68D4(&gSprites[ballSpriteId]);
+    InitAnimArcTranslation(&gSprites[ballSpriteId]);
     gSprites[ballSpriteId].oam.affineParam = taskId;
     gTasks[taskId].tOpponentBattler = gBattlerTarget;
     gTasks[taskId].func = TaskDummy;
@@ -411,7 +411,7 @@ static void Task_DoPokeballSendOutAnim(u8 taskId)
 
 static void SpriteCB_TestBallThrow(struct Sprite *sprite)
 {
-    if (AnimateBallThrow(sprite))
+    if (TranslateAnimHorizontalArc(sprite))
     {
         u16 ballId;
         u8 taskId = sprite->oam.affineParam;
@@ -426,7 +426,7 @@ static void SpriteCB_TestBallThrow(struct Sprite *sprite)
         sprite->pos2.y = 0;
         sprite->data[5] = 0;
         ballId = ItemIdToBallId(GetBattlerPokeballItemId(opponentBattler));
-        LaunchBallStarsTask(sprite->pos1.x, sprite->pos1.y - 5, 1, 0x1C, ballId);
+        AnimateBallOpenParticles(sprite->pos1.x, sprite->pos1.y - 5, 1, 0x1C, ballId);
         sprite->data[0] = LaunchBallFadeMonTask(FALSE, opponentBattler, 14, ballId);
         sprite->sBattler = opponentBattler;
         sprite->data[7] = noOfShakes;
@@ -737,7 +737,7 @@ static void SpriteCB_ReleaseMonFromBall(struct Sprite *sprite)
 
     StartSpriteAnim(sprite, 1);
     ballId = ItemIdToBallId(GetBattlerPokeballItemId(battlerId));
-    LaunchBallStarsTask(sprite->pos1.x, sprite->pos1.y - 5, 1, 0x1C, ballId);
+    AnimateBallOpenParticles(sprite->pos1.x, sprite->pos1.y - 5, 1, 0x1C, ballId);
     sprite->data[0] = LaunchBallFadeMonTask(1, sprite->sBattler, 14, ballId);
     sprite->callback = HandleBallAnimEnd;
 
@@ -898,7 +898,7 @@ static void SpriteCB_PlayerMonSendOut_1(struct Sprite *sprite)
     sprite->data[4] = GetBattlerSpriteCoord(sprite->sBattler, 3) + 24;
     sprite->data[5] = -30;
     sprite->oam.affineParam = sprite->sBattler;
-    sub_80A68D4(sprite);
+    InitAnimArcTranslation(sprite);
     sprite->callback = SpriteCB_PlayerMonSendOut_2;
 }
 
@@ -922,7 +922,7 @@ static void SpriteCB_PlayerMonSendOut_2(struct Sprite *sprite)
             StartSpriteAffineAnim(sprite, 4);
         }
         r4 = sprite->data[0];
-        sub_80A6F3C(sprite);
+        AnimTranslateLinear(sprite);
         sprite->data[7] += sprite->sBattler / 3;
         sprite->pos2.y += Sin(HIBYTE(sprite->data[7]), sprite->data[5]);
         sprite->oam.affineParam += 0x100;
@@ -940,7 +940,7 @@ static void SpriteCB_PlayerMonSendOut_2(struct Sprite *sprite)
     }
     else
     {
-        if (AnimateBallThrow(sprite))
+        if (TranslateAnimHorizontalArc(sprite))
         {
             sprite->pos1.x += sprite->pos2.x;
             sprite->pos1.y += sprite->pos2.y;
@@ -985,9 +985,9 @@ static void SpriteCB_OpponentMonSendOut(struct Sprite *sprite)
 
 #undef sBattler
 
-static u8 LaunchBallStarsTaskForPokeball(u8 x, u8 y, u8 kindOfStars, u8 d)
+static u8 AnimateBallOpenParticlesForPokeball(u8 x, u8 y, u8 kindOfStars, u8 d)
 {
-    return LaunchBallStarsTask(x, y, kindOfStars, d, BALL_POKE);
+    return AnimateBallOpenParticles(x, y, kindOfStars, d, BALL_POKE);
 }
 
 static u8 LaunchBallFadeMonTaskForPokeball(bool8 unFadeLater, u8 battlerId, u32 arg2)
@@ -999,8 +999,8 @@ void CreatePokeballSpriteToReleaseMon(u8 monSpriteId, u8 battlerId, u8 x, u8 y, 
 {
     u8 spriteId;
 
-    LoadCompressedObjectPicUsingHeap(&gBallSpriteSheets[0]);
-    LoadCompressedObjectPaletteUsingHeap(&gBallSpritePalettes[0]);
+    LoadCompressedSpriteSheetUsingHeap(&gBallSpriteSheets[0]);
+    LoadCompressedSpritePaletteUsingHeap(&gBallSpritePalettes[0]);
     spriteId = CreateSprite(&gBallSpriteTemplates[0], x, y, subpriortiy);
 
     gSprites[spriteId].data[0] = monSpriteId;
@@ -1036,7 +1036,7 @@ static void sub_8076524(struct Sprite *sprite)
             r5 = 0;
 
         StartSpriteAnim(sprite, 1);
-        LaunchBallStarsTaskForPokeball(sprite->pos1.x, sprite->pos1.y - 5, sprite->oam.priority, r5);
+        AnimateBallOpenParticlesForPokeball(sprite->pos1.x, sprite->pos1.y - 5, sprite->oam.priority, r5);
         sprite->data[1] = LaunchBallFadeMonTaskForPokeball(1, battlerId, r4);
         sprite->callback = sub_80765E0;
         gSprites[r7].invisible = FALSE;
@@ -1101,8 +1101,8 @@ u8 sub_807671C(u8 a, u8 b, u8 x, u8 y, u8 oamPriority, u8 subPriority, u8 g, u32
 {
     u8 spriteId;
 
-    LoadCompressedObjectPicUsingHeap(&gBallSpriteSheets[0]);
-    LoadCompressedObjectPaletteUsingHeap(&gBallSpritePalettes[0]);
+    LoadCompressedSpriteSheetUsingHeap(&gBallSpriteSheets[0]);
+    LoadCompressedSpritePaletteUsingHeap(&gBallSpritePalettes[0]);
     spriteId = CreateSprite(&gBallSpriteTemplates[0], x, y, subPriority);
     gSprites[spriteId].data[0] = a;
     gSprites[spriteId].data[1] = g;
@@ -1129,7 +1129,7 @@ static void sub_80767D4(struct Sprite *sprite)
             r6 = 0;
 
         StartSpriteAnim(sprite, 1);
-        LaunchBallStarsTaskForPokeball(sprite->pos1.x, sprite->pos1.y - 5, sprite->oam.priority, r6);
+        AnimateBallOpenParticlesForPokeball(sprite->pos1.x, sprite->pos1.y - 5, sprite->oam.priority, r6);
         sprite->data[1] = LaunchBallFadeMonTaskForPokeball(1, r8, r5);
         sprite->callback = sub_807687C;
         StartSpriteAffineAnim(&gSprites[r7], 2);
@@ -1170,7 +1170,7 @@ static void sub_80768F0(struct Sprite *sprite)
         sprite->callback = SpriteCallbackDummy;
 }
 
-static void DestroySpriteAndFreeResources_(struct Sprite *sprite)
+static void Unref_DestroySpriteAndFreeResources(struct Sprite *sprite)
 {
     DestroySpriteAndFreeResources(sprite);
 }
@@ -1245,8 +1245,8 @@ void LoadBallGfx(u8 ballId)
 
     if (GetSpriteTileStartByTag(gBallSpriteSheets[ballId].tag) == 0xFFFF)
     {
-        LoadCompressedObjectPicUsingHeap(&gBallSpriteSheets[ballId]);
-        LoadCompressedObjectPaletteUsingHeap(&gBallSpritePalettes[ballId]);
+        LoadCompressedSpriteSheetUsingHeap(&gBallSpriteSheets[ballId]);
+        LoadCompressedSpritePaletteUsingHeap(&gBallSpritePalettes[ballId]);
     }
     switch (ballId)
     {

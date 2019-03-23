@@ -19,7 +19,8 @@ enum SpinnerRunnerFollowPatterns
     RUNFOLLOW_SOUTH_EAST_WEST
 };
 
-struct UnkStruct_085094AC {
+struct UnkStruct_085094AC
+{
     const union AnimCmd *const *anims;
     u8 animPos[4];
 };
@@ -45,28 +46,6 @@ struct UnkStruct_085094AC {
 #define GROUND_EFFECT_FLAG_HOT_SPRINGS           (1 << 18)
 #define GROUND_EFFECT_FLAG_SEAWEED               (1 << 19)
 
-#define movement_type_def(setup, table) \
-static u8 setup##_callback(struct EventObject *, struct Sprite *);\
-void setup(struct Sprite *sprite)\
-{\
-    UpdateEventObjectCurrentMovement(&gEventObjects[sprite->data[0]], sprite, setup##_callback);\
-}\
-static u8 setup##_callback(struct EventObject *eventObject, struct Sprite *sprite)\
-{\
-    return table[sprite->data[1]](eventObject, sprite);\
-}
-
-#define movement_type_empty_callback(setup) \
-static u8 setup##_callback(struct EventObject *, struct Sprite *);\
-void setup(struct Sprite *sprite)\
-{\
-    UpdateEventObjectCurrentMovement(&gEventObjects[sprite->data[0]], sprite, setup##_callback);\
-}\
-static u8 setup##_callback(struct EventObject *eventObject, struct Sprite *sprite)\
-{\
-    return 0;\
-}
-
 struct PairedPalettes
 {
     u16 tag;
@@ -75,13 +54,17 @@ struct PairedPalettes
 
 struct LockedAnimEventObjects
 {
-    u8 eventObjectIds[NUM_EVENT_OBJECTS];
+    u8 eventObjectIds[EVENT_OBJECTS_COUNT];
     u8 count;
 };
 
 extern const struct SpriteFrameImage gEventObjectPicTable_PechaBerryTree[];
+extern const struct OamData gEventObjectBaseOam_32x8;
+extern const struct OamData gEventObjectBaseOam_32x32;
+extern const struct SpriteTemplate *const gFieldEffectObjectTemplatePointers[];
+extern const u8 gReflectionEffectPaletteMap[];
 
-void sub_808D438(void);
+void ResetEventObjects(void);
 u8 GetMoveDirectionAnimNum(u8);
 u8 GetEventObjectIdByLocalIdAndMap(u8, u8, u8);
 bool8 TryGetEventObjectIdByLocalIdAndMap(u8, u8, u8, u8 *);
@@ -101,17 +84,17 @@ void sub_80930E0(s16 *, s16 *, s16, s16);
 void EventObjectClearHeldMovement(struct EventObject *);
 void EventObjectClearHeldMovementIfActive(struct EventObject *);
 void TrySpawnEventObjects(s16, s16);
-u8 sprite_new(u8, u8, s16, s16, u8, u8);
-u8 AddPseudoEventObject(u16, void (*)(struct Sprite *), s16, s16, u8);
+u8 sprite_new(u8 graphicsId, u8 a1, s16 x, s16 y, u8 z, u8 direction);
+u8 AddPseudoEventObject(u16, void (*)(struct Sprite *), s16 x, s16 y, u8 subpriority);
 u8 show_sprite(u8, u8, u8);
-u8 SpawnSpecialEventObjectParameterized(u8, u8, u8, s16, s16, u8);
+u8 SpawnSpecialEventObjectParameterized(u8 graphicsId, u8 movementBehavior, u8 localId, s16 x, s16 y, u8 z);
 u8 SpawnSpecialEventObject(struct EventObjectTemplate *);
 void sub_8093038(s16, s16, s16 *, s16 *);
 void CameraObjectReset1(void);
-void EventObjectSetGraphicsId(struct EventObject *, u8);
+void EventObjectSetGraphicsId(struct EventObject *, u8 graphicsId);
 void EventObjectTurn(struct EventObject *, u8);
 void EventObjectTurnByLocalIdAndMap(u8, u8, u8, u8);
-const struct EventObjectGraphicsInfo *GetEventObjectGraphicsInfo(u8);
+const struct EventObjectGraphicsInfo *GetEventObjectGraphicsInfo(u8 graphicsId);
 void npc_by_local_id_and_map_set_field_1_bit_x20(u8, u8, u8, u8);
 void FreeAndReserveObjectSpritePalettes(void);
 void sub_808E82C(u8, u8, u8, s16, s16);
@@ -142,9 +125,27 @@ u8 GetCollisionFlagsAtCoords(struct EventObject *eventObject, s16 x, s16 y, u8 d
 u8 GetFaceDirectionMovementAction(u32);
 u8 GetWalkNormalMovementAction(u32);
 u8 GetWalkFastMovementAction(u32);
+u8 GetRideWaterCurrentMovementAction(u32);
 u8 GetWalkFastestMovementAction(u32);
+u8 GetPlayerRunMovementAction(u32);
 u8 GetJumpInPlaceMovementAction(u32);
+u8 GetAcroWheelieFaceDirectionMovementAction(u32);
+u8 GetAcroPopWheelieFaceDirectionMovementAction(u32);
+u8 GetAcroEndWheelieFaceDirectionMovementAction(u32);
+u8 GetAcroWheelieHopFaceDirectionMovementAction(u32);
+u8 GetAcroWheelieHopDirectionMovementAction(u32);
+u8 GetAcroWheelieJumpDirectionMovementAction(u32);
+u8 GetJumpInPlaceTurnAroundMovementAction(u32);
+u8 GetAcroWheelieInPlaceDirectionMovementAction(u32);
+u8 GetAcroPopWheelieMoveDirectionMovementAction(u32);
+u8 GetAcroWheelieMoveDirectionMovementAction(u32);
+u8 GetAcroEndWheelieMoveDirectionMovementAction(u32);
+u8 GetFishingDirectionAnimNum(u8 direction);
+u8 GetAcroWheelieDirectionAnimNum(u8 direction);
+u8 GetFishingBiteDirectionAnimNum(u8 direction);
+u8 GetFishingNoCatchDirectionAnimNum(u8 direction);
 bool8 EventObjectSetHeldMovement(struct EventObject *eventObject, u8 specialAnimId);
+void EventObjectForceSetHeldMovement(struct EventObject *eventObject, u8 movementActionId);
 bool8 EventObjectIsMovementOverridden(struct EventObject *eventObject);
 u8 EventObjectCheckHeldMovementStatus(struct EventObject *eventObject);
 u8 EventObjectGetHeldMovementActionId(struct EventObject *eventObject);
@@ -161,9 +162,7 @@ u8 ZCoordToPriority(u8);
 void EventObjectUpdateZCoord(struct EventObject *pObject);
 void SetObjectSubpriorityByZCoord(u8, struct Sprite *, u8);
 bool8 IsZCoordMismatchAt(u8, s16, s16);
-void UpdateEventObjectSpriteSubpriorityAndVisibility(struct Sprite *);
 void UnfreezeEventObject(struct EventObject *);
-void oamt_npc_ministep_reset(struct Sprite *, u8, u8);
 u8 FindLockedEventObjectIndex(struct EventObject *);
 bool8 obj_npc_ministep(struct Sprite *sprite);
 bool8 sub_80976EC(struct Sprite *sprite);
@@ -189,6 +188,14 @@ u8 GetMoveDirectionFasterAnimNum(u8);
 u8 GetMoveDirectionFastestAnimNum(u8);
 u8 GetLedgeJumpDirection(s16, s16, u8);
 void CameraObjectSetFollowedObjectId(u8 objectId);
+u16 GetObjectPaletteTag(u8 palSlot);
+void UpdateEventObjectSpriteVisibility(struct Sprite *sprite, bool8 invisible);
+s16 sub_809773C(s16 a1);
+s16 sub_8097728(s16 a1);
+void CameraObjectReset2(void);
+u8 EventObjectGetBerryTreeId(u8 eventObjectId);
+void sub_8092EF0(u8 mapId, u8 mapNumber, u8 mapGroup);
+bool8 IsBerryTreeSparkling(u8, u8, u8);
 
 void MovementType_None(struct Sprite *);
 void MovementType_LookAround(struct Sprite *);
@@ -249,6 +256,7 @@ u8 GetSlideMovementAction(u32);
 u8 GetJumpInPlaceMovementAction(u32);
 u8 GetJumpMovementAction(u32);
 u8 GetJump2MovementAction(u32);
+u8 CreateCopySpriteAt(struct Sprite *sprite, s16 x, s16 y, u8 subpriority);
 
 u8 MovementType_WanderAround_Step0(struct EventObject *, struct Sprite *);
 u8 MovementType_WanderAround_Step1(struct EventObject *, struct Sprite *);

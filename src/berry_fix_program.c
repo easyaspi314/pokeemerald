@@ -1,8 +1,9 @@
 #include "global.h"
 #include "gpu_regs.h"
 #include "multiboot.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "bg.h"
+#include "graphics.h"
 #include "main.h"
 #include "sprite.h"
 #include "task.h"
@@ -66,7 +67,7 @@ static const u16 sUnknown_08618138[] = {
     0x7fff, 0x7fff, 0x318c, 0x675a,
     0x043c, 0x3aff, 0x0664, 0x4bd2,
     0x6546, 0x7b14, 0x7fff, 0x318c,
-    0x675a, 0x0000, 0x0000, 0x0000
+    0x675a, 0, 0, 0
 };
 
 static const u8 sUnknown_08618158[] = {10, 11, 12};
@@ -81,26 +82,7 @@ static const u8 *const gUnknown_08618160[] = {
     Unknown_08617EA3
 };
 
-extern const u8 gBerryFixGameboy_Gfx[];
-extern const u8 gBerryFixGameboy_Tilemap[];
-extern const u8 gBerryFixGameboy_Pal[];
-extern const u8 gBerryFixGameboyLogo_Gfx[];
-extern const u8 gBerryFixGameboyLogo_Tilemap[];
-extern const u8 gBerryFixGameboyLogo_Pal[];
-extern const u8 gBerryFixGbaTransfer_Gfx[];
-extern const u8 gBerryFixGbaTransfer_Tilemap[];
-extern const u8 gBerryFixGbaTransfer_Pal[];
-extern const u8 gBerryFixGbaTransferHighlight_Gfx[];
-extern const u8 gBerryFixGbaTransferHighlight_Tilemap[];
-extern const u8 gBerryFixGbaTransferHighlight_Pal[];
-extern const u8 gBerryFixGbaTransferError_Gfx[];
-extern const u8 gBerryFixGbaTransferError_Tilemap[];
-extern const u8 gBerryFixGbaTransferError_Pal[];
-extern const u8 gBerryFixWindow_Gfx[];
-extern const u8 gBerryFixWindow_Tilemap[];
-extern const u8 gBerryFixWindow_Pal[];
-
-static const u8 *const gUnknown_08618178[][3] = {
+static const void *const gUnknown_08618178[][3] = {
     {
         gBerryFixGameboy_Gfx,
         gBerryFixGameboy_Tilemap,
@@ -142,7 +124,7 @@ void CB2_InitBerryFixProgram(void)
     ResetSpriteData();
     ResetTasks();
     ScanlineEffect_Stop();
-    SetGpuReg(REG_OFFSET_DISPCNT, 0x0000);
+    SetGpuReg(REG_OFFSET_DISPCNT, 0);
     berry_fix_mb_manager = AllocZeroed(0x50);
     berry_fix_mb_manager->state = 0;
     berry_fix_mb_manager->unk1 = 6;
@@ -221,13 +203,13 @@ static void berry_fix_gpu_set(void)
 {
     s32 width, left;
 
-    SetGpuReg(REG_OFFSET_BG0CNT, 0x0000);
-    SetGpuReg(REG_OFFSET_BG1CNT, 0x0000);
-    SetGpuReg(REG_OFFSET_BG0HOFS, 0x0000);
-    SetGpuReg(REG_OFFSET_BG0VOFS, 0x0000);
-    SetGpuReg(REG_OFFSET_BG1HOFS, 0x0000);
-    SetGpuReg(REG_OFFSET_BG1VOFS, 0x0000);
-    SetGpuReg(REG_OFFSET_BLDCNT, 0x0000);
+    SetGpuReg(REG_OFFSET_BG0CNT, 0);
+    SetGpuReg(REG_OFFSET_BG1CNT, 0);
+    SetGpuReg(REG_OFFSET_BG0HOFS, 0);
+    SetGpuReg(REG_OFFSET_BG0VOFS, 0);
+    SetGpuReg(REG_OFFSET_BG1HOFS, 0);
+    SetGpuReg(REG_OFFSET_BG1VOFS, 0);
+    SetGpuReg(REG_OFFSET_BLDCNT, 0);
 
     DmaFill32(3, 0, VRAM, VRAM_SIZE);
     DmaFill32(3, 0, OAM, OAM_SIZE);
@@ -244,9 +226,9 @@ static void berry_fix_gpu_set(void)
 
     DmaCopy32(3, sUnknown_08618138, BG_PLTT + 0x1E0, 0x20);
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_1D_MAP);
-    FillWindowPixelBuffer(2, 0);
-    FillWindowPixelBuffer(3, 0);
-    FillWindowPixelBuffer(0, 0xAA);
+    FillWindowPixelBuffer(2, PIXEL_FILL(0));
+    FillWindowPixelBuffer(3, PIXEL_FILL(0));
+    FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
 
     width = GetStringWidth(0, sUnknown_08617E9B, 0);
     left = (0x78 - width) / 2;
@@ -291,7 +273,7 @@ static int berry_fix_text_update(int checkval)
 static void berry_fix_text_print(int scene)
 {
     FillBgTilemapBufferRect_Palette0(0, 0, 0, 0, 32, 32);
-    FillWindowPixelBuffer(1, 0xAA);
+    FillWindowPixelBuffer(1, PIXEL_FILL(0xA));
     AddTextPrinterParameterized3(1, 1, 0, 0, sUnknown_08618158, -1, gUnknown_08618160[scene]);
     PutWindowTilemap(1);
     CopyWindowToVram(1, 2);

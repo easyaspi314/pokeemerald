@@ -1,5 +1,4 @@
 #include "global.h"
-#include "main.h"
 #include "battle.h"
 #include "battle_tower.h"
 #include "cable_club.h"
@@ -13,15 +12,15 @@
 #include "field_effect.h"
 #include "field_message_box.h"
 #include "field_player_avatar.h"
-#include "field_region_map.h"
-#include "field_screen.h"
+#include "field_screen_effect.h"
 #include "field_specials.h"
 #include "field_weather.h"
 #include "international_string_util.h"
 #include "item_icon.h"
 #include "link.h"
 #include "list_menu.h"
-#include "malloc.h"
+#include "main.h"
+#include "alloc.h"
 #include "match_call.h"
 #include "menu.h"
 #include "overworld.h"
@@ -46,13 +45,17 @@
 #include "wallclock.h"
 #include "window.h"
 #include "constants/event_objects.h"
+#include "constants/field_effects.h"
 #include "constants/items.h"
+#include "constants/map_types.h"
 #include "constants/maps.h"
 #include "constants/songs.h"
 #include "constants/species.h"
 #include "constants/moves.h"
 #include "constants/vars.h"
 #include "constants/battle_frontier.h"
+#include "constants/weather.h"
+#include "palette.h"
 
 EWRAM_DATA bool8 gBikeCyclingChallenge = FALSE;
 EWRAM_DATA u8 gBikeCollisions = 0;
@@ -78,8 +81,6 @@ extern const u16 gEventObjectPalette17[];
 extern const u16 gEventObjectPalette33[];
 extern const u16 gEventObjectPalette34[];
 
-extern void LoadPalette(const void *src, u32 offset, u16 size); // incorrect signature, needed to match
-extern void BlendPalettes(u32, u8, u16);
 
 void UpdateMovedLilycoveFanClubMembers(void);
 void sub_813BF60(void);
@@ -114,9 +115,9 @@ static void sub_813A738(u8 taskId);
 static void sub_813A600(u8 taskId);
 static void sub_813A664(u8 taskId);
 static void sub_813ABD4(u16 a0);
-static void task_deoxys_sound(u8 taskId);
-static void sub_813B0B4(u8 a0);
-static void sub_813B160(u8 taskId);
+static void Task_DeoxysRockInteraction(u8 taskId);
+static void ChangeDeoxysRockLevel(u8 a0);
+static void WaitForDeoxysRockMovement(u8 taskId);
 static void sub_813B57C(u8 taskId);
 static void sub_813B824(u8 taskId);
 static void _fwalk(u8 taskId);
@@ -357,17 +358,17 @@ u8 GetSSTidalLocation(s8 *mapGroup, s8 *mapNum, s16 *x, s16 *y)
     return 0;
 }
 
-bool32 is_tile_that_overrides_player_control(void)
+bool32 ShouldDoWallyCall(void)
 {
-    if (FlagGet(FLAG_0x088))
+    if (FlagGet(FLAG_ENABLE_FIRST_WALLY_POKENAV_CALL))
     {
         switch (gMapHeader.mapType)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 6:
-                if (++(*GetVarPointer(VAR_0x40F2)) < 0xFA)
+            case MAP_TYPE_TOWN:
+            case MAP_TYPE_CITY:
+            case MAP_TYPE_ROUTE:
+            case MAP_TYPE_OCEAN_ROUTE:
+                if (++(*GetVarPointer(VAR_WALLY_CALL_STEP_COUNTER)) < 250)
                 {
                     return FALSE;
                 }
@@ -384,17 +385,17 @@ bool32 is_tile_that_overrides_player_control(void)
     return TRUE;
 }
 
-bool32 sub_8138120(void)
+bool32 ShouldDoWinonaCall(void)
 {
-    if (FlagGet(FLAG_0x08A))
+    if (FlagGet(FLAG_REGISTER_WINONA_POKENAV))
     {
         switch (gMapHeader.mapType)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 6:
-                if (++(*GetVarPointer(VAR_0x40F3)) < 0xA)
+            case MAP_TYPE_TOWN:
+            case MAP_TYPE_CITY:
+            case MAP_TYPE_ROUTE:
+            case MAP_TYPE_OCEAN_ROUTE:
+                if (++(*GetVarPointer(VAR_WINONA_CALL_STEP_COUNTER)) < 10)
                 {
                     return FALSE;
                 }
@@ -411,9 +412,9 @@ bool32 sub_8138120(void)
     return TRUE;
 }
 
-bool32 sub_8138168(void)
+bool32 ShouldDoScottCall(void)
 {
-    if (FlagGet(FLAG_0x072))
+    if (FlagGet(FLAG_SCOTT_CALL_NATIONAL_DEX))
     {
         switch (gMapHeader.mapType)
         {
@@ -421,7 +422,7 @@ bool32 sub_8138168(void)
             case 2:
             case 3:
             case 6:
-                if (++(*GetVarPointer(VAR_0x40F5)) < 0xA)
+                if (++(*GetVarPointer(VAR_SCOTT_CALL_STEP_COUNTER)) < 10)
                 {
                     return FALSE;
                 }
@@ -438,9 +439,9 @@ bool32 sub_8138168(void)
     return TRUE;
 }
 
-bool32 sub_81381B0(void)
+bool32 ShouldDoRoxanneCall(void)
 {
-    if (FlagGet(FLAG_0x080))
+    if (FlagGet(FLAG_ENABLE_ROXANNE_FIRST_CALL))
     {
         switch (gMapHeader.mapType)
         {
@@ -448,7 +449,7 @@ bool32 sub_81381B0(void)
             case 2:
             case 3:
             case 6:
-                if (++(*GetVarPointer(VAR_0x40F4)) < 0xFA)
+                if (++(*GetVarPointer(VAR_ROXANNE_CALL_STEP_COUNTER)) < 250)
                 {
                     return FALSE;
                 }
@@ -465,9 +466,9 @@ bool32 sub_81381B0(void)
     return TRUE;
 }
 
-bool32 sub_81381F8(void)
+bool32 ShouldDoRivalRayquazaCall(void)
 {
-    if (FlagGet(FLAG_0x075))
+    if (FlagGet(FLAG_DEFEATED_MAGMA_SPACE_CENTER))
     {
         switch (gMapHeader.mapType)
         {
@@ -475,7 +476,7 @@ bool32 sub_81381F8(void)
             case 2:
             case 3:
             case 6:
-                if (++(*GetVarPointer(VAR_0x40F6)) < 0xFA)
+                if (++(*GetVarPointer(VAR_RIVAL_RAYQUAZA_CALL_STEP_COUNTER)) < 250)
                 {
                     return FALSE;
                 }
@@ -588,32 +589,34 @@ void SpawnLinkPartnerEventObject(void)
 
 static void LoadLinkPartnerEventObjectSpritePalette(u8 graphicsId, u8 localEventId, u8 paletteNum)
 {
-    paletteNum += 6;
+    u8 adjustedPaletteNum;
+    // Note: This temp var is necessary; paletteNum += 6 doesn't match.
+    adjustedPaletteNum = paletteNum + 6;
     if (graphicsId == EVENT_OBJ_GFX_LINK_RS_BRENDAN ||
         graphicsId == EVENT_OBJ_GFX_LINK_RS_MAY ||
         graphicsId == EVENT_OBJ_GFX_RIVAL_BRENDAN_NORMAL ||
         graphicsId == EVENT_OBJ_GFX_RIVAL_MAY_NORMAL)
     {
         u8 obj = GetEventObjectIdByLocalIdAndMap(localEventId, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup);
-        if (obj != NUM_EVENT_OBJECTS)
+        if (obj != EVENT_OBJECTS_COUNT)
         {
             u8 spriteId = gEventObjects[obj].spriteId;
             struct Sprite *sprite = &gSprites[spriteId];
-            sprite->oam.paletteNum = paletteNum;
+            sprite->oam.paletteNum = adjustedPaletteNum;
 
             switch (graphicsId)
             {
                 case EVENT_OBJ_GFX_LINK_RS_BRENDAN:
-                    LoadPalette(gEventObjectPalette33, 0x100 + paletteNum * 16, 0x20);
+                    LoadPalette(gEventObjectPalette33, 0x100 + (adjustedPaletteNum << 4), 0x20);
                     break;
                 case EVENT_OBJ_GFX_LINK_RS_MAY:
-                    LoadPalette(gEventObjectPalette34, 0x100 + paletteNum * 16, 0x20);
+                    LoadPalette(gEventObjectPalette34, 0x100 + (adjustedPaletteNum << 4), 0x20);
                     break;
                 case EVENT_OBJ_GFX_RIVAL_BRENDAN_NORMAL:
-                    LoadPalette(gEventObjectPalette8, 0x100 + paletteNum * 16, 0x20);
+                    LoadPalette(gEventObjectPalette8, 0x100 + (adjustedPaletteNum << 4), 0x20);
                     break;
                 case EVENT_OBJ_GFX_RIVAL_MAY_NORMAL:
-                    LoadPalette(gEventObjectPalette17, 0x100 + paletteNum * 16, 0x20);
+                    LoadPalette(gEventObjectPalette17, 0x100 + (adjustedPaletteNum << 4), 0x20);
                     break;
             }
         }
@@ -884,8 +887,8 @@ static void PetalburgGymFunc(u8 a0, u16 a1)
     }
     for (i = 0; i < nDoors; i++)
     {
-        MapGridSetMetatileIdAt(x[i] + 7, y[i] + 7, a1 | 0xc00);
-        MapGridSetMetatileIdAt(x[i] + 7, y[i] + 8, (a1 + 8) | 0xc00);
+        MapGridSetMetatileIdAt(x[i] + 7, y[i] + 7, a1 | METATILE_COLLISION_MASK);
+        MapGridSetMetatileIdAt(x[i] + 7, y[i] + 8, (a1 + 8) | METATILE_COLLISION_MASK);
     }
     DrawWholeMapView();
 }
@@ -944,11 +947,11 @@ void CableCarWarp(void)
 {
     if (gSpecialVar_0x8004 != 0)
     {
-        Overworld_SetWarpDestination(MAP_GROUP(ROUTE112_CABLE_CAR_STATION), MAP_NUM(ROUTE112_CABLE_CAR_STATION), -1, 6, 4);
+        SetWarpDestination(MAP_GROUP(ROUTE112_CABLE_CAR_STATION), MAP_NUM(ROUTE112_CABLE_CAR_STATION), -1, 6, 4);
     }
     else
     {
-        Overworld_SetWarpDestination(MAP_GROUP(MT_CHIMNEY_CABLE_CAR_STATION), MAP_NUM(MT_CHIMNEY_CABLE_CAR_STATION), -1, 6, 4);
+        SetWarpDestination(MAP_GROUP(MT_CHIMNEY_CABLE_CAR_STATION), MAP_NUM(MT_CHIMNEY_CABLE_CAR_STATION), -1, 6, 4);
     }
 }
 
@@ -1097,7 +1100,7 @@ static void PCTurnOnEffect_1(s16 flag, s8 dx, s8 dy)
             tileId = 0x27e;
         }
     }
-    MapGridSetMetatileIdAt(gSaveBlock1Ptr->pos.x + dx + 7, gSaveBlock1Ptr->pos.y + dy + 7, tileId | 0xc00);
+    MapGridSetMetatileIdAt(gSaveBlock1Ptr->pos.x + dx + 7, gSaveBlock1Ptr->pos.y + dy + 7, tileId | METATILE_COLLISION_MASK);
 }
 
 void DoPCTurnOffEffect(void)
@@ -1138,7 +1141,7 @@ static void PCTurnOffEffect(void)
     {
         tileId = 0x259;
     }
-    MapGridSetMetatileIdAt(gSaveBlock1Ptr->pos.x + dx + 7, gSaveBlock1Ptr->pos.y + dy + 7, tileId | 0xc00);
+    MapGridSetMetatileIdAt(gSaveBlock1Ptr->pos.x + dx + 7, gSaveBlock1Ptr->pos.y + dy + 7, tileId | METATILE_COLLISION_MASK);
     DrawWholeMapView();
 }
 
@@ -1199,7 +1202,7 @@ void EndLotteryCornerComputerEffect(void)
 void SetTrickHouseEndRoomFlag(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_0x1F5;
+    u16 flag = FLAG_TRICK_HOUSE_END_ROOM;
     *specVar = flag;
     FlagSet(flag);
 }
@@ -1207,7 +1210,7 @@ void SetTrickHouseEndRoomFlag(void)
 void ResetTrickHouseEndRoomFlag(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_0x1F5;
+    u16 flag = FLAG_TRICK_HOUSE_END_ROOM;
     *specVar = flag;
     FlagClear(flag);
 }
@@ -1265,7 +1268,7 @@ void IsGrassTypeInParty(void)
     for (i = 0; i < PARTY_SIZE; i++)
     {
         pokemon = &gPlayerParty[i];
-        if (GetMonData(pokemon, MON_DATA_SANITY_BIT2) && !GetMonData(pokemon, MON_DATA_IS_EGG))
+        if (GetMonData(pokemon, MON_DATA_SANITY_HAS_SPECIES) && !GetMonData(pokemon, MON_DATA_IS_EGG))
         {
             species = GetMonData(pokemon, MON_DATA_SPECIES);
             if (gBaseStats[species].type1 == TYPE_GRASS || gBaseStats[species].type2 == TYPE_GRASS)
@@ -1278,17 +1281,17 @@ void IsGrassTypeInParty(void)
     gSpecialVar_Result = FALSE;
 }
 
-void SpawnScriptEventObject(void)
+void SpawnCameraObject(void)
 {
-    u8 obj = SpawnSpecialEventObjectParameterized(EVENT_OBJ_GFX_BOY_1, 8, 0x7F, gSaveBlock1Ptr->pos.x + 7, gSaveBlock1Ptr->pos.y + 7, 3);
+    u8 obj = SpawnSpecialEventObjectParameterized(EVENT_OBJ_GFX_BOY_1, 8, EVENT_OBJ_ID_CAMERA, gSaveBlock1Ptr->pos.x + 7, gSaveBlock1Ptr->pos.y + 7, 3);
     gEventObjects[obj].invisible = TRUE;
     CameraObjectSetFollowedObjectId(gEventObjects[obj].spriteId);
 }
 
-void RemoveScriptEventObject(void)
+void RemoveCameraObject(void)
 {
     CameraObjectSetFollowedObjectId(GetPlayerAvatarObjectId());
-    RemoveEventObjectByLocalIdAndMap(0x7F, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup);
+    RemoveEventObjectByLocalIdAndMap(EVENT_OBJ_ID_CAMERA, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup);
 }
 
 u8 GetPokeblockNameByMonNature(void)
@@ -1328,7 +1331,7 @@ u16 GetSlotMachineId(void)
 bool8 FoundAbandonedShipRoom1Key(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_HIDDEN_ITEM_1F;
+    u16 flag = FLAG_HIDDEN_ITEM_ABANDONED_SHIP_RM_1_KEY;
     *specVar = flag;
     if (!FlagGet(flag))
     {
@@ -1340,7 +1343,7 @@ bool8 FoundAbandonedShipRoom1Key(void)
 bool8 FoundAbandonedShipRoom2Key(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_HIDDEN_ITEM_20;
+    u16 flag = FLAG_HIDDEN_ITEM_ABANDONED_SHIP_RM_2_KEY;
     *specVar = flag;
     if (!FlagGet(flag))
     {
@@ -1352,7 +1355,7 @@ bool8 FoundAbandonedShipRoom2Key(void)
 bool8 FoundAbandonedShipRoom4Key(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_HIDDEN_ITEM_21;
+    u16 flag = FLAG_HIDDEN_ITEM_ABANDONED_SHIP_RM_4_KEY;
     *specVar = flag;
     if (!FlagGet(flag))
     {
@@ -1364,7 +1367,7 @@ bool8 FoundAbandonedShipRoom4Key(void)
 bool8 FoundAbandonedShipRoom6Key(void)
 {
     u16 *specVar = &gSpecialVar_0x8004;
-    u16 flag = FLAG_HIDDEN_ITEM_22;
+    u16 flag = FLAG_HIDDEN_ITEM_ABANDONED_SHIP_RM_6_KEY;
     *specVar = flag;
     if (!FlagGet(flag))
     {
@@ -1508,12 +1511,12 @@ static void sub_8139620(u8 taskId)
 
 bool8 FoundBlackGlasses(void)
 {
-    return FlagGet(FLAG_HIDDEN_ITEM_BLACK_GLASSES);
+    return FlagGet(FLAG_HIDDEN_ITEM_ROUTE_116_BLACK_GLASSES);
 }
 
 void SetRoute119Weather(void)
 {
-    if (is_map_type_1_2_3_5_or_6(get_map_light_from_warp0()) != TRUE)
+    if (IsMapTypeOutdoors(GetLastUsedWarpMapType()) != TRUE)
     {
         SetSav1Weather(20);
     }
@@ -1521,7 +1524,7 @@ void SetRoute119Weather(void)
 
 void SetRoute123Weather(void)
 {
-    if (is_map_type_1_2_3_5_or_6(get_map_light_from_warp0()) != TRUE)
+    if (IsMapTypeOutdoors(GetLastUsedWarpMapType()) != TRUE)
     {
         SetSav1Weather(21);
     }
@@ -1657,7 +1660,7 @@ bool8 sub_813990C(void)
 
     for (i = 0; i < partyCount; i++)
     {
-        if (GetMonData(&gPlayerParty[i], MON_DATA_SANITY_BIT1) == 1)
+        if (GetMonData(&gPlayerParty[i], MON_DATA_SANITY_IS_BAD_EGG) == 1)
             return TRUE;
     }
 
@@ -1680,7 +1683,7 @@ void sub_8139980(void)
 }
 
 const struct WindowTemplate gUnknown_085B2BAC = {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 21,
     .tilemapTop = 1,
     .width = 8,
@@ -1690,31 +1693,41 @@ const struct WindowTemplate gUnknown_085B2BAC = {
 };
 
 const u8 *const gElevatorFloorsTable[] = {
-	gText_B4F,
-	gText_B3F,
-	gText_B2F,
-	gText_B1F,
-	gText_1F,
-	gText_2F,
-	gText_3F,
-	gText_4F,
-	gText_5F,
-	gText_6F,
-	gText_7F,
-	gText_8F,
-	gText_9F,
-	gText_10F,
-	gText_11F,
-	gText_Rooftop
+    gText_B4F,
+    gText_B3F,
+    gText_B2F,
+    gText_B1F,
+    gText_1F,
+    gText_2F,
+    gText_3F,
+    gText_4F,
+    gText_5F,
+    gText_6F,
+    gText_7F,
+    gText_8F,
+    gText_9F,
+    gText_10F,
+    gText_11F,
+    gText_Rooftop
 };
 
-const u16 gUnknown_085B2BF4[] = { 0x0329, 0x032a, 0x032b, 0x0331, 0x0332, 0x0333, 0x0339, 0x033a, 0x033b };
-const u16 gUnknown_085B2C06[] = { 0x0329, 0x032b, 0x032a, 0x0331, 0x0333, 0x0332, 0x0339, 0x033b, 0x033a };
+const u16 gUnknown_085B2BF4[][3] =
+{
+    {0x0329, 0x032a, 0x032b},
+    {0x0331, 0x0332, 0x0333},
+    {0x0339, 0x033a, 0x033b},
+};
+const u16 gUnknown_085B2C06[][3] =
+{
+    {0x0329, 0x032b, 0x032a},
+    {0x0331, 0x0333, 0x0332},
+    {0x0339, 0x033b, 0x033a},
+};
 
 void SetDepartmentStoreFloorVar(void)
 {
     u8 deptStoreFloor;
-    switch (gSaveBlock1Ptr->warp2.mapNum)
+    switch (gSaveBlock1Ptr->dynamicWarp.mapNum)
     {
         case MAP_NUM(LILYCOVE_CITY_DEPARTMENT_STORE_1F):
             deptStoreFloor = 4;
@@ -1746,9 +1759,9 @@ u16 sub_81399F4(void)
     gUnknown_0203AB60 = 0;
     gUnknown_0203AB62 = 0;
 
-    if (gSaveBlock1Ptr->warp2.mapGroup == 13)
+    if (gSaveBlock1Ptr->dynamicWarp.mapGroup == MAP_GROUP(LILYCOVE_CITY_DEPARTMENT_STORE_1F))
     {
-        switch (gSaveBlock1Ptr->warp2.mapNum)
+        switch (gSaveBlock1Ptr->dynamicWarp.mapNum)
         {
             case MAP_NUM(LILYCOVE_CITY_DEPARTMENT_STORE_5F):
                 gUnknown_0203AB60 = 0;
@@ -1847,7 +1860,7 @@ void sub_8139B60(void)
 
 void sub_8139C10(void)
 {
-    sub_8198070(gUnknown_0203AB5E, TRUE);
+    ClearStdWindowAndFrameToTransparent(gUnknown_0203AB5E, TRUE);
     RemoveWindow(gUnknown_0203AB5E);
 }
 
@@ -1865,9 +1878,6 @@ static void sub_8139C2C(u16 a1, u8 a2)
     }
 }
 
-// Annoyingly close but compiler wants to add all the parts of the index into the arrays
-// first and then shift by one, whereas we need each individual part to shift and then be added.
-#ifdef NONMATCHING
 static void sub_8139C80(u8 taskId)
 {
     u8 x, y;
@@ -1882,7 +1892,7 @@ static void sub_8139C80(u8 taskId)
             {
                 for (x = 0; x < 3; x++)
                 {
-                    MapGridSetMetatileIdAt(x + 8, y + 7, gUnknown_085B2BF4[y * 3 + data[0] % 3] | 0xC00);
+                    MapGridSetMetatileIdAt(x + 8, y + 7, gUnknown_085B2BF4[y][data[0] % 3] | METATILE_COLLISION_MASK);
                 }
             }
         }
@@ -1892,7 +1902,7 @@ static void sub_8139C80(u8 taskId)
             {
                 for (x = 0; x < 3; x++)
                 {
-                    MapGridSetMetatileIdAt(x + 8, y + 7, gUnknown_085B2C06[y * 3 + data[0] % 3] | 0xC00);
+                    MapGridSetMetatileIdAt(x + 8, y + 7, gUnknown_085B2C06[y][data[0] % 3] | METATILE_COLLISION_MASK);
                 }
             }
         }
@@ -1905,172 +1915,30 @@ static void sub_8139C80(u8 taskId)
     }
     data[1]++;
 }
-#else
-NAKED
-static void sub_8139C80(u8 taskId)
-{
-    asm_unified("push {r4-r7,lr}\n\
-	mov r7, r10\n\
-	mov r6, r9\n\
-	mov r5, r8\n\
-	push {r5-r7}\n\
-	sub sp, 0x4\n\
-	lsls r0, 24\n\
-	lsrs r0, 24\n\
-	str r0, [sp]\n\
-	lsls r0, 2\n\
-	ldr r1, [sp]\n\
-	adds r0, r1\n\
-	lsls r0, 3\n\
-	ldr r1, =gTasks + 0x8\n\
-	adds r6, r0, r1\n\
-	movs r2, 0x2\n\
-	ldrsh r0, [r6, r2]\n\
-	cmp r0, 0x6\n\
-	bne _08139D7C\n\
-	ldrh r0, [r6]\n\
-	adds r0, 0x1\n\
-	strh r0, [r6]\n\
-	movs r1, 0x4\n\
-	ldrsh r0, [r6, r1]\n\
-	cmp r0, 0\n\
-	bne _08139D10\n\
-	movs r1, 0\n\
-	ldr r2, =gUnknown_085B2BF4\n\
-	mov r10, r2\n\
-_08139CBA:\n\
-	movs r5, 0\n\
-	adds r7, r1, 0x7\n\
-	lsls r0, r1, 1\n\
-	adds r2, r1, 0x1\n\
-	mov r8, r2\n\
-	adds r0, r1\n\
-	lsls r0, 1\n\
-	mov r9, r0\n\
-_08139CCA:\n\
-	adds r4, r5, 0\n\
-	adds r4, 0x8\n\
-	movs r1, 0\n\
-	ldrsh r0, [r6, r1]\n\
-	movs r1, 0x3\n\
-	bl __modsi3\n\
-	lsls r0, 16\n\
-	asrs r0, 15\n\
-	add r0, r9\n\
-	add r0, r10\n\
-	ldrh r0, [r0]\n\
-	movs r1, 0xC0\n\
-	lsls r1, 4\n\
-	adds r2, r1, 0\n\
-	orrs r2, r0\n\
-	adds r0, r4, 0\n\
-	adds r1, r7, 0\n\
-	bl MapGridSetMetatileIdAt\n\
-	adds r0, r5, 0x1\n\
-	lsls r0, 24\n\
-	lsrs r5, r0, 24\n\
-	cmp r5, 0x2\n\
-	bls _08139CCA\n\
-	mov r2, r8\n\
-	lsls r0, r2, 24\n\
-	lsrs r1, r0, 24\n\
-	cmp r1, 0x2\n\
-	bls _08139CBA\n\
-	b _08139D62\n\
-	.pool\n\
-_08139D10:\n\
-	movs r1, 0\n\
-	ldr r0, =gUnknown_085B2C06\n\
-	mov r10, r0\n\
-_08139D16:\n\
-	movs r5, 0\n\
-	adds r7, r1, 0x7\n\
-	lsls r0, r1, 1\n\
-	adds r2, r1, 0x1\n\
-	mov r8, r2\n\
-	adds r0, r1\n\
-	lsls r0, 1\n\
-	mov r9, r0\n\
-_08139D26:\n\
-	adds r4, r5, 0\n\
-	adds r4, 0x8\n\
-	movs r1, 0\n\
-	ldrsh r0, [r6, r1]\n\
-	movs r1, 0x3\n\
-	bl __modsi3\n\
-	lsls r0, 16\n\
-	asrs r0, 15\n\
-	add r0, r9\n\
-	add r0, r10\n\
-	ldrh r0, [r0]\n\
-	movs r1, 0xC0\n\
-	lsls r1, 4\n\
-	adds r2, r1, 0\n\
-	orrs r2, r0\n\
-	adds r0, r4, 0\n\
-	adds r1, r7, 0\n\
-	bl MapGridSetMetatileIdAt\n\
-	adds r0, r5, 0x1\n\
-	lsls r0, 24\n\
-	lsrs r5, r0, 24\n\
-	cmp r5, 0x2\n\
-	bls _08139D26\n\
-	mov r2, r8\n\
-	lsls r0, r2, 24\n\
-	lsrs r1, r0, 24\n\
-	cmp r1, 0x2\n\
-	bls _08139D16\n\
-_08139D62:\n\
-	bl DrawWholeMapView\n\
-	movs r0, 0\n\
-	strh r0, [r6, 0x2]\n\
-	movs r0, 0\n\
-	ldrsh r1, [r6, r0]\n\
-	movs r2, 0x6\n\
-	ldrsh r0, [r6, r2]\n\
-	cmp r1, r0\n\
-	bne _08139D7C\n\
-	ldr r0, [sp]\n\
-	bl DestroyTask\n\
-_08139D7C:\n\
-	ldrh r0, [r6, 0x2]\n\
-	adds r0, 0x1\n\
-	strh r0, [r6, 0x2]\n\
-	add sp, 0x4\n\
-	pop {r3-r5}\n\
-	mov r8, r3\n\
-	mov r9, r4\n\
-	mov r10, r5\n\
-	pop {r4-r7}\n\
-	pop {r0}\n\
-	bx r0\n\
-	.pool");
-}
-#endif // NAKED
 
 void sub_8139D98(void)
 {
     u8 i;
-    u32 ivStorage[6];
+    u32 ivStorage[NUM_STATS];
 
-    ivStorage[0] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_HP_IV);
-    ivStorage[1] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_ATK_IV);
-    ivStorage[2] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_DEF_IV);
-    ivStorage[3] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPEED_IV);
-    ivStorage[4] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPATK_IV);
-    ivStorage[5] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPDEF_IV);
+    ivStorage[STAT_HP] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_HP_IV);
+    ivStorage[STAT_ATK] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_ATK_IV);
+    ivStorage[STAT_DEF] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_DEF_IV);
+    ivStorage[STAT_SPEED] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPEED_IV);
+    ivStorage[STAT_SPATK] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPATK_IV);
+    ivStorage[STAT_SPDEF] = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPDEF_IV);
 
     gSpecialVar_0x8005 = 0;
 
-    for (i = 0; i < ARRAY_COUNT(ivStorage); i++)
+    for (i = 0; i < NUM_STATS; i++)
     {
         gSpecialVar_0x8005 += ivStorage[i];
     }
 
     gSpecialVar_0x8006 = 0;
-    gSpecialVar_0x8007 = ivStorage[0];  // HP IV
+    gSpecialVar_0x8007 = ivStorage[STAT_HP];
 
-    for (i = 1; i < 6; i++)
+    for (i = 1; i < NUM_STATS; i++)
     {
         if (ivStorage[gSpecialVar_0x8006] < ivStorage[i])
         {
@@ -2080,7 +1948,7 @@ void sub_8139D98(void)
         else if (ivStorage[gSpecialVar_0x8006] == ivStorage[i])
         {
             u16 randomNumber = Random();
-            if ((randomNumber & 1) != 0)
+            if (randomNumber & 1)
             {
                 gSpecialVar_0x8006 = i;
                 gSpecialVar_0x8007 = ivStorage[i];
@@ -2089,9 +1957,9 @@ void sub_8139D98(void)
     }
 }
 
-bool32 warp0_in_pokecenter(void)
+bool8 warp0_in_pokecenter(void)
 {
-    static const u16 gUnknown_085B2C2A[] = { 0x0202, 0x0301, 0x0405, 0x0504, 0x0604, 0x0700, 0x0804, 0x090b, 0x0a05, 0x0b05, 0x0c02, 0x0d06, 0x0e03, 0x0f02, 0x100c, 0x100a, 0x1a35, 0x193c, 0xffff };
+    static const u16 gUnknown_085B2C2A[] = { 0x0202, 0x0301, 0x0405, 0x0504, 0x0604, 0x0700, 0x0804, 0x090b, 0x0a05, 0x0b05, 0x0c02, 0x0d06, 0x0e03, 0x0f02, 0x100c, 0x100a, 0x1a35, 0x193c, 0xFFFF };
 
     int i;
     u16 map = (gLastUsedWarp.mapGroup << 8) + gLastUsedWarp.mapNum;
@@ -2158,73 +2026,73 @@ void sub_8139F20(void)
         case 1:
         case 2:
         case 3:
-            if (gSaveBlock2Ptr->frontier.field_CE0[var][0] >= gSaveBlock2Ptr->frontier.field_CE0[var][1])
+            if (gSaveBlock2Ptr->frontier.towerWinStreaks[var][0] >= gSaveBlock2Ptr->frontier.towerWinStreaks[var][1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_CE0[var][0];
+                unk = gSaveBlock2Ptr->frontier.towerWinStreaks[var][0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_CE0[var][1];
+                unk = gSaveBlock2Ptr->frontier.towerWinStreaks[var][1];
             }
             break;
         case 4:
-            if (gSaveBlock2Ptr->frontier.field_D0C[0][0] >= gSaveBlock2Ptr->frontier.field_D0C[0][1])
+            if (gSaveBlock2Ptr->frontier.domeWinStreaks[0][0] >= gSaveBlock2Ptr->frontier.domeWinStreaks[0][1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_D0C[0][0];
+                unk = gSaveBlock2Ptr->frontier.domeWinStreaks[0][0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_D0C[0][1];
+                unk = gSaveBlock2Ptr->frontier.domeWinStreaks[0][1];
             }
             break;
         case 5:
-            if (gSaveBlock2Ptr->frontier.field_DE2[0][0] >= gSaveBlock2Ptr->frontier.field_DE2[0][1])
+            if (gSaveBlock2Ptr->frontier.factoryWinStreaks[0][0] >= gSaveBlock2Ptr->frontier.factoryWinStreaks[0][1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_DE2[0][0];
+                unk = gSaveBlock2Ptr->frontier.factoryWinStreaks[0][0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_DE2[0][1];
+                unk = gSaveBlock2Ptr->frontier.factoryWinStreaks[0][1];
             }
             break;
         case 6:
-            if (gSaveBlock2Ptr->frontier.field_DC8[0][0] >= gSaveBlock2Ptr->frontier.field_DC8[0][1])
+            if (gSaveBlock2Ptr->frontier.palaceWinStreaks[0][0] >= gSaveBlock2Ptr->frontier.palaceWinStreaks[0][1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_DC8[0][0];
+                unk = gSaveBlock2Ptr->frontier.palaceWinStreaks[0][0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_DC8[0][1];
+                unk = gSaveBlock2Ptr->frontier.palaceWinStreaks[0][1];
             }
             break;
         case 7:
-            if (gSaveBlock2Ptr->frontier.field_DDA[0] >= gSaveBlock2Ptr->frontier.field_DDA[1])
+            if (gSaveBlock2Ptr->frontier.arenaWinStreaks[0] >= gSaveBlock2Ptr->frontier.arenaWinStreaks[1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_DDA[0];
+                unk = gSaveBlock2Ptr->frontier.arenaWinStreaks[0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_DDA[1];
+                unk = gSaveBlock2Ptr->frontier.arenaWinStreaks[1];
             }
             break;
         case 8:
-            if (gSaveBlock2Ptr->frontier.field_E04[0] >= gSaveBlock2Ptr->frontier.field_E04[1])
+            if (gSaveBlock2Ptr->frontier.pikeWinStreaks[0] >= gSaveBlock2Ptr->frontier.pikeWinStreaks[1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_E04[0];
+                unk = gSaveBlock2Ptr->frontier.pikeWinStreaks[0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_E04[1];
+                unk = gSaveBlock2Ptr->frontier.pikeWinStreaks[1];
             }
             break;
         case 9:
-            if (gSaveBlock2Ptr->frontier.field_E1A[0] >= gSaveBlock2Ptr->frontier.field_E1A[1])
+            if (gSaveBlock2Ptr->frontier.pyramidWinStreaks[0] >= gSaveBlock2Ptr->frontier.pyramidWinStreaks[1])
             {
-                unk = gSaveBlock2Ptr->frontier.field_E1A[0];
+                unk = gSaveBlock2Ptr->frontier.pyramidWinStreaks[0];
             }
             else
             {
-                unk = gSaveBlock2Ptr->frontier.field_E1A[1];
+                unk = gSaveBlock2Ptr->frontier.pyramidWinStreaks[1];
             }
             break;
     }
@@ -2244,7 +2112,7 @@ void sub_813A080(void)
     u16 battleMode = VarGet(VAR_FRONTIER_BATTLE_MODE);
     u8 lvlMode = gSaveBlock2Ptr->frontier.lvlMode;
 
-    if (battleMode == 2 && !FlagGet(FLAG_0x152))
+    if (battleMode == FRONTIER_MODE_MULTIS && !FlagGet(FLAG_CHOSEN_MULTI_BATTLE_NPC_PARTNER))
     {
         gSpecialVar_0x8005 = 5;
         gSpecialVar_0x8006 = 4;
@@ -2253,7 +2121,7 @@ void sub_813A080(void)
 
     for (i = 0; i < 9; i++)
     {
-        if (gUnknown_085B2CDC[i] > gSaveBlock2Ptr->frontier.field_CE0[battleMode][lvlMode])
+        if (gUnknown_085B2CDC[i] > gSaveBlock2Ptr->frontier.towerWinStreaks[battleMode][lvlMode])
         {
             gSpecialVar_0x8005 = 4;
             gSpecialVar_0x8006 = i + 5;
@@ -2733,26 +2601,28 @@ static void sub_813A46C(s32 itemIndex, bool8 onInit, struct ListMenu *list)
     }
 }
 
-// stupid r5<->r6 swap
-#ifdef NONMATCHING
 static void sub_813A4EC(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
-    s32 itemId = ListMenuHandleInputGetItemId(task->data[14]);
+    s32 input = ListMenu_ProcessInput(task->data[14]);
 
-    switch (itemId)
+    switch (input)
     {
     case LIST_NOTHING_CHOSEN:
         break;
-    case LIST_B_PRESSED:
+    case LIST_CANCEL:
         gSpecialVar_Result = 0x7F;
         PlaySE(SE_SELECT);
         sub_813A570(taskId);
         break;
     default:
-        gSpecialVar_Result = itemId;
+        gSpecialVar_Result = input;
         PlaySE(SE_SELECT);
-        if (!task->data[6] || itemId == task->data[1] - 1)
+        if (!task->data[6])
+        {
+            sub_813A570(taskId);
+        }
+        else if (input == task->data[1] - 1)
         {
             sub_813A570(taskId);
         }
@@ -2765,72 +2635,6 @@ static void sub_813A4EC(u8 taskId)
         break;
     }
 }
-#else
-NAKED
-static void sub_813A4EC(u8 taskId)
-{
-    asm_unified("push {r4-r6,lr}\n\
-	lsls r0, 24\n\
-	lsrs r5, r0, 24\n\
-	lsls r0, r5, 2\n\
-	adds r0, r5\n\
-	lsls r0, 3\n\
-	ldr r1, =gTasks\n\
-	adds r6, r0, r1\n\
-	ldrh r0, [r6, 0x24]\n\
-	lsls r0, 24\n\
-	lsrs r0, 24\n\
-	bl ListMenuHandleInputGetItemId\n\
-	adds r4, r0, 0\n\
-	movs r0, 0x2\n\
-	negs r0, r0\n\
-	cmp r4, r0\n\
-	beq _0813A51C\n\
-	adds r0, 0x1\n\
-	cmp r4, r0\n\
-	bne _0813A530\n\
-	b _0813A566\n\
-	.pool\n\
-_0813A51C:\n\
-	ldr r1, =gSpecialVar_Result\n\
-	movs r0, 0x7F\n\
-	strh r0, [r1]\n\
-	movs r0, 0x5\n\
-	bl PlaySE\n\
-	b _0813A54C\n\
-	.pool\n\
-_0813A530:\n\
-	ldr r0, =gSpecialVar_Result\n\
-	strh r4, [r0]\n\
-	movs r0, 0x5\n\
-	bl PlaySE\n\
-	movs r1, 0x14\n\
-	ldrsh r0, [r6, r1]\n\
-	cmp r0, 0\n\
-	beq _0813A54C\n\
-	movs r1, 0xA\n\
-	ldrsh r0, [r6, r1]\n\
-	subs r0, 0x1\n\
-	cmp r4, r0\n\
-	bne _0813A558\n\
-_0813A54C:\n\
-	adds r0, r5, 0\n\
-	bl sub_813A570\n\
-	b _0813A566\n\
-	.pool\n\
-_0813A558:\n\
-	adds r0, r5, 0\n\
-	bl sub_813A738\n\
-	ldr r0, =sub_813A600\n\
-	str r0, [r6]\n\
-	bl EnableBothScriptContexts\n\
-_0813A566:\n\
-	pop {r4-r6}\n\
-	pop {r0}\n\
-	bx r0\n\
-	.pool");
-}
-#endif // NONMATCHING
 
 static void sub_813A570(u8 taskId)
 {
@@ -2841,8 +2645,8 @@ static void sub_813A570(u8 taskId)
     sub_813A738(taskId);
     DestroyListMenuTask(task->data[14], NULL, NULL);
     Free(gUnknown_0203AB64);
-    sub_8198070(task->data[13], 1);
-    FillWindowPixelBuffer(task->data[13], 0);
+    ClearStdWindowAndFrameToTransparent(task->data[13], 1);
+    FillWindowPixelBuffer(task->data[13], PIXEL_FILL(0));
     CopyWindowToVram(task->data[13], 2);
     RemoveWindow(task->data[13]);
     DestroyTask(taskId);
@@ -2886,10 +2690,10 @@ static void sub_813A664(u8 taskId)
 static void sub_813A694(u8 taskId)
 {
     static const struct ScrollArrowsTemplate gUnknown_085B3030 = {
-        .firstArrowType = 2,
+        .firstArrowType = SCROLL_ARROW_UP,
         .firstX = 0,
         .firstY = 0,
-        .secondArrowType = 3,
+        .secondArrowType = SCROLL_ARROW_DOWN,
         .secondX = 0,
         .secondY = 0,
         .fullyUpThreshold = 0,
@@ -3061,7 +2865,7 @@ void sub_813A8FC(void)
 {
     u8 string[32];
     u32 x;
-    StringCopy(ConvertIntToDecimalStringN(string, gSaveBlock2Ptr->frontier.frontierBattlePoints, STR_CONV_MODE_RIGHT_ALIGN, 4), gText_BP);
+    StringCopy(ConvertIntToDecimalStringN(string, gSaveBlock2Ptr->frontier.battlePoints, STR_CONV_MODE_RIGHT_ALIGN, 4), gText_BP);
     x = GetStringRightAlignXOffset(1, string, 48);
     AddTextPrinterParameterized(gUnknown_0203AB6D, 1, string, x, 1, 0, NULL);
 }
@@ -3069,7 +2873,7 @@ void sub_813A8FC(void)
 void sub_813A958(void)
 {
     static const struct WindowTemplate gUnknown_085B311C = {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 1,
         .tilemapTop = 1,
         .width = 6,
@@ -3086,43 +2890,43 @@ void sub_813A958(void)
 
 void sub_813A988(void)
 {
-    sub_8198070(gUnknown_0203AB6D, TRUE);
+    ClearStdWindowAndFrameToTransparent(gUnknown_0203AB6D, TRUE);
     RemoveWindow(gUnknown_0203AB6D);
 }
 
 void sub_813A9A4(void)
 {
-    if (gSaveBlock2Ptr->frontier.frontierBattlePoints < gSpecialVar_0x8004)
+    if (gSaveBlock2Ptr->frontier.battlePoints < gSpecialVar_0x8004)
     {
-        gSaveBlock2Ptr->frontier.frontierBattlePoints = 0;
+        gSaveBlock2Ptr->frontier.battlePoints = 0;
     }
     else
     {
-        gSaveBlock2Ptr->frontier.frontierBattlePoints -= gSpecialVar_0x8004;
+        gSaveBlock2Ptr->frontier.battlePoints -= gSpecialVar_0x8004;
     }
 }
 
 void sub_813A9D0(void)
 {
-    if (gSaveBlock2Ptr->frontier.frontierBattlePoints + gSpecialVar_0x8004 > 0x270F)
+    if (gSaveBlock2Ptr->frontier.battlePoints + gSpecialVar_0x8004 > 9999)
     {
-        gSaveBlock2Ptr->frontier.frontierBattlePoints = 0x270f;
+        gSaveBlock2Ptr->frontier.battlePoints = 9999;
     }
     else
     {
-        gSaveBlock2Ptr->frontier.frontierBattlePoints = gSaveBlock2Ptr->frontier.frontierBattlePoints + gSpecialVar_0x8004;
+        gSaveBlock2Ptr->frontier.battlePoints = gSaveBlock2Ptr->frontier.battlePoints + gSpecialVar_0x8004;
     }
 }
 
 u16 sub_813AA04(void)
 {
-    return gSaveBlock2Ptr->frontier.frontierBattlePoints;
+    return gSaveBlock2Ptr->frontier.battlePoints;
 }
 
 void sub_813AA18(void)
 {
     static const struct WindowTemplate gUnknown_085B3124 = {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 9,
         .width = 4,
@@ -3138,16 +2942,16 @@ void sub_813AA18(void)
 
 void sub_813AA44(void)
 {
-    sub_8198070(gUnknown_0203AB6E, TRUE);
+    ClearStdWindowAndFrameToTransparent(gUnknown_0203AB6E, TRUE);
     RemoveWindow(gUnknown_0203AB6E);
 }
 
 static void sub_813AA60(u16 a0, u16 a1)
 {
-    static const u16 gUnknown_085B312C[] = { 0x004b, 0x0067, 0x0057, 0x004f, 0x0054, 0x0055, 0x0056, 0x0050, 0x0051, 0x0052, 0xffff };
-    static const u16 gUnknown_085B3142[] = { 0x0071, 0x006f, 0x0072, 0x0073, 0x0074, 0xffff };
-    static const u16 gUnknown_085B314E[] = { 0x0040, 0x0043, 0x0041, 0x0046, 0x0042, 0x003f, 0xffff };
-    static const u16 gUnknown_085B315C[] = { 0x00c8, 0x00b4, 0x00b7, 0x00b9, 0x00b3, 0x00ba, 0x00bb, 0x00c4, 0x00c6, 0xffff };
+    static const u16 gUnknown_085B312C[] = { 0x004b, 0x0067, 0x0057, 0x004f, 0x0054, 0x0055, 0x0056, 0x0050, 0x0051, 0x0052, 0xFFFF };
+    static const u16 gUnknown_085B3142[] = { 0x0071, 0x006f, 0x0072, 0x0073, 0x0074, 0xFFFF };
+    static const u16 gUnknown_085B314E[] = { 0x0040, 0x0043, 0x0041, 0x0046, 0x0042, 0x003f, 0xFFFF };
+    static const u16 gUnknown_085B315C[] = { 0x00c8, 0x00b4, 0x00b7, 0x00b9, 0x00b3, 0x00ba, 0x00bb, 0x00c4, 0x00c6, 0xFFFF };
 
     static const u8 *const gUnknown_085B3170[] = {
         BattleFrontier_BattlePointExchangeServiceCorner_Text_2601AA,
@@ -3197,7 +3001,7 @@ static void sub_813AA60(u16 a0, u16 a1)
 
     if (a0 > 2 && a0 < 7)
     {
-        FillWindowPixelRect(0, 0x11, 0, 0, 216, 32);
+        FillWindowPixelRect(0, PIXEL_FILL(1), 0, 0, 216, 32);
         switch (a0)
         {
             case 3:
@@ -3284,7 +3088,7 @@ void sub_813AC7C(void)
 static void sub_813ACE8(u8 a0, u16 a1)
 {
     static const struct WindowTemplate gUnknown_085B3220 = {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 1,
         .tilemapTop = 7,
         .width = 12,
@@ -3336,7 +3140,7 @@ static void sub_813AD34(u8 a0, u16 a1)
 
     if (a0 == 9 || a0 == 10)
     {
-        FillWindowPixelRect(gUnknown_0203AB5E, 0x11, 0, 0, 96, 48);
+        FillWindowPixelRect(gUnknown_0203AB5E, PIXEL_FILL(1), 0, 0, 96, 48);
         if (a0 == 10)
         {
             AddTextPrinterParameterized(gUnknown_0203AB5E, 1, gUnknown_085B3254[a1], 0, 1, 0, NULL);
@@ -3350,7 +3154,7 @@ static void sub_813AD34(u8 a0, u16 a1)
 
 void sub_813ADB8(void)
 {
-    sub_8198070(gUnknown_0203AB5E, TRUE);
+    ClearStdWindowAndFrameToTransparent(gUnknown_0203AB5E, TRUE);
     RemoveWindow(gUnknown_0203AB5E);
 }
 
@@ -3391,7 +3195,7 @@ void sub_813AEB4(void)
         i = 0;
         do
         {
-            if (gUnknown_0861500C[i] == gUnknown_085B320C[temp2])
+            if (gTutorMoves[i] == gUnknown_085B320C[temp2])
             {
                 gSpecialVar_0x8005 = i;
                 break;
@@ -3404,7 +3208,7 @@ void sub_813AEB4(void)
         i = 0;
         do
         {
-            if (gUnknown_0861500C[i] == gUnknown_085B31F8[temp2])
+            if (gTutorMoves[i] == gUnknown_085B31F8[temp2])
             {
                 gSpecialVar_0x8005 = i;
                 break;
@@ -3422,8 +3226,8 @@ void sub_813AF48(void)
         struct Task *task = &gTasks[taskId];
         DestroyListMenuTask(task->data[14], NULL, NULL);
         Free(gUnknown_0203AB64);
-        sub_8198070(task->data[13], TRUE);
-        FillWindowPixelBuffer(task->data[13], 0);
+        ClearStdWindowAndFrameToTransparent(task->data[13], TRUE);
+        FillWindowPixelBuffer(task->data[13], PIXEL_FILL(0));
         ClearWindowTilemap(task->data[13]);
         CopyWindowToVram(task->data[13], 2);
         RemoveWindow(task->data[13]);
@@ -3431,12 +3235,12 @@ void sub_813AF48(void)
     }
 }
 
-void sub_813AFC8(void)
+void DoDeoxysRockInteraction(void)
 {
-    CreateTask(task_deoxys_sound, 8);
+    CreateTask(Task_DeoxysRockInteraction, 8);
 }
 
-static const u16 gUnknown_085B3280[][16] = {
+static const u16 sDeoxysRockPalettes[][16] = {
     INCBIN_U16("graphics/misc/deoxys1.gbapal"),
     INCBIN_U16("graphics/misc/deoxys2.gbapal"),
     INCBIN_U16("graphics/misc/deoxys3.gbapal"),
@@ -3450,25 +3254,25 @@ static const u16 gUnknown_085B3280[][16] = {
     INCBIN_U16("graphics/misc/deoxys11.gbapal"),
 };
 
-static const u8 gUnknown_085B33E0[][2] = {
-    { 0x0f, 0x0c },
-    { 0x0b, 0x0e },
-    { 0x0f, 0x08 },
-    { 0x13, 0x0e },
-    { 0x0c, 0x0b },
-    { 0x12, 0x0b },
-    { 0x0f, 0x0e },
-    { 0x0b, 0x0e },
-    { 0x13, 0x0e },
-    { 0x0f, 0x0f },
-    { 0x0f, 0x0a },
+static const u8 sDeoxysRockCoords[][2] = {
+    { 15, 12 },
+    { 11, 14 },
+    { 15,  8 },
+    { 19, 14 },
+    { 12, 11 },
+    { 18, 11 },
+    { 15, 14 },
+    { 11, 14 },
+    { 19, 14 },
+    { 15, 15 },
+    { 15, 10 },
 };
 
-static void task_deoxys_sound(u8 taskId)
+static void Task_DeoxysRockInteraction(u8 taskId)
 {
-    static const u8 gUnknown_085B33F6[] = { 0x04, 0x08, 0x08, 0x08, 0x04, 0x04, 0x04, 0x06, 0x03, 0x03 };
+    static const u8 sStoneMaxStepCounts[] = { 4, 8, 8, 8, 4, 4, 4, 6, 3, 3 };
 
-    if (FlagGet(FLAG_0x8D4) == TRUE)
+    if (FlagGet(FLAG_DEOXYS_ROCK_COMPLETE) == TRUE)
     {
         gSpecialVar_Result = 3;
         EnableBothScriptContexts();
@@ -3476,100 +3280,92 @@ static void task_deoxys_sound(u8 taskId)
     }
     else
     {
-        u16 temp1 = VarGet(VAR_0x4035);
-        u16 temp2 = VarGet(VAR_0x4034);
+        u16 rockLevel = VarGet(VAR_DEOXYS_ROCK_LEVEL);
+        u16 stepCount = VarGet(VAR_DEOXYS_ROCK_STEP_COUNT);
 
-        VarSet(VAR_0x4034, 0);
-        if (temp1 != 0 && gUnknown_085B33F6[temp1 - 1] < temp2)
+        VarSet(VAR_DEOXYS_ROCK_STEP_COUNT, 0);
+        if (rockLevel != 0 && sStoneMaxStepCounts[rockLevel - 1] < stepCount)
         {
-            sub_813B0B4(0);
-            VarSet(VAR_0x4035, 0);
+            // Player failed to take the shortest path to the stone, so it resets.
+            ChangeDeoxysRockLevel(0);
+            VarSet(VAR_DEOXYS_ROCK_LEVEL, 0);
             gSpecialVar_Result = 0;
             DestroyTask(taskId);
         }
-        else if (temp1 == 10)
+        else if (rockLevel == 10)
         {
-            FlagSet(FLAG_0x8D4);
+            FlagSet(FLAG_DEOXYS_ROCK_COMPLETE);
             gSpecialVar_Result = 2;
             EnableBothScriptContexts();
             DestroyTask(taskId);
         }
         else
         {
-            temp1++;
-            sub_813B0B4(temp1);
-            VarSet(VAR_0x4035, temp1);
+            rockLevel++;
+            ChangeDeoxysRockLevel(rockLevel);
+            VarSet(VAR_DEOXYS_ROCK_LEVEL, rockLevel);
             gSpecialVar_Result = 1;
             DestroyTask(taskId);
         }
     }
 }
 
-static void sub_813B0B4(u8 a0)
+static void ChangeDeoxysRockLevel(u8 rockLevel)
 {
     u8 eventObjectId;
-    LoadPalette(&gUnknown_085B3280[a0], 0x1A0, 8);
+    LoadPalette(&sDeoxysRockPalettes[rockLevel], 0x1A0, 8);
     TryGetEventObjectIdByLocalIdAndMap(1, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup, &eventObjectId);
 
-    if (a0 == 0)
-    {
+    if (rockLevel == 0)
         PlaySE(SE_W109);
-    }
     else
-    {
         PlaySE(SE_RG_DEOMOV);
-    }
 
-    CreateTask(sub_813B160, 8);
-
+    CreateTask(WaitForDeoxysRockMovement, 8);
     gFieldEffectArguments[0] = 1;
     gFieldEffectArguments[1] = 58;
     gFieldEffectArguments[2] = 26;
-    gFieldEffectArguments[3] = gUnknown_085B33E0[a0][0];
-    gFieldEffectArguments[4] = gUnknown_085B33E0[a0][1];
+    gFieldEffectArguments[3] = sDeoxysRockCoords[rockLevel][0];
+    gFieldEffectArguments[4] = sDeoxysRockCoords[rockLevel][1];
 
-    if (a0 == 0)
-    {
+    if (rockLevel == 0)
         gFieldEffectArguments[5] = 60;
-    }
     else
-    {
         gFieldEffectArguments[5] = 5;
-    }
 
-    FieldEffectStart(FLDEFF_66);
-    Overworld_SetEventObjTemplateCoords(1, gUnknown_085B33E0[a0][0], gUnknown_085B33E0[a0][1]);
+    FieldEffectStart(FLDEFF_MOVE_DEOXYS_ROCK);
+    Overworld_SetEventObjTemplateCoords(1, sDeoxysRockCoords[rockLevel][0], sDeoxysRockCoords[rockLevel][1]);
 }
 
-static void sub_813B160(u8 taskId)
+static void WaitForDeoxysRockMovement(u8 taskId)
 {
-    if (FieldEffectActiveListContains(FLDEFF_66) == FALSE)
+    if (FieldEffectActiveListContains(FLDEFF_MOVE_DEOXYS_ROCK) == FALSE)
     {
         EnableBothScriptContexts();
         DestroyTask(taskId);
     }
 }
 
-void increment_var_x4026_on_birth_island_modulo_100(void)
+void IncrementBirthIslandRockStepCount(void)
 {
-    u16 var = VarGet(VAR_0x4034);
+    u16 var = VarGet(VAR_DEOXYS_ROCK_STEP_COUNT);
     if (gSaveBlock1Ptr->location.mapNum == MAP_NUM(BIRTH_ISLAND_EXTERIOR) && gSaveBlock1Ptr->location.mapGroup == MAP_GROUP(BIRTH_ISLAND_EXTERIOR))
     {
         var++;
         if (var > 99)
         {
-            VarSet(VAR_0x4034, 0);
+            VarSet(VAR_DEOXYS_ROCK_STEP_COUNT, 0);
         }
         else
         {
-            VarSet(VAR_0x4034, var);
+            VarSet(VAR_DEOXYS_ROCK_STEP_COUNT, var);
         }
     }
 }
 
 void sub_813B1D0(void)
 {
-    LoadPalette(&gUnknown_085B3280[(u8)VarGet(VAR_0x4035)], 0x1A0, 8);
+    LoadPalette(&sDeoxysRockPalettes[(u8)VarGet(VAR_DEOXYS_ROCK_LEVEL)], 0x1A0, 8);
     BlendPalettes(0x04000000, 16, 0);
 }
 
@@ -3583,7 +3379,7 @@ u16 get_unknown_box_id(void)
     return gUnknown_0203AB6F;
 }
 
-bool32 sub_813B21C(void)
+bool8 sub_813B21C(void)
 {
     if (FlagGet(FLAG_SYS_STORAGE_UNKNOWN_FLAG) == FALSE)
     {
@@ -3625,40 +3421,59 @@ bool8 sub_813B260(void)
     return FALSE;
 }
 
-void sub_813B2E4(void)
+void CreateUnusualWeatherEvent(void)
 {
     u16 randomValue = Random();
-    VarSet(VAR_0x4038, 0);
+    VarSet(VAR_UNUSUAL_WEATHER_STEP_COUNTER, 0);
 
-    if (FlagGet(FLAG_0x1BE) == TRUE)
+    if (FlagGet(FLAG_DEFEATED_KYOGRE) == TRUE)
     {
-        VarSet(VAR_0x4037, (randomValue & 7) + 1);
+        VarSet(VAR_UNUSUAL_WEATHER_LOCATION, (randomValue % UNUSUAL_WEATHER_COUNT_PER_LEGENDARY) + UNUSUAL_WEATHER_GROUDON_LOCATIONS_START);
     }
-    else if (FlagGet(FLAG_0x1BF) == TRUE)
+    else if (FlagGet(FLAG_DEFEATED_GROUDON) == TRUE)
     {
-        VarSet(VAR_0x4037, (randomValue & 7) + 9);
+        VarSet(VAR_UNUSUAL_WEATHER_LOCATION, (randomValue % UNUSUAL_WEATHER_COUNT_PER_LEGENDARY) + UNUSUAL_WEATHER_KYOGRE_LOCATIONS_START);
     }
     else if ((randomValue & 1) == 0)
     {
         randomValue = Random();
-        VarSet(VAR_0x4037, (randomValue & 7) + 1);
+        VarSet(VAR_UNUSUAL_WEATHER_LOCATION, (randomValue % UNUSUAL_WEATHER_COUNT_PER_LEGENDARY) + UNUSUAL_WEATHER_GROUDON_LOCATIONS_START);
     }
     else
     {
         randomValue = Random();
-        VarSet(VAR_0x4037, (randomValue & 7) + 9);
+        VarSet(VAR_UNUSUAL_WEATHER_LOCATION, (randomValue % UNUSUAL_WEATHER_COUNT_PER_LEGENDARY) + UNUSUAL_WEATHER_KYOGRE_LOCATIONS_START);
     }
 }
 
-bool32 sub_813B374(void)
+// Saves the map name for the current unusual weather location in gStringVar1, then
+// returns TRUE if the weather is for Kyogre, and FALSE if it's for Groudon.
+bool32 GetUnusualWeatherMapNameAndType(void)
 {
-    static const u8 gUnknown_085B3400[] = { 0x1d, 0x1d, 0x1e, 0x1e, 0x1f, 0x1f, 0x21, 0x21, 0x14, 0x14, 0x28, 0x28, 0x2a, 0x2a, 0x2c, 0x2c };
+    static const u8 sUnusualWeatherMapNumbers[] = {
+        MAP_NUM(ROUTE114),
+        MAP_NUM(ROUTE114),
+        MAP_NUM(ROUTE115),
+        MAP_NUM(ROUTE115),
+        MAP_NUM(ROUTE116),
+        MAP_NUM(ROUTE116),
+        MAP_NUM(ROUTE118),
+        MAP_NUM(ROUTE118),
+        MAP_NUM(ROUTE105),
+        MAP_NUM(ROUTE105),
+        MAP_NUM(ROUTE125),
+        MAP_NUM(ROUTE125),
+        MAP_NUM(ROUTE127),
+        MAP_NUM(ROUTE127),
+        MAP_NUM(ROUTE129),
+        MAP_NUM(ROUTE129)
+    };
 
-    u16 var = VarGet(VAR_0x4037);
+    u16 unusualWeather = VarGet(VAR_UNUSUAL_WEATHER_LOCATION);
 
-    GetMapName(gStringVar1, gUnknown_085B3400[var - 1], 0);
+    GetMapName(gStringVar1, sUnusualWeatherMapNumbers[unusualWeather - 1], 0);
 
-    if (var < 9)
+    if (unusualWeather < UNUSUAL_WEATHER_KYOGRE_LOCATIONS_START)
     {
         return FALSE;
     }
@@ -3668,21 +3483,39 @@ bool32 sub_813B374(void)
     }
 }
 
-bool32 sub_813B3B0(void)
+bool8 UnusualWeatherHasExpired(void)
 {
-    static const u8 gUnknown_085B3410[] = { 0x1d, 0x1d, 0x1e, 0x1e, 0x1f, 0x1f, 0x21, 0x21, 0x14, 0x14, 0x28, 0x28, 0x2a, 0x2a, 0x2c, 0x2c };
+    // Duplicate array.
+    static const u8 sUnusualWeatherMapNumbers_2[] = {
+        MAP_NUM(ROUTE114),
+        MAP_NUM(ROUTE114),
+        MAP_NUM(ROUTE115),
+        MAP_NUM(ROUTE115),
+        MAP_NUM(ROUTE116),
+        MAP_NUM(ROUTE116),
+        MAP_NUM(ROUTE118),
+        MAP_NUM(ROUTE118),
+        MAP_NUM(ROUTE105),
+        MAP_NUM(ROUTE105),
+        MAP_NUM(ROUTE125),
+        MAP_NUM(ROUTE125),
+        MAP_NUM(ROUTE127),
+        MAP_NUM(ROUTE127),
+        MAP_NUM(ROUTE129),
+        MAP_NUM(ROUTE129)
+    };
 
-    u16 var1 = VarGet(VAR_0x4038);
-    u16 var2 = VarGet(VAR_0x4037);
+    u16 steps = VarGet(VAR_UNUSUAL_WEATHER_STEP_COUNTER);
+    u16 unusualWeather = VarGet(VAR_UNUSUAL_WEATHER_LOCATION);
 
-    if (!var2)
+    if (unusualWeather == UNUSUAL_WEATHER_NONE)
     {
         return FALSE;
     }
 
-    if (++var1 > 999)
+    if (++steps > 999)
     {
-        VarSet(VAR_0x4038, 0);
+        VarSet(VAR_UNUSUAL_WEATHER_STEP_COUNTER, 0);
         if (gSaveBlock1Ptr->location.mapGroup == MAP_GROUP(UNDERWATER_MARINE_CAVE))
         {
             switch (gSaveBlock1Ptr->location.mapNum)
@@ -3692,7 +3525,7 @@ bool32 sub_813B3B0(void)
                 case MAP_NUM(MARINE_CAVE_END):
                 case MAP_NUM(TERRA_CAVE_ENTRANCE):
                 case MAP_NUM(TERRA_CAVE_END):
-                    VarSet(VAR_0x4039, 1);
+                    VarSet(VAR_SHOULD_END_UNUSUAL_WEATHER, 1);
                     return FALSE;
                 default:
                     break;
@@ -3707,34 +3540,34 @@ bool32 sub_813B3B0(void)
                 case MAP_NUM(UNDERWATER5):
                 case MAP_NUM(UNDERWATER6):
                 case MAP_NUM(UNDERWATER7):
-                    VarSet(VAR_0x4039, 1);
+                    VarSet(VAR_SHOULD_END_UNUSUAL_WEATHER, 1);
                     return FALSE;
                 default:
                     break;
             }
         }
 
-        if (gSaveBlock1Ptr->location.mapNum == gUnknown_085B3410[var2 - 1] &&
+        if (gSaveBlock1Ptr->location.mapNum == sUnusualWeatherMapNumbers_2[unusualWeather - 1] &&
             gSaveBlock1Ptr->location.mapGroup == 0)
         {
             return TRUE;
         }
         else
         {
-            VarSet(VAR_0x4037, 0);
+            VarSet(VAR_UNUSUAL_WEATHER_LOCATION, UNUSUAL_WEATHER_NONE);
             return FALSE;
         }
     }
     else
     {
-        VarSet(VAR_0x4038, var1);
+        VarSet(VAR_UNUSUAL_WEATHER_STEP_COUNTER, steps);
         return FALSE;
     }
 }
 
-void sub_813B484(void)
+void Unused_SetWeatherSunny(void)
 {
-    sub_80AB104(2);
+    SetCurrentAndNextWeather(WEATHER_SUNNY);
 }
 
 bool32 sub_813B490(void)
@@ -3781,7 +3614,7 @@ bool32 sub_813B4E0(void)
 
 bool32 sub_813B514(void)
 {
-    if (!VarGet(VAR_0x403F))
+    if (!VarGet(VAR_ALWAYS_ZERO_0x403F))
     {
         return FALSE;
     }
@@ -3814,7 +3647,7 @@ static void sub_813B57C(u8 taskId)
             }
             break;
         case 1:
-            if (sub_800A520() == TRUE)
+            if (IsLinkTaskFinished() == TRUE)
             {
                 if (GetMultiplayerId() == 0)
                 {
@@ -3855,7 +3688,7 @@ static void sub_813B57C(u8 taskId)
             }
             break;
         case 3:
-            if (sub_800A520() == TRUE)
+            if (IsLinkTaskFinished() == TRUE)
             {
                 if (GetMultiplayerId() != 0)
                 {
@@ -3907,14 +3740,14 @@ static void sub_813B57C(u8 taskId)
             }
             break;
         case 7:
-            if (sub_800A520() == 1)
+            if (IsLinkTaskFinished() == 1)
             {
                 sub_800ADF8();
                 gTasks[taskId].data[0]++;
             }
             break;
         case 8:
-            if (sub_800A520() == 1)
+            if (IsLinkTaskFinished() == 1)
             {
                 gTasks[taskId].data[0]++;
             }
@@ -4011,11 +3844,11 @@ void sub_813B9A0(void)
 {
     if (gSaveBlock1Ptr->lastHealLocation.mapGroup == MAP_GROUP(DEWFORD_TOWN) && gSaveBlock1Ptr->lastHealLocation.mapNum == MAP_NUM(DEWFORD_TOWN))
     {
-        Overworld_SetHealLocationWarp(3);
+        SetLastHealLocationWarp(3);
     }
 }
 
-bool32 sub_813B9C0(void)
+bool8 sub_813B9C0(void)
 {
     static const u16 gUnknown_085B3444[] = {
         MAP_OLDALE_TOWN_POKEMON_CENTER_1F,
@@ -4039,7 +3872,7 @@ bool32 sub_813B9C0(void)
         MAP_TRADE_CENTER,
         MAP_RECORD_CORNER,
         MAP_DOUBLE_BATTLE_COLOSSEUM,
-        0xffff
+        0xFFFF
     };
 
     int i;
@@ -4081,7 +3914,7 @@ void sub_813BA60(void)
         FlagClear(FLAG_HIDE_FANCLUB_BOY);
         FlagClear(FLAG_HIDE_FANCLUB_LITTLE_BOY);
         FlagClear(FLAG_HIDE_FANCLUB_LADY);
-        FlagClear(FLAG_0x2DA);
+        FlagClear(FLAG_HIDE_LILYCOVE_FAN_CLUB_INTERVIEWER);
         VarSet(VAR_LILYCOVE_FAN_CLUB_STATE, 1);
     }
 }

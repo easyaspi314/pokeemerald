@@ -1,25 +1,24 @@
 FarawayIsland_Interior_MapScripts:: @ 8267CFA
-	map_script 5, FarawayIsland_Interior_MapScript1_267D54
-	map_script 3, FarawayIsland_Interior_MapScript1_267D72
-	map_script 2, FarawayIsland_Interior_MapScript2_267D98
-	map_script 7, FarawayIsland_Interior_MapScript1_267D0F
+	map_script MAP_SCRIPT_ON_RESUME, FarawayIsland_Interior_MapScript1_267D54
+	map_script MAP_SCRIPT_ON_TRANSITION, FarawayIsland_Interior_MapScript1_267D72
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, FarawayIsland_Interior_MapScript2_267D98
+	map_script MAP_SCRIPT_ON_RETURN_TO_FIELD, FarawayIsland_Interior_MapScript1_267D0F
 	.byte 0
 
 FarawayIsland_Interior_MapScript1_267D0F: @ 8267D0F
-	checkflag FLAG_SYS_CTRL_OBJ_DELETE
-	call_if 1, FarawayIsland_Interior_EventScript_267D19
+	call_if_set FLAG_SYS_CTRL_OBJ_DELETE, FarawayIsland_Interior_EventScript_267D19
 	end
 
 FarawayIsland_Interior_EventScript_267D19:: @ 8267D19
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 1
-	goto_eq FarawayIsland_Interior_EventScript_267D4B
+	goto_if_eq FarawayIsland_Interior_EventScript_267D4B
 	compare VAR_RESULT, 4
-	goto_eq FarawayIsland_Interior_EventScript_267D4B
+	goto_if_eq FarawayIsland_Interior_EventScript_267D4B
 	compare VAR_RESULT, 5
-	goto_eq FarawayIsland_Interior_EventScript_267D4B
+	goto_if_eq FarawayIsland_Interior_EventScript_267D4B
 	compare VAR_RESULT, 10
-	goto_eq FarawayIsland_Interior_EventScript_267D4B
+	goto_if_eq FarawayIsland_Interior_EventScript_267D4B
 	return
 
 FarawayIsland_Interior_EventScript_267D4B:: @ 8267D4B
@@ -28,28 +27,25 @@ FarawayIsland_Interior_EventScript_267D4B:: @ 8267D4B
 	return
 
 FarawayIsland_Interior_MapScript1_267D54: @ 8267D54
-	checkflag FLAG_SYS_CTRL_OBJ_DELETE
-	call_if 1, FarawayIsland_Interior_EventScript_267D5E
+	call_if_set FLAG_SYS_CTRL_OBJ_DELETE, FarawayIsland_Interior_EventScript_267D5E
 	end
 
 FarawayIsland_Interior_EventScript_267D5E:: @ 8267D5E
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 7
-	goto_if 5, FarawayIsland_Interior_EventScript_27374E
+	goto_if_ne Common_EventScript_NopReturn
 	removeobject VAR_LAST_TALKED
 	return
 
 FarawayIsland_Interior_MapScript1_267D72: @ 8267D72
-	setvar VAR_0x403A, 0
+	setvar VAR_NEVER_READ_0x403A, 0
 	setvar VAR_TEMP_1, 1
-	checkflag FLAG_0x1CA
-	call_if 0, FarawayIsland_Interior_EventScript_267D86
+	call_if_unset FLAG_CAUGHT_MEW, FarawayIsland_Interior_EventScript_267D86
 	end
 
 FarawayIsland_Interior_EventScript_267D86:: @ 8267D86
-	checkflag FLAG_0x1C7
-	goto_eq FarawayIsland_Interior_EventScript_27374E
-	clearflag FLAG_0x2CE
+	goto_if_set FLAG_DEFEATED_MEW, Common_EventScript_NopReturn
+	clearflag FLAG_HIDE_MEW
 	setvar VAR_TEMP_1, 0
 	return
 
@@ -60,9 +56,9 @@ FarawayIsland_Interior_MapScript2_267D98: @ 8267D98
 FarawayIsland_Interior_EventScript_267DA2:: @ 8267DA2
 	lockall
 	playse SE_PIN
-	applymovement 1, FarawayIsland_Interior_Movement_272598
+	applymovement 1, Common_Movement_ExclamationMark
 	waitmovement 0
-	applymovement 1, FarawayIsland_Interior_Movement_27259A
+	applymovement 1, Common_Movement_Delay48
 	waitmovement 0
 	applymovement 1, FarawayIsland_Interior_Movement_267DCE
 	waitmovement 0
@@ -130,13 +126,13 @@ FarawayIsland_Interior_EventScript_267DF2:: @ 8267DF2
 	waitse
 	playmoncry SPECIES_MEW, 2
 	compare VAR_FACING, 2
-	call_if 1, FarawayIsland_Interior_EventScript_267EAF
+	call_if_eq FarawayIsland_Interior_EventScript_267EAF
 	compare VAR_FACING, 1
-	call_if 1, FarawayIsland_Interior_EventScript_267EBA
+	call_if_eq FarawayIsland_Interior_EventScript_267EBA
 	compare VAR_FACING, 3
-	call_if 1, FarawayIsland_Interior_EventScript_267EC5
+	call_if_eq FarawayIsland_Interior_EventScript_267EC5
 	compare VAR_FACING, 4
-	call_if 1, FarawayIsland_Interior_EventScript_267ED0
+	call_if_eq FarawayIsland_Interior_EventScript_267ED0
 	special sub_81D4BEC
 	delay 40
 	waitmoncry
@@ -150,19 +146,19 @@ FarawayIsland_Interior_EventScript_267DF2:: @ 8267DF2
 	clearflag FLAG_SYS_CTRL_OBJ_DELETE
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 1
-	goto_eq FarawayIsland_Interior_EventScript_267E96
+	goto_if_eq FarawayIsland_Interior_EventScript_267E96
 	compare VAR_RESULT, 4
-	goto_eq FarawayIsland_Interior_EventScript_267EA4
+	goto_if_eq FarawayIsland_Interior_EventScript_267EA4
 	compare VAR_RESULT, 5
-	goto_eq FarawayIsland_Interior_EventScript_267EA4
+	goto_if_eq FarawayIsland_Interior_EventScript_267EA4
 	compare VAR_RESULT, 10
-	goto_eq FarawayIsland_Interior_EventScript_267EA4
-	setflag FLAG_0x1CA
+	goto_if_eq FarawayIsland_Interior_EventScript_267EA4
+	setflag FLAG_CAUGHT_MEW
 	release
 	end
 
 FarawayIsland_Interior_EventScript_267E96:: @ 8267E96
-	setflag FLAG_0x1C7
+	setflag FLAG_DEFEATED_MEW
 	setvar VAR_0x8004, 151
 	goto FarawayIsland_Interior_EventScript_273776
 	end
@@ -195,10 +191,10 @@ FarawayIsland_Interior_EventScript_267ED0:: @ 8267ED0
 FarawayIsland_Interior_EventScript_267EDB:: @ 8267EDB
 	lockall
 	fadescreenswapbuffers 1
-	setflag FLAG_0x2CE
+	setflag FLAG_HIDE_MEW
 	removeobject 1
 	fadescreenswapbuffers 0
-	msgbox FarawayIsland_Interior_Text_267EF1, 4
+	msgbox FarawayIsland_Interior_Text_267EF1, MSGBOX_DEFAULT
 	closemessage
 	releaseall
 	end

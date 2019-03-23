@@ -5,7 +5,9 @@
 #include "global.h"
 #include "main.h"
 #include "overworld.h"
-#include "rom6.h"
+#include "fldeff.h"
+#include "field_specials.h"
+#include "pokeblock.h"
 #include "event_data.h"
 #include "script.h"
 #include "random.h"
@@ -693,7 +695,7 @@ u8 sub_818E2D8(void)
 
 void sub_818E2FC(void)
 {
-    easy_chat_input_maybe();
+    ShowEasyChatScreen();
 }
 
 bool8 sub_818E308(void)
@@ -761,8 +763,8 @@ void sub_818E430(void)
 
 void sub_818E47C(void)
 {
-    gSpecialVar_0x8004 = 0x11;
-    easy_chat_input_maybe();
+    gSpecialVar_0x8004 = EASY_CHAT_TYPE_QUIZ_SET_QUESTION;
+    ShowEasyChatScreen();
 }
 
 void sub_818E490(void)

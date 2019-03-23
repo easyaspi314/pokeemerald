@@ -65,7 +65,7 @@ gFieldEffectScriptPointers:: @ 82DB9D4
 	.4byte gFieldEffectScript_Unknown57
 	.4byte gFieldEffectScript_Unknown58
 	.4byte gFieldEffectScript_FieldMoveShowMonInit
-	.4byte gFieldEffectScript_Unknown60
+	.4byte gFieldEffectScript_UsePuzzleEffect
 	.4byte gFieldEffectScript_Unknown61
 	.4byte gFieldEffectScript_Unknown62
 	.4byte gFieldEffectScript_Unknown63
@@ -86,15 +86,15 @@ gFieldEffectScript_UseCutOnTree:: @ 82DBAEC
 	field_eff_end
 
 gFieldEffectScript_Shadow:: @ 82DBAF2
-	field_eff_callnative oei_shadow
+	field_eff_callnative FldEff_Shadow
 	field_eff_end
 
 gFieldEffectScript_TallGrass:: @ 82DBAF8
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, oei_grass_normal
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_TallGrass
 	field_eff_end
 
 gFieldEffectScript_Ripple:: @ 82DBB02
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, oei_ripples
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_Ripple
 	field_eff_end
 
 gFieldEffectScript_FieldMoveShowMon:: @ 82DBB0C
@@ -102,11 +102,11 @@ gFieldEffectScript_FieldMoveShowMon:: @ 82DBB0C
 	field_eff_end
 
 gFieldEffectScript_Ash:: @ 82DBB12
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, oei_ash
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_Ash
 	field_eff_end
 
 gFieldEffectScript_SurfBlob:: @ 82DBB1C
-	field_eff_callnative sub_8155534
+	field_eff_callnative FldEff_SurfBlob
 	field_eff_end
 
 gFieldEffectScript_UseSurf:: @ 82DBB22
@@ -114,63 +114,63 @@ gFieldEffectScript_UseSurf:: @ 82DBB22
 	field_eff_end
 
 gFieldEffectScript_GroundImpactDust:: @ 82DBB28
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8155890
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_Dust
 	field_eff_end
 
 gFieldEffectScript_Unknown11:: @ 82DBB32
-	field_eff_callnative oei_sweet_scent
+	field_eff_callnative FldEff_UseSecretPowerCave
 	field_eff_end
 
 gFieldEffectScript_BikeHopTallGrass:: @ 82DBB38
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_8154658
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_JumpTallGrass
 	field_eff_end
 
 gFieldEffectScript_SandFootprints:: @ 82DBB42
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154B04
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_SandFootprints
 	field_eff_end
 
 gFieldEffectScript_BikeHopBigSplash:: @ 82DBB4C
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, oei_water_drop_tall
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_JumpBigSplash
 	field_eff_end
 
 gFieldEffectScript_Splash:: @ 82DBB56
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154CEC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_Splash
 	field_eff_end
 
 gFieldEffectScript_BikeHopSmallSplash:: @ 82DBB60
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154E1C
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_JumpSmallSplash
 	field_eff_end
 
 gFieldEffectScript_LongGrass:: @ 82DBB6A
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_8154758
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_LongGrass
 	field_eff_end
 
 gFieldEffectScript_Unknown18:: @ 82DBB74
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_81548FC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_JumpLongGrass
 	field_eff_end
 
 gFieldEffectScript_Unknown19:: @ 82DBB7E
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_81551F0
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_Unknown19
 	field_eff_end
 
 gFieldEffectScript_Unknown20:: @ 82DBB88
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_815525C
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_Unknown20
 	field_eff_end
 
 gFieldEffectScript_Unknown21:: @ 82DBB92
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_81552C8
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_Unknown21
 	field_eff_end
 
 gFieldEffectScript_Unknown22:: @ 82DBB9C
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8155334
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_Unknown22
 	field_eff_end
 
 gFieldEffectScript_BerryTreeGrowthSparkle:: @ 82DBBA6
-	field_eff_callnative sub_8155B2C
+	field_eff_callnative FldEff_BerryTreeGrowthSparkle
 	field_eff_end
 
 gFieldEffectScript_DeepSandFootprints:: @ 82DBBAC
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154B78
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_DeepSandFootprints
 	field_eff_end
 
 gFieldEffectScript_Unknown25:: @ 82DBBB6
@@ -179,11 +179,11 @@ gFieldEffectScript_Unknown25:: @ 82DBBB6
 	field_eff_end
 
 gFieldEffectScript_Unknown26:: @ 82DBBC5
-	field_eff_callnative sub_80FA208
+	field_eff_callnative FldEff_UseSecretPowerTree
 	field_eff_end
 
 gFieldEffectScript_Unknown27:: @ 82DBBCB
-	field_eff_callnative sub_80FA36C
+	field_eff_callnative FldEff_UseSecretPowerShrub
 	field_eff_end
 
 gFieldEffectScript_TreeDisguise:: @ 82DBBD1
@@ -211,11 +211,11 @@ gFieldEffectScript_QuestionMarkIcon:: @ 82DBBEF
 	field_eff_end
 
 gFieldEffectScript_FeetInFlowingWater:: @ 82DBBF5
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154EFC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_FeetInFlowingWater
 	field_eff_end
 
 gFieldEffectScript_BikeTireTracks:: @ 82DBBFF
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8154BEC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_BikeTireTracks
 	field_eff_end
 
 gFieldEffectScript_SandDisguisePlaceholder:: @ 82DBC09
@@ -235,15 +235,15 @@ gFieldEffectScript_Unknown38:: @ 82DBC1B
 	field_eff_end
 
 gFieldEffectScript_Unknown39:: @ 82DBC21
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8155900
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_SandPile
 	field_eff_end
 
 gFieldEffectScript_ShortGrass:: @ 82DBC2B
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_815496C
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_ShortGrass
 	field_eff_end
 
 gFieldEffectScript_HotSpringsWater:: @ 82DBC35
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, sub_81550B4
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo1, FldEff_HotSpringsWater
 	field_eff_end
 
 gFieldEffectScript_Unknown43:: @ 82DBC3F
@@ -264,11 +264,11 @@ gFieldEffectScript_HeartIcon:: @ 82DBC56
 	field_eff_end
 
 gFieldEffectScript_Unknown47:: @ 82DBC60
-	field_eff_callnative sub_80FA6FC
+	field_eff_callnative FldEff_NopA6FC
 	field_eff_end
 
 gFieldEffectScript_Unknown48:: @ 82DBC66
-	field_eff_callnative sub_80FA700
+	field_eff_callnative FldEff_NopA700
 	field_eff_end
 
 gFieldEffectScript_JumpOutOfAsh:: @ 82DBC6C
@@ -284,27 +284,27 @@ gFieldEffectScript_Unknown51:: @ 82DBC80
 	field_eff_end
 
 gFieldEffectScript_Unknown52:: @ 82DBC86
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo9, sub_80FAA7C
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo9, FldEff_SandPillar
 	field_eff_end
 
 gFieldEffectScript_Bubbles:: @ 82DBC90
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, sub_8155A88
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo0, FldEff_Bubbles
 	field_eff_end
 
 gFieldEffectScript_Unknown54:: @ 82DBC9A
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo3, sub_8155DDC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo3, FldEff_Sparkle
 	field_eff_end
 
 gFieldEffectScript_Unknown55:: @ 82DBCA4
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo7, sub_80FA13C
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo7, FldEff_SecretPowerCave
 	field_eff_end
 
 gFieldEffectScript_Unknown56:: @ 82DBCAE
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo8, sub_80FA248
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo8, FldEff_SecretPowerTree
 	field_eff_end
 
 gFieldEffectScript_Unknown57:: @ 82DBCB8
-	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo8, sub_80FA3AC
+	field_eff_loadfadedpal_callnative gFieldEffectObjectPaletteInfo8, FldEff_SecretPowerShrub
 	field_eff_end
 
 gFieldEffectScript_Unknown58:: @ 82DBCC2
@@ -315,12 +315,12 @@ gFieldEffectScript_FieldMoveShowMonInit:: @ 82DBCCC
 	field_eff_callnative FldEff_FieldMoveShowMonInit
 	field_eff_end
 
-gFieldEffectScript_Unknown60:: @ 82DBCD2
+gFieldEffectScript_UsePuzzleEffect:: @ 82DBCD2
 	field_eff_callnative FldEff_UsePuzzleEffect
 	field_eff_end
 
 gFieldEffectScript_Unknown61:: @ 82DBCD8
-	field_eff_callnative sub_80FA458
+	field_eff_callnative FldEff_SecretBasePCTurnOn
 	field_eff_end
 
 gFieldEffectScript_Unknown62:: @ 82DBCDE
@@ -341,5 +341,5 @@ gFieldEffectScript_Unknown65:: @ 82DBCF9
 	field_eff_end
 
 gFieldEffectScript_Unknown66:: @ 82DBCFF
-	field_eff_callnative sub_80B9E28
+	field_eff_callnative Fldeff_MoveDeoxysRock
 	field_eff_end

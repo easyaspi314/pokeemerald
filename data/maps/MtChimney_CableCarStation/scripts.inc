@@ -1,60 +1,60 @@
 MtChimney_CableCarStation_MapScripts:: @ 822ABFA
-	map_script 3, MtChimney_CableCarStation_MapScript1_22AC05
-	map_script 2, MtChimney_CableCarStation_MapScript2_22AC1D
+	map_script MAP_SCRIPT_ON_TRANSITION, MtChimney_CableCarStation_MapScript1_22AC05
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, MtChimney_CableCarStation_MapScript2_22AC1D
 	.byte 0
 
 MtChimney_CableCarStation_MapScript1_22AC05: @ 822AC05
-	compare VAR_0x40A3, 1
-	call_if 1, MtChimney_CableCarStation_EventScript_22AC11
+	compare VAR_CABLE_CAR_STATION_STATE, 1
+	call_if_eq MtChimney_CableCarStation_EventScript_22AC11
 	end
 
 MtChimney_CableCarStation_EventScript_22AC11:: @ 822AC11
 	setobjectxyperm 1, 5, 4
-	setobjectmovementtype 1, 10
+	setobjectmovementtype 1, MOVEMENT_TYPE_FACE_RIGHT
 	return
 
 MtChimney_CableCarStation_MapScript2_22AC1D: @ 822AC1D
-	map_script_2 VAR_0x40A3, 1, MtChimney_CableCarStation_EventScript_22AC27
+	map_script_2 VAR_CABLE_CAR_STATION_STATE, 1, MtChimney_CableCarStation_EventScript_22AC27
 	.2byte 0
 
 MtChimney_CableCarStation_EventScript_22AC27:: @ 822AC27
 	lockall
-	applymovement 255, MtChimney_CableCarStation_Movement_22ACB4
+	applymovement EVENT_OBJ_ID_PLAYER, MtChimney_CableCarStation_Movement_22ACB4
 	applymovement 1, MtChimney_CableCarStation_Movement_22ACAA
 	waitmovement 0
-	setvar VAR_0x40A3, 0
+	setvar VAR_CABLE_CAR_STATION_STATE, 0
 	setobjectxyperm 1, 6, 7
-	setobjectmovementtype 1, 8
+	setobjectmovementtype 1, MOVEMENT_TYPE_FACE_DOWN
 	releaseall
 	end
 
 MtChimney_CableCarStation_EventScript_22AC4B:: @ 822AC4B
 	lock
 	faceplayer
-	msgbox MtChimney_CableCarStation_Text_22ACB9, 5
+	msgbox MtChimney_CableCarStation_Text_22ACB9, MSGBOX_YESNO
 	compare VAR_RESULT, 1
-	goto_eq MtChimney_CableCarStation_EventScript_22AC6C
+	goto_if_eq MtChimney_CableCarStation_EventScript_22AC6C
 	compare VAR_RESULT, 0
-	goto_eq MtChimney_CableCarStation_EventScript_22AC9B
+	goto_if_eq MtChimney_CableCarStation_EventScript_22AC9B
 	end
 
 MtChimney_CableCarStation_EventScript_22AC6C:: @ 822AC6C
-	msgbox MtChimney_CableCarStation_Text_22ACF8, 4
+	msgbox MtChimney_CableCarStation_Text_22ACF8, MSGBOX_DEFAULT
 	closemessage
 	applymovement 1, MtChimney_CableCarStation_Movement_22ACA5
-	applymovement 255, MtChimney_CableCarStation_Movement_22ACAF
+	applymovement EVENT_OBJ_ID_PLAYER, MtChimney_CableCarStation_Movement_22ACAF
 	waitmovement 0
 	setvar VAR_0x8004, 1
-	setvar VAR_0x40A3, 2
+	setvar VAR_CABLE_CAR_STATION_STATE, 2
 	incrementgamestat 48
 	special CableCarWarp
-	special sub_814FC9C
+	special CableCar
 	waitstate
 	release
 	end
 
 MtChimney_CableCarStation_EventScript_22AC9B:: @ 822AC9B
-	msgbox MtChimney_CableCarStation_Text_22AD0E, 4
+	msgbox MtChimney_CableCarStation_Text_22AD0E, MSGBOX_DEFAULT
 	release
 	end
 

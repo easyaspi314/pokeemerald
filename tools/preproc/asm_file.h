@@ -25,7 +25,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
-#include "my_string.h"
+#include <stdbool.h>
 
 typedef enum Directive
 {
@@ -38,15 +38,16 @@ typedef enum Directive
 struct AsmFile;
 typedef struct AsmFile AsmFile;
 
-AsmFile *AsmFile_New(string *filename, string *data);
-void AsmFile_Delete(AsmFile *m);
-Directive AsmFile_GetDirective(AsmFile *m);
-string *AsmFile_GetGlobalLabel(AsmFile *m);
-string *AsmFile_ReadPath(AsmFile *m);
-int AsmFile_ReadString(AsmFile *r m, unsigned char *r s);
-int AsmFile_ReadBraille(AsmFile *r m, unsigned char *r s);
-bool AsmFile_IsAtEnd(AsmFile *m);
-void AsmFile_OutputLine(AsmFile *m);
-void AsmFile_OutputLocation(AsmFile *m);
+AsmFile *AsmFile_New(const char *restrict filename);
+void AsmFile_Delete(AsmFile *const restrict m);
+Directive AsmFile_GetDirective(AsmFile *const restrict m);
+char *AsmFile_GetGlobalLabel(AsmFile *const restrict m);
+char *AsmFile_ReadPath(AsmFile *const restrict m);
+int AsmFile_ReadString(AsmFile *const restrict m, unsigned char *const restrict s);
+int AsmFile_ReadBraille(AsmFile *const restrict m, unsigned char *const restrict s);
+__attribute__((__pure__)) bool AsmFile_IsAtEnd(const AsmFile *const restrict m);
+void AsmFile_OutputLine(AsmFile *const restrict m);
+void AsmFile_OutputLocation(const AsmFile *const restrict m);
 
 #endif  // ASM_FILE_H
+

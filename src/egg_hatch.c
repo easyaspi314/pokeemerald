@@ -17,15 +17,22 @@
 #include "menu.h"
 #include "trig.h"
 #include "random.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "dma3.h"
 #include "gpu_regs.h"
 #include "bg.h"
 #include "m4a.h"
 #include "window.h"
+#include "graphics.h"
 #include "constants/abilities.h"
 #include "daycare.h"
 #include "overworld.h"
+#include "scanline_effect.h"
+#include "field_weather.h"
+#include "international_string_util.h"
+#include "naming_screen.h"
+#include "pokemon_storage_system.h"
+#include "field_screen_effect.h"
 #include "battle.h" // to get rid of later
 
 struct EggHatchData
@@ -46,25 +53,9 @@ struct EggHatchData
 };
 
 extern const struct CompressedSpriteSheet gMonFrontPicTable[];
-extern const u8 gBattleTextboxTiles[];
-extern const u8 gBattleTextboxTilemap[];
-extern const u8 gBattleTextboxPalette[];
-extern const u16 gTradeGba2_Pal[]; // palette, gameboy advance
-extern const u32 gTradeGba_Gfx[]; // tileset gameboy advance
 extern const u32 gUnknown_08331F60[]; // tilemap gameboy circle
 extern const u8 gText_HatchedFromEgg[];
 extern const u8 gText_NickHatchPrompt[];
-
-extern u8 sav1_map_get_name(void);
-extern void TVShowConvertInternationalString(u8* str1, u8* str2, u8);
-extern void FadeScreen(u8, u8);
-extern void overworld_free_bg_tilemaps(void);
-extern void sub_80AF168(void);
-extern void ScanlineEffect_Stop(void);
-extern void play_some_sound(void);
-extern void DoNamingScreen(u8, const u8*, u16, u8, u32, MainCallback);
-extern u16 sub_80D22D0(void);
-extern u8 CountPartyAliveNonEggMonsExcept(u8);
 
 static void Task_EggHatch(u8 taskID);
 static void CB2_EggHatch_0(void);
@@ -84,7 +75,7 @@ static void CreateEggShardSprite(u8 x, u8 y, s16 data1, s16 data2, s16 data3, u8
 static IWRAM_DATA struct EggHatchData *sEggHatchData;
 
 // rom data
-static const u16 sEggPalette[] = INCBIN_U16("graphics/pokemon/palettes/egg_palette.gbapal");
+static const u16 sEggPalette[] = INCBIN_U16("graphics/pokemon/egg/normal.gbapal");
 static const u8 sEggHatchTiles[] = INCBIN_U8("graphics/misc/egg_hatch.4bpp");
 static const u8 sEggShardTiles[] = INCBIN_U8("graphics/misc/egg_shard.4bpp");
 
@@ -95,10 +86,10 @@ static const struct OamData sOamData_EggHatch =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(32x32),
     .x = 0,
     .matrixNum = 0,
-    .size = 2,
+    .size = SPRITE_SIZE(32x32),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -175,10 +166,10 @@ static const struct OamData sOamData_EggShard =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(8x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x8),
     .tileNum = 0,
     .priority = 2,
     .paletteNum = 0,
@@ -254,7 +245,7 @@ static const struct BgTemplate sBgTemplates_EggHatch[2] =
 static const struct WindowTemplate sWinTemplates_EggHatch[2] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 15,
         .width = 26,
@@ -267,7 +258,7 @@ static const struct WindowTemplate sWinTemplates_EggHatch[2] =
 
 static const struct WindowTemplate sYesNoWinTemplate =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 21,
     .tilemapTop = 9,
     .width = 5,
@@ -307,7 +298,7 @@ static void CreatedHatchedMon(struct Pokemon *egg, struct Pokemon *temp)
     u32 personality, pokerus;
     u8 i, friendship, language, gameMet, markings, obedience;
     u16 moves[4];
-    u32 ivs[6];
+    u32 ivs[NUM_STATS];
 
 
     species = GetMonData(egg, MON_DATA_SPECIES);
@@ -319,7 +310,7 @@ static void CreatedHatchedMon(struct Pokemon *egg, struct Pokemon *temp)
 
     personality = GetMonData(egg, MON_DATA_PERSONALITY);
 
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < NUM_STATS; i++)
     {
         ivs[i] = GetMonData(egg, MON_DATA_HP_IV + i);
     }
@@ -337,7 +328,7 @@ static void CreatedHatchedMon(struct Pokemon *egg, struct Pokemon *temp)
         SetMonData(temp, MON_DATA_MOVE1 + i,  &moves[i]);
     }
 
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < NUM_STATS; i++)
     {
         SetMonData(temp, MON_DATA_HP_IV + i,  &ivs[i]);
     }
@@ -384,7 +375,7 @@ static void AddHatchedMonToParty(u8 id)
     caughtLvl = 0;
     SetMonData(mon, MON_DATA_MET_LEVEL, &caughtLvl);
 
-    mapNameID = sav1_map_get_name();
+    mapNameID = GetCurrentRegionMapSectionId();
     SetMonData(mon, MON_DATA_MET_LOCATION, &mapNameID);
 
     MonRestorePP(mon);
@@ -444,7 +435,7 @@ static u8 EggHatchCreateMonSprite(u8 a0, u8 switchID, u8 pokeID, u16* speciesLoc
             HandleLoadSpecialPokePic_DontHandleDeoxys(&gMonFrontPicTable[species],
                                                       gMonSpritesGfxPtr->sprites[(a0 * 2) + 1],
                                                       species, pid);
-            LoadCompressedObjectPalette(GetMonSpritePalStruct(mon));
+            LoadCompressedSpritePalette(GetMonSpritePalStruct(mon));
             *speciesLoc = species;
         }
         break;
@@ -476,9 +467,9 @@ static void Task_EggHatch(u8 taskID)
 {
     if (!gPaletteFade.active)
     {
-        overworld_free_bg_tilemaps();
+        CleanupOverworldWindowsAndTilemaps();
         SetMainCallback2(CB2_EggHatch_0);
-        gFieldCallback = sub_80AF168;
+        gFieldCallback = FieldCallback_ReturnToEventScript2;
         DestroyTask(taskID);
     }
 }
@@ -507,7 +498,7 @@ static void CB2_EggHatch_0(void)
         ChangeBgX(0, 0, 0);
         ChangeBgY(0, 0, 0);
 
-        SetBgAttribute(1, BG_CTRL_ATTR_MOSAIC, 2);
+        SetBgAttribute(1, BG_ATTR_PRIORITY, 2);
         SetBgTilemapBuffer(1, Alloc(0x1000));
         SetBgTilemapBuffer(0, Alloc(0x2000));
 
@@ -583,7 +574,7 @@ static void Task_EggHatchPlayBGM(u8 taskID)
     if (gTasks[taskID].data[0] == 0)
     {
         StopMapMusic();
-        play_some_sound();
+        PlayRainStoppingSoundEffect();
     }
     if (gTasks[taskID].data[0] == 1)
         PlayBGM(MUS_ME_SHINKA);
@@ -615,7 +606,7 @@ static void CB2_EggHatch_1(void)
     case 1:
         if (!gPaletteFade.active)
         {
-            FillWindowPixelBuffer(sEggHatchData->windowId, 0);
+            FillWindowPixelBuffer(sEggHatchData->windowId, PIXEL_FILL(0));
             sEggHatchData->CB2_PalCounter = 0;
             sEggHatchData->CB2_state++;
         }
@@ -673,7 +664,7 @@ static void CB2_EggHatch_1(void)
         }
         break;
     case 10:
-        switch (Menu_ProcessInputNoWrap_())
+        switch (Menu_ProcessInputNoWrapClearOnChoose())
         {
         case 0:
             GetMonNick(&gPlayerParty[sEggHatchData->eggPartyID], gStringVar3);
@@ -866,7 +857,7 @@ static void CreateEggShardSprite(u8 x, u8 y, s16 data1, s16 data2, s16 data3, u8
 
 static void EggHatchPrintMessage(u8 windowId, u8* string, u8 x, u8 y, u8 speed)
 {
-    FillWindowPixelBuffer(windowId, 0xFF);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(15));
     sEggHatchData->textColor[0] = 0;
     sEggHatchData->textColor[1] = 5;
     sEggHatchData->textColor[2] = 6;
@@ -878,7 +869,7 @@ u8 GetEggStepsToSubtract(void)
     u8 count, i;
     for (count = CalculatePlayerPartyCount(), i = 0; i < count; i++)
     {
-        if (!GetMonData(&gPlayerParty[i], MON_DATA_SANITY_BIT3))
+        if (!GetMonData(&gPlayerParty[i], MON_DATA_SANITY_IS_EGG))
         {
             u8 ability = GetMonAbility(&gPlayerParty[i]);
             if (ability == ABILITY_MAGMA_ARMOR || ability == ABILITY_FLAME_BODY)
@@ -890,7 +881,7 @@ u8 GetEggStepsToSubtract(void)
 
 u16 sub_80722E0(void)
 {
-    u16 value = sub_80D22D0();
-    value += CountPartyAliveNonEggMonsExcept(6);
-    return value;
+    u16 aliveNonEggMonsCount = CountStorageNonEggMons();
+    aliveNonEggMonsCount += CountPartyAliveNonEggMonsExcept(6);
+    return aliveNonEggMonsCount;
 }

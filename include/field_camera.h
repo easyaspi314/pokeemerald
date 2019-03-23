@@ -7,16 +7,16 @@ struct CameraObject
 {
     void (*callback)(struct CameraObject *);
     u32 spriteId;
-    s32 unk8;
-    s32 unkC;
+    s32 movementSpeedX;
+    s32 movementSpeedY;
     s32 x;
     s32 y;
 };
 
 // Exported RAM declarations
-extern struct CameraObject gUnknown_03005DD0;
-extern u16 gUnknown_03005DEC;
-extern u16 gUnknown_03005DE8;
+extern struct CameraObject gFieldCamera;
+extern u16 gTotalCameraPixelOffsetX;
+extern u16 gTotalCameraPixelOffsetY;
 
 // Exported ROM declarations
 void DrawWholeMapView(void);
@@ -32,5 +32,6 @@ void SetCameraPanningCallback(void (*a)(void));
 void SetCameraPanning(s16 a, s16 b);
 void InstallCameraPanAheadCallback(void);
 void UpdateCameraPanning(void);
+void FieldUpdateBgTilemapScroll(void);
 
 #endif //GUARD_FIELD_CAMERA_H

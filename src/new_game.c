@@ -8,6 +8,7 @@
 #include "lottery_corner.h"
 #include "play_time.h"
 #include "mauville_old_man.h"
+#include "match_call.h"
 #include "lilycove_lady.h"
 #include "load_save.h"
 #include "pokeblock.h"
@@ -17,6 +18,7 @@
 #include "easy_chat.h"
 #include "event_data.h"
 #include "money.h"
+#include "trainer_hill.h"
 #include "tv.h"
 #include "coins.h"
 #include "text.h"
@@ -25,41 +27,37 @@
 #include "battle_records.h"
 #include "item.h"
 #include "pokedex.h"
+#include "apprentice.h"
+#include "frontier_util.h"
+#include "constants/maps.h"
+#include "pokedex.h"
+#include "save.h"
+#include "link_rfu.h"
+#include "main.h"
+#include "contest.h"
+#include "item_menu.h"
+#include "pokemon_storage_system.h"
+#include "decoration_inventory.h"
+#include "secret_base.h"
+#include "player_pc.h"
+#include "field_specials.h"
 
-extern u8 gDifferentSaveFile;
-extern u16 gSaveFileStatus;
-extern u8 gUnknown_030060B0;
 
-// TODO: replace those declarations with file headers
-extern u16 GetGeneratedTrainerIdLower(void);
-extern void ClearContestWinnerPicsInContestHall(void);
-extern void sub_80BB358(void);
-extern void ResetBagScrollPositions(void);
-extern void ResetGabbyAndTy(void);
-extern void ResetSecretBases(void);
-extern void ResetLinkContestBoolean(void);
-extern void sub_8052DA8(void);
-extern void ResetPokemonStorageSystem(void);
-extern void NewGameInitPCItems(void);
-extern void ClearDecorationInventories(void);
-extern void ResetFanClub(void);
 extern void copy_strings_to_sav1(void);
-extern void sub_819FAA0(void);
-extern void sub_81A4B14(void);
-extern void sub_8195E10(void);
 extern void sub_801AFD8(void);
-extern void sub_800E5AC(void);
-extern void sub_81D54BC(void);
-extern void ResetContestLinkResults(void);
 extern void ResetPokeJumpResults(void);
 extern void SetBerryPowder(u32* powder, u32 newValue);
 
-extern const u8 EventScript_2715DE[];
+extern const u8 EventScript_ResetAllMapFlags[];
 
 // this file's functions
 static void ClearFrontierRecord(void);
 static void WarpToTruck(void);
 static void ResetMiniGamesResults(void);
+
+// EWRAM vars
+EWRAM_DATA bool8 gDifferentSaveFile = FALSE;
+EWRAM_DATA bool8 gUnknown_020322D5 = FALSE;
 
 // const rom data
 static const struct ContestWinner sContestWinnerPicDummy =
@@ -69,30 +67,30 @@ static const struct ContestWinner sContestWinnerPicDummy =
 };
 
 // code
-void WriteUnalignedWord(u32 var, u8 *dataPtr)
+void SetTrainerId(u32 trainerId, u8 *dst)
 {
-    dataPtr[0] = var;
-    dataPtr[1] = var >> 8;
-    dataPtr[2] = var >> 16;
-    dataPtr[3] = var >> 24;
+    dst[0] = trainerId;
+    dst[1] = trainerId >> 8;
+    dst[2] = trainerId >> 16;
+    dst[3] = trainerId >> 24;
 }
 
-u32 ReadUnalignedWord(u8* dataPtr)
+u32 GetTrainerId(u8 *trainerId)
 {
-    return (dataPtr[3] << 24) | (dataPtr[2] << 16) | (dataPtr[1] << 8) | (dataPtr[0]);
+    return (trainerId[3] << 24) | (trainerId[2] << 16) | (trainerId[1] << 8) | (trainerId[0]);
 }
 
-void CopyUnalignedWord(u8 *copyTo, u8 *copyFrom)
+void CopyTrainerId(u8 *dst, u8 *src)
 {
     s32 i;
     for (i = 0; i < 4; i++)
-        copyTo[i] = copyFrom[i];
+        dst[i] = src[i];
 }
 
 static void InitPlayerTrainerId(void)
 {
     u32 trainerId = (Random() << 0x10) | GetGeneratedTrainerIdLower();
-    WriteUnalignedWord(trainerId, gSaveBlock2Ptr->playerTrainerId);
+    SetTrainerId(trainerId, gSaveBlock2Ptr->playerTrainerId);
 }
 
 // L=A isnt set here for some reason.
@@ -108,7 +106,7 @@ static void SetDefaultOptions(void)
 
 static void ClearPokedexFlags(void)
 {
-    gUnknown_030060B0 = 0;
+    gUnusedPokedexU8 = 0;
     memset(&gSaveBlock2Ptr->pokedex.owned, 0, sizeof(gSaveBlock2Ptr->pokedex.owned));
     memset(&gSaveBlock2Ptr->pokedex.seen, 0, sizeof(gSaveBlock2Ptr->pokedex.seen));
 }
@@ -126,13 +124,13 @@ static void ClearFrontierRecord(void)
 {
     CpuFill32(0, &gSaveBlock2Ptr->frontier, sizeof(gSaveBlock2Ptr->frontier));
 
-    gSaveBlock2Ptr->frontier.field_EE1[0][0] = EOS;
-    gSaveBlock2Ptr->frontier.field_EE1[1][0] = EOS;
+    gSaveBlock2Ptr->frontier.opponentName[0][0] = EOS;
+    gSaveBlock2Ptr->frontier.opponentName[1][0] = EOS;
 }
 
 static void WarpToTruck(void)
 {
-    Overworld_SetWarpDestination(25, 40, -1, -1, -1); // inside of truck
+    SetWarpDestination(MAP_GROUP(INSIDE_OF_TRUCK), MAP_NUM(INSIDE_OF_TRUCK), -1, -1, -1);
     WarpIntoMap();
 }
 
@@ -142,10 +140,10 @@ void Sav2_ClearSetDefault(void)
     SetDefaultOptions();
 }
 
-void sub_808447C(void)
+void ResetMenuAndMonGlobals(void)
 {
     gDifferentSaveFile = 0;
-    sub_80BB358();
+    ResetPokedexScrollPositions();
     ZeroPlayerPartyMons();
     ZeroEnemyPartyMons();
     ResetBagScrollPositions();
@@ -165,7 +163,7 @@ void NewGameInitData(void)
     ClearFrontierRecord();
     ClearSav1();
     ClearMailData();
-    gSaveBlock2Ptr->specialSaveWarp = 0;
+    gSaveBlock2Ptr->specialSaveWarpFlags = 0;
     gSaveBlock2Ptr->field_A8 = 0;
     InitPlayerTrainerId();
     PlayTimeCounter_Reset();
@@ -199,17 +197,17 @@ void NewGameInitData(void)
     ResetFanClub();
     ResetLotteryCorner();
     WarpToTruck();
-    ScriptContext2_RunNewScript(EventScript_2715DE);
+    ScriptContext2_RunNewScript(EventScript_ResetAllMapFlags);
     ResetMiniGamesResults();
     copy_strings_to_sav1();
-	SetLilycoveLady();
-	sub_819FAA0();
-	sub_81A4B14();
-	sub_8195E10();
-	sub_801AFD8();
-	sub_800E5AC();
-	sub_81D54BC();
-	ResetContestLinkResults();
+    SetLilycoveLady();
+    ResetAllApprenticeData();
+    ClearRankingHallRecords();
+    InitMatchCallCounters();
+    sub_801AFD8();
+    WipeTrainerNameRecords();
+    ResetTrainerHillResults();
+    ResetContestLinkResults();
 }
 
 static void ResetMiniGamesResults(void)

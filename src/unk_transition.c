@@ -35,11 +35,13 @@ static bool8 sub_81DB290(struct Task *task);
 static bool8 sub_81DB328(struct Task *task);
 
 // const rom data
-// TODO: move those from .s file to .c
-extern const u8 gUnknown_0862AD54[];
-extern const u8 gUnknown_0862AF30[];
-extern const u8 gUnknown_0862B0DC[];
-extern const u16 gUnknown_0862B53C[];
+static const u32 gUnknown_0862AD54[] = INCBIN_U32("graphics/battle_transitions/frontier_transition.4bpp.lz");
+static const u32 gUnknown_0862AF30[] = INCBIN_U32("graphics/battle_transitions/frontier_transition.bin");
+static const u32 gUnknown_0862B0DC[] = INCBIN_U32("graphics/battle_transitions/frontier_transition_circles.4bpp.lz");
+static const u16 gUnknown_0862B53C[] = INCBIN_U16("graphics/battle_transitions/frontier_transition.gbapal");
+
+// Unused Empty data.
+static const u8 sFiller[0x1C0] = {0};
 
 static const struct OamData sOamData_862B71C =
 {
@@ -48,10 +50,10 @@ static const struct OamData sOamData_862B71C =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 1,
     .paletteNum = 0,
@@ -60,12 +62,15 @@ static const struct OamData sOamData_862B71C =
 
 static const struct CompressedSpriteSheet sUnknown_0862B724 =
 {
-    gUnknown_0862B0DC, 0x1800, 11920
+    .data = gUnknown_0862B0DC,
+    .size = 0x1800,
+    .tag = 11920
 };
 
 static const struct SpritePalette sUnknown_0862B72C =
 {
-    gUnknown_0862B53C, 11920
+    .data = gUnknown_0862B53C,
+    .tag = 11920
 };
 
 static const union AnimCmd sSpriteAnim_862B734[] =
@@ -185,7 +190,7 @@ static void sub_81DA700(void)
     LZ77UnCompVram(gUnknown_0862AD54, dst2);
     LZ77UnCompVram(gUnknown_0862AF30, dst1);
     LoadPalette(gUnknown_0862B53C, 0xF0, 0x20);
-    LoadCompressedObjectPic(&sUnknown_0862B724);
+    LoadCompressedSpriteSheet(&sUnknown_0862B724);
     LoadSpritePalette(&sUnknown_0862B72C);
 }
 
@@ -335,8 +340,8 @@ static bool8 sub_81DAACC(struct Task *task)
     else
     {
         sub_81DA700();
-        SetGpuReg(REG_OFFSET_BLDCNT, 0x3F41);
-        SetGpuReg(REG_OFFSET_BLDALPHA, 0x1000);
+        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT2_ALL);
+        SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(0, 16));
         ChangeBgX(0, 0, 0);
         ChangeBgY(0, 0, 0);
         ChangeBgY(0, 0x500, 2);
@@ -366,11 +371,11 @@ static bool8 sub_81DAB4C(struct Task *task)
     }
     else
     {
-        u16 var;
+        u16 blnd;
 
         task->data[2]++;
-        var = task->data[2];
-        SetGpuReg(REG_OFFSET_BLDALPHA, (var) | ((16 - var) << 8));
+        blnd = task->data[2];
+        SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(blnd, 16 - blnd));
     }
 
     return FALSE;

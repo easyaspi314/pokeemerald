@@ -2,6 +2,7 @@
 #include "reshow_battle_screen.h"
 #include "battle.h"
 #include "palette.h"
+#include "pokemon.h"
 #include "main.h"
 #include "scanline_effect.h"
 #include "text.h"
@@ -16,18 +17,7 @@
 #include "battle_anim.h"
 #include "data2.h"
 
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
-extern u16 gBattle_BG1_X;
-extern u16 gBattle_BG1_Y;
-extern u16 gBattle_BG2_X;
-extern u16 gBattle_BG2_Y;
-extern u16 gBattle_BG3_X;
-extern u16 gBattle_BG3_Y;
-
 extern const union AnimCmd * const * const gMonAnimationsSpriteAnimsPtrTable[];
-
-extern void SetMultiuseSpriteTemplateToTrainerBack(u16 backPicId, u8 battlerPosition);
 
 // this file's functions
 static void CB2_ReshowBattleScreenAfterMenu(void);
@@ -59,8 +49,8 @@ static void CB2_ReshowBattleScreenAfterMenu(void)
     case 0:
         ScanlineEffect_Clear();
         BattleInitBgsAndWindows();
-        SetBgAttribute(1, BG_CTRL_ATTR_VISIBLE, 0);
-        SetBgAttribute(2, BG_CTRL_ATTR_VISIBLE, 0);
+        SetBgAttribute(1, BG_ATTR_CHARBASEINDEX, 0);
+        SetBgAttribute(2, BG_ATTR_CHARBASEINDEX, 0);
         ShowBg(0);
         ShowBg(1);
         ShowBg(2);
@@ -235,7 +225,7 @@ static void CreateBattlerSprite(u8 battler)
                 return;
 
             SetMultiuseSpriteTemplateToPokemon(GetMonData(&gEnemyParty[gBattlerPartyIndexes[battler]], MON_DATA_SPECIES), GetBattlerPosition(battler));
-            gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, GetBattlerSpriteCoord(battler, 2), posY, sub_80A82E4(battler));
+            gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, GetBattlerSpriteCoord(battler, 2), posY, GetBattlerSpriteSubpriority(battler));
             gSprites[gBattlerSpriteIds[battler]].oam.paletteNum = battler;
             gSprites[gBattlerSpriteIds[battler]].callback = SpriteCallbackDummy;
             gSprites[gBattlerSpriteIds[battler]].data[0] = battler;
@@ -249,8 +239,8 @@ static void CreateBattlerSprite(u8 battler)
         {
             SetMultiuseSpriteTemplateToTrainerBack(gSaveBlock2Ptr->playerGender, GetBattlerPosition(B_POSITION_PLAYER_LEFT));
             gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, 0x50,
-                                                (8 - gTrainerBackPicCoords[gSaveBlock2Ptr->playerGender].coords) * 4 + 80,
-                                                 sub_80A82E4(0));
+                                                (8 - gTrainerBackPicCoords[gSaveBlock2Ptr->playerGender].size) * 4 + 80,
+                                                 GetBattlerSpriteSubpriority(0));
             gSprites[gBattlerSpriteIds[battler]].oam.paletteNum = battler;
             gSprites[gBattlerSpriteIds[battler]].callback = SpriteCallbackDummy;
             gSprites[gBattlerSpriteIds[battler]].data[0] = battler;
@@ -259,8 +249,8 @@ static void CreateBattlerSprite(u8 battler)
         {
             SetMultiuseSpriteTemplateToTrainerBack(TRAINER_BACK_PIC_WALLY, GetBattlerPosition(0));
             gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, 0x50,
-                                                (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].coords) * 4 + 80,
-                                                 sub_80A82E4(0));
+                                                (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].size) * 4 + 80,
+                                                 GetBattlerSpriteSubpriority(0));
             gSprites[gBattlerSpriteIds[battler]].oam.paletteNum = battler;
             gSprites[gBattlerSpriteIds[battler]].callback = SpriteCallbackDummy;
             gSprites[gBattlerSpriteIds[battler]].data[0] = battler;
@@ -271,7 +261,7 @@ static void CreateBattlerSprite(u8 battler)
                 return;
 
             SetMultiuseSpriteTemplateToPokemon(GetMonData(&gPlayerParty[gBattlerPartyIndexes[battler]], MON_DATA_SPECIES), GetBattlerPosition(battler));
-            gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, GetBattlerSpriteCoord(battler, 2), posY, sub_80A82E4(battler));
+            gBattlerSpriteIds[battler] = CreateSprite(&gMultiuseSpriteTemplate, GetBattlerSpriteCoord(battler, 2), posY, GetBattlerSpriteSubpriority(battler));
             gSprites[gBattlerSpriteIds[battler]].oam.paletteNum = battler;
             gSprites[gBattlerSpriteIds[battler]].callback = SpriteCallbackDummy;
             gSprites[gBattlerSpriteIds[battler]].data[0] = battler;

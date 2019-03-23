@@ -1,5 +1,5 @@
 ShoalCave_LowTideLowerRoom_MapScripts:: @ 8237156
-	map_script 1, ShoalCave_LowTideLowerRoom_MapScript1_23715C
+	map_script MAP_SCRIPT_ON_LOAD, ShoalCave_LowTideLowerRoom_MapScript1_23715C
 	.byte 0
 
 ShoalCave_LowTideLowerRoom_MapScript1_23715C: @ 823715C
@@ -7,8 +7,7 @@ ShoalCave_LowTideLowerRoom_MapScript1_23715C: @ 823715C
 	end
 
 ShoalCave_LowTideLowerRoom_EventScript_237162:: @ 8237162
-	checkflag FLAG_0x3BB
-	goto_eq ShoalCave_LowTideLowerRoom_EventScript_237175
+	goto_if_set FLAG_RECEIVED_SHOAL_SALT_4, ShoalCave_LowTideLowerRoom_EventScript_237175
 	setmetatile 18, 2, 856, 1
 	return
 
@@ -17,37 +16,35 @@ ShoalCave_LowTideLowerRoom_EventScript_237175:: @ 8237175
 
 ShoalCave_LowTideLowerRoom_EventScript_237176:: @ 8237176
 	lockall
-	checkflag FLAG_0x3BB
-	goto_eq ShoalCave_LowTideLowerRoom_EventScript_2371A8
+	goto_if_set FLAG_RECEIVED_SHOAL_SALT_4, ShoalCave_LowTideLowerRoom_EventScript_2371A8
 	giveitem_std ITEM_SHOAL_SALT
 	compare VAR_RESULT, 0
-	goto_eq ShoalCave_LowTideLowerRoom_EventScript_272054
+	goto_if_eq Common_EventScript_ShowBagIsFull
 	setmetatile 18, 2, 858, 0
 	special DrawWholeMapView
-	setflag FLAG_0x3BB
+	setflag FLAG_RECEIVED_SHOAL_SALT_4
 	releaseall
 	end
 
 ShoalCave_LowTideLowerRoom_EventScript_2371A8:: @ 82371A8
-	msgbox ShoalCave_LowTideLowerRoom_Text_2A8169, 4
+	msgbox ShoalCave_LowTideLowerRoom_Text_2A8169, MSGBOX_DEFAULT
 	releaseall
 	end
 
 ShoalCave_LowTideLowerRoom_EventScript_2371B2:: @ 82371B2
 	lock
 	faceplayer
-	checkflag FLAG_0x11B
-	goto_eq ShoalCave_LowTideLowerRoom_EventScript_2371E1
-	msgbox ShoalCave_LowTideLowerRoom_Text_2371EB, 4
+	goto_if_set FLAG_RECEIVED_FOCUS_BAND, ShoalCave_LowTideLowerRoom_EventScript_2371E1
+	msgbox ShoalCave_LowTideLowerRoom_Text_2371EB, MSGBOX_DEFAULT
 	giveitem_std ITEM_FOCUS_BAND
 	compare VAR_RESULT, 0
-	goto_eq ShoalCave_LowTideLowerRoom_EventScript_272054
-	setflag FLAG_0x11B
+	goto_if_eq Common_EventScript_ShowBagIsFull
+	setflag FLAG_RECEIVED_FOCUS_BAND
 	release
 	end
 
 ShoalCave_LowTideLowerRoom_EventScript_2371E1:: @ 82371E1
-	msgbox ShoalCave_LowTideLowerRoom_Text_23728D, 4
+	msgbox ShoalCave_LowTideLowerRoom_Text_23728D, MSGBOX_DEFAULT
 	release
 	end
 

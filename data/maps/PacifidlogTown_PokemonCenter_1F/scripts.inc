@@ -1,6 +1,6 @@
 PacifidlogTown_PokemonCenter_1F_MapScripts:: @ 82034A7
-	map_script 3, PacifidlogTown_PokemonCenter_1F_MapScript1_2034B2
-	map_script 5, PacifidlogTown_PokemonCenter_1F_MapScript1_277C30
+	map_script MAP_SCRIPT_ON_TRANSITION, PacifidlogTown_PokemonCenter_1F_MapScript1_2034B2
+	map_script MAP_SCRIPT_ON_RESUME, PacifidlogTown_PokemonCenter_1F_MapScript1_277C30
 	.byte 0
 
 PacifidlogTown_PokemonCenter_1F_MapScript1_2034B2: @ 82034B2
@@ -16,20 +16,20 @@ PacifidlogTown_PokemonCenter_1F_EventScript_2034B6:: @ 82034B6
 	end
 
 PacifidlogTown_PokemonCenter_1F_EventScript_2034C4:: @ 82034C4
-	msgbox PacifidlogTown_PokemonCenter_1F_Text_2034DF, 2
+	msgbox PacifidlogTown_PokemonCenter_1F_Text_2034DF, MSGBOX_NPC
 	end
 
 PacifidlogTown_PokemonCenter_1F_EventScript_2034CD:: @ 82034CD
-	msgbox PacifidlogTown_PokemonCenter_1F_Text_20350F, 2
+	msgbox PacifidlogTown_PokemonCenter_1F_Text_20350F, MSGBOX_NPC
 	end
 
 PacifidlogTown_PokemonCenter_1F_EventScript_2034D6:: @ 82034D6
-	msgbox PacifidlogTown_PokemonCenter_1F_Text_20356F, 2
+	msgbox PacifidlogTown_PokemonCenter_1F_Text_20356F, MSGBOX_NPC
 	end
 
 PacifidlogTown_PokemonCenter_1F_Text_2034DF: @ 82034DF
 	.string "What color is your TRAINER CARD?\n"
-	.string "Mine’s copper!$"
+	.string "Mine's copper!$"
 
 PacifidlogTown_PokemonCenter_1F_Text_20350F: @ 820350F
 	.string "PACIFIDLOG TOWN floats on top of\n"

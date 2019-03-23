@@ -1,11 +1,11 @@
 #include "global.h"
 #include "battle.h"
+#include "battle_anim.h"
+#include "contest.h"
+#include "sound.h"
+#include "task.h"
 #include "constants/battle_anim.h"
 #include "constants/species.h"
-#include "battle_anim.h"
-#include "task.h"
-#include "sound.h"
-#include "contest.h"
 
 // this file's functions
 static void sub_8158B98(u8 taskId);
@@ -23,8 +23,8 @@ void sub_8158B30(u8 taskId)
     gTasks[taskId].data[0] = gBattleAnimArgs[0];
     gTasks[taskId].data[1] = gBattleAnimArgs[1];
 
-    pan1 = BattleAnimAdjustPanning(PAN_SIDE_PLAYER);
-    pan2 = BattleAnimAdjustPanning(PAN_SIDE_OPPONENT);
+    pan1 = BattleAnimAdjustPanning(SOUND_PAN_ATTACKER);
+    pan2 = BattleAnimAdjustPanning(SOUND_PAN_TARGET);
     panIncrement = CalculatePanIncrement(pan1, pan2, 2);
 
     gTasks[taskId].data[2] = pan1;
@@ -64,7 +64,7 @@ static void sub_8158C04(u8 taskId)
         s8 pan;
 
         gTasks[taskId].data[10] = 0;
-        pan = BattleAnimAdjustPanning(PAN_SIDE_OPPONENT);
+        pan = BattleAnimAdjustPanning(SOUND_PAN_TARGET);
         PlaySE12WithPanning(gTasks[taskId].data[1], pan);
         if (++gTasks[taskId].data[11] == 2)
             DestroyAnimSoundTask(taskId);
@@ -127,11 +127,11 @@ static void sub_8158D08(u8 taskId)
 void sub_8158D8C(u8 taskId)
 {
     u16 species = 0;
-    s8 pan = BattleAnimAdjustPanning(PAN_SIDE_PLAYER);
+    s8 pan = BattleAnimAdjustPanning(SOUND_PAN_ATTACKER);
     if (IsContest())
     {
         if (gBattleAnimArgs[0] == ANIM_ATTACKER)
-            species = gContestResources->field_18->field_0;
+            species = gContestResources->field_18->species;
         else
             DestroyAnimVisualTask(taskId); // UB: function should return upon destroying task.
     }
@@ -173,11 +173,11 @@ void sub_8158D8C(u8 taskId)
 void sub_8158E9C(u8 taskId)
 {
     u16 species = 0;
-    s8 pan = BattleAnimAdjustPanning(PAN_SIDE_PLAYER);
+    s8 pan = BattleAnimAdjustPanning(SOUND_PAN_ATTACKER);
     if (IsContest())
     {
         if (gBattleAnimArgs[0] == ANIM_ATTACKER)
-            species = gContestResources->field_18->field_0;
+            species = gContestResources->field_18->species;
         else
             DestroyAnimVisualTask(taskId); // UB: function should return upon destroying task.
     }
@@ -278,10 +278,10 @@ void sub_81590B8(u8 taskId)
     s8 pan;
 
     gTasks[taskId].data[10] = gBattleAnimArgs[0];
-    pan = BattleAnimAdjustPanning(PAN_SIDE_PLAYER);
+    pan = BattleAnimAdjustPanning(SOUND_PAN_ATTACKER);
 
     if (IsContest())
-        species = gContestResources->field_18->field_0;
+        species = gContestResources->field_18->species;
     else
         species = gAnimBattlerSpecies[gBattleAnimAttacker];
 
@@ -389,50 +389,50 @@ void sub_8159308(u8 taskId)
 NAKED
 void sub_8159308(u8 taskId)
 {
-    asm_unified("	push {r4,r5,lr}\n\
-	lsls r0, 24\n\
-	lsrs r0, 24\n\
-	adds r5, r0, 0\n\
-	ldr r1, =gTasks\n\
-	lsls r0, r5, 2\n\
-	adds r0, r5\n\
-	lsls r0, 3\n\
-	adds r4, r0, r1\n\
-	ldrh r2, [r4, 0xE]\n\
-	ldrh r0, [r4, 0x1C]\n\
-	adds r1, r0, 0x1\n\
-	strh r1, [r4, 0x1C]\n\
-	lsls r0, 16\n\
-	asrs r0, 16\n\
-	movs r3, 0x12\n\
-	ldrsh r1, [r4, r3]\n\
-	cmp r0, r1\n\
-	bne _08159342\n\
-	movs r0, 0\n\
-	strh r0, [r4, 0x1C]\n\
-	ldrh r1, [r4, 0x1E]\n\
-	adds r0, r2, r1\n\
-	strh r0, [r4, 0x1E]\n\
-	movs r2, 0x1E\n\
-	ldrsh r0, [r4, r2]\n\
-	bl KeepPanInRange\n\
-	strh r0, [r4, 0x1E]\n\
+    asm_unified("    push {r4,r5,lr}\n\
+    lsls r0, 24\n\
+    lsrs r0, 24\n\
+    adds r5, r0, 0\n\
+    ldr r1, =gTasks\n\
+    lsls r0, r5, 2\n\
+    adds r0, r5\n\
+    lsls r0, 3\n\
+    adds r4, r0, r1\n\
+    ldrh r2, [r4, 0xE]\n\
+    ldrh r0, [r4, 0x1C]\n\
+    adds r1, r0, 0x1\n\
+    strh r1, [r4, 0x1C]\n\
+    lsls r0, 16\n\
+    asrs r0, 16\n\
+    movs r3, 0x12\n\
+    ldrsh r1, [r4, r3]\n\
+    cmp r0, r1\n\
+    bne _08159342\n\
+    movs r0, 0\n\
+    strh r0, [r4, 0x1C]\n\
+    ldrh r1, [r4, 0x1E]\n\
+    adds r0, r2, r1\n\
+    strh r0, [r4, 0x1E]\n\
+    movs r2, 0x1E\n\
+    ldrsh r0, [r4, r2]\n\
+    bl KeepPanInRange\n\
+    strh r0, [r4, 0x1E]\n\
 _08159342:\n\
-	ldr r1, =gUnknown_02038440\n\
-	ldrh r0, [r4, 0x1E]\n\
-	strb r0, [r1]\n\
-	movs r3, 0x1E\n\
-	ldrsh r1, [r4, r3]\n\
-	movs r2, 0xC\n\
-	ldrsh r0, [r4, r2]\n\
-	cmp r1, r0\n\
-	bne _0815935A\n\
-	adds r0, r5, 0\n\
-	bl DestroyAnimVisualTask\n\
+    ldr r1, =gUnknown_02038440\n\
+    ldrh r0, [r4, 0x1E]\n\
+    strb r0, [r1]\n\
+    movs r3, 0x1E\n\
+    ldrsh r1, [r4, r3]\n\
+    movs r2, 0xC\n\
+    ldrsh r0, [r4, r2]\n\
+    cmp r1, r0\n\
+    bne _0815935A\n\
+    adds r0, r5, 0\n\
+    bl DestroyAnimVisualTask\n\
 _0815935A:\n\
-	pop {r4,r5}\n\
-	pop {r0}\n\
-	bx r0\n\
-	.pool");
+    pop {r4,r5}\n\
+    pop {r0}\n\
+    bx r0\n\
+    .pool");
 }
 #endif

@@ -1,24 +1,24 @@
 #include "global.h"
+#include "alloc.h"
 #include "bg.h"
-#include "window.h"
-#include "palette.h"
-#include "menu.h"
-#include "constants/songs.h"
-#include "main.h"
-#include "sound.h"
-#include "menu_helpers.h"
-#include "malloc.h"
-#include "task.h"
 #include "dma3.h"
-#include "string_util.h"
-#include "pokemon_icon.h"
-#include "constants/flags.h"
 #include "event_data.h"
-#include "pokedex.h"
-#include "region_map.h"
-#include "text_window.h"
-#include "strings.h"
 #include "graphics.h"
+#include "main.h"
+#include "menu.h"
+#include "menu_helpers.h"
+#include "palette.h"
+#include "pokedex.h"
+#include "pokemon_icon.h"
+#include "region_map.h"
+#include "sound.h"
+#include "string_util.h"
+#include "strings.h"
+#include "task.h"
+#include "text_window.h"
+#include "window.h"
+#include "constants/flags.h"
+#include "constants/songs.h"
 
 #define DLG_WINDOW_PALETTE_NUM 15
 #define DLG_WINDOW_BASE_TILE_NUM 0x200
@@ -48,13 +48,13 @@ struct Menu
     bool8 APressMuted;
 };
 
-static EWRAM_DATA u8 gStartMenuWindowId = 0;
-static EWRAM_DATA u8 gUnknown_0203CD8D = 0;
-static EWRAM_DATA struct Menu gUnknown_0203CD90 = {0};
-static EWRAM_DATA u16 gUnknown_0203CD9C = 0;
-static EWRAM_DATA u8 gUnknown_0203CD9E = 0;
-static EWRAM_DATA u8 gUnknown_0203CD9F = 0;
-static EWRAM_DATA u8 gUnknown_0203CDA0 = 0;
+static EWRAM_DATA u8 sStartMenuWindowId = 0;
+static EWRAM_DATA u8 sMapNamePopupWindowId = 0;
+static EWRAM_DATA struct Menu sMenu = {0};
+static EWRAM_DATA u16 sTileNum = 0;
+static EWRAM_DATA u8 sPaletteNum = 0;
+static EWRAM_DATA u8 sYesNoWindowId = 0;
+static EWRAM_DATA u8 sWindowId = 0;
 static EWRAM_DATA u16 sFiller = 0;  // needed to align
 static EWRAM_DATA bool8 gUnknown_0203CDA4[4] = {FALSE};
 static EWRAM_DATA u16 gUnknown_0203CDA8 = 0;
@@ -63,10 +63,10 @@ static EWRAM_DATA void *gUnknown_0203CDAC[0x20] = {NULL};
 const u16 gUnknown_0860F074[] = INCBIN_U16("graphics/interface/860F074.gbapal");
 static const u8 gUnknown_0860F094[] = { 8, 4, 1 };
 
-static const struct WindowTemplate gUnknown_0860F098[] =
+static const struct WindowTemplate sStandardTextBox_WindowTemplates[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 15,
         .width = 27,
@@ -77,9 +77,9 @@ static const struct WindowTemplate gUnknown_0860F098[] =
     DUMMY_WIN_TEMPLATE
 };
 
-static const struct WindowTemplate gUnknown_0860F0A8 =
+static const struct WindowTemplate sYesNo_WindowTemplates =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 21,
     .tilemapTop = 9,
     .width = 5,
@@ -122,29 +122,27 @@ const struct MoveMenuInfoIcon gMoveMenuInfoIcons[] =
     {  8,  8, 0xAF },       // Unused (Small dark pokeball)
 };
 
-// Forward declarations
-extern void sub_81973A4(void);
-extern void DrawStandardFrame(u8, u8, u8, u8, u8, u8);
-extern void DrawDialogueFrame(u8, u8, u8, u8, u8, u8);
-extern void sub_81977BC(u8, u8, u8, u8, u8, u8);
-extern void sub_8197804(u8, u8, u8, u8, u8, u8);
-extern void sub_8197BB4(u8, u8, u8, u8, u8, u8);
-extern void sub_8197E30(u8, u8, u8, u8, u8, u8);
-extern void DrawWindowBorder(u8, u8, u8, u8, u8, u8);
-extern void sub_81980A8(u8, u8, u8, u8, u8, u8);
-extern u8 MoveMenuCursor(s8);
-extern u8 sub_8199134(s8, s8);
-extern void sub_8198C78(void);
-extern void task_free_buf_after_copying_tile_data_to_vram(u8 taskId);
 
-void sub_81971D0(void)
+// Forward declarations
+void WindowFunc_DrawStandardFrame(u8, u8, u8, u8, u8, u8);
+void WindowFunc_DrawDialogueFrame(u8, u8, u8, u8, u8, u8);
+void WindowFunc_ClearStdWindowAndFrame(u8, u8, u8, u8, u8, u8);
+void WindowFunc_ClearDialogWindowAndFrame(u8, u8, u8, u8, u8, u8);
+void WindowFunc_DrawDialogFrameWithCustomTileAndPalette(u8, u8, u8, u8, u8, u8);
+void WindowFunc_ClearDialogWindowAndFrameNullPalette(u8, u8, u8, u8, u8, u8);
+void WindowFunc_DrawStdFrameWithCustomTileAndPalette(u8, u8, u8, u8, u8, u8);
+void WindowFunc_ClearStdWindowAndFrameToTransparent(u8, u8, u8, u8, u8, u8);
+void sub_8198C78(void);
+void task_free_buf_after_copying_tile_data_to_vram(u8 taskId);
+
+void InitStandardTextBoxWindows(void)
 {
-    InitWindows(gUnknown_0860F098);
-    gStartMenuWindowId = 0xFF;
-    gUnknown_0203CD8D = 0xFF;
+    InitWindows(sStandardTextBox_WindowTemplates);
+    sStartMenuWindowId = 0xFF;
+    sMapNamePopupWindowId = 0xFF;
 }
 
-void sub_81971F4(void)
+void FreeAllOverworldWindowBuffers(void)
 {
     FreeAllWindowBuffers();
 }
@@ -157,17 +155,17 @@ void sub_8197200(void)
     sub_81973A4();
 }
 
-u16 sub_8197224(void)
+u16 RunTextPrintersAndIsPrinter0Active(void)
 {
     RunTextPrinters();
     return IsTextPrinterActive(0);
 }
 
-u16 AddTextPrinterParameterized2(u8 windowId, u8 fontId, const u8 *str, u8 speed, void (*callback)(struct TextSubPrinter *, u16), u8 fgColor, u8 bgColor, u8 shadowColor)
+u16 AddTextPrinterParameterized2(u8 windowId, u8 fontId, const u8 *str, u8 speed, void (*callback)(struct TextPrinterTemplate *, u16), u8 fgColor, u8 bgColor, u8 shadowColor)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    printer.current_text_offset = str;
+    printer.currentChar = str;
     printer.windowId = windowId;
     printer.fontId = fontId;
     printer.x = 0;
@@ -176,31 +174,31 @@ u16 AddTextPrinterParameterized2(u8 windowId, u8 fontId, const u8 *str, u8 speed
     printer.currentY = 1;
     printer.letterSpacing = 0;
     printer.lineSpacing = 0;
-    printer.fontColor_l = 0;
+    printer.unk = 0;
     printer.fgColor = fgColor;
     printer.bgColor = bgColor;
     printer.shadowColor = shadowColor;
 
-    gTextFlags.flag_1 = 0;
+    gTextFlags.useAlternateDownArrow = 0;
     return AddTextPrinter(&printer, speed, callback);
 }
 
 void AddTextPrinterForMessage(bool8 allowSkippingDelayWithButtonPress)
 {
-    void (*callback)(struct TextSubPrinter *, u16) = NULL;
-    gTextFlags.flag_0 = allowSkippingDelayWithButtonPress;
-    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeed(), callback, 2, 1, 3);
+    void (*callback)(struct TextPrinterTemplate *, u16) = NULL;
+    gTextFlags.canABSpeedUpPrint = allowSkippingDelayWithButtonPress;
+    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeedDelay(), callback, 2, 1, 3);
 }
 
 void AddTextPrinterForMessage_2(bool8 allowSkippingDelayWithButtonPress)
 {
-    gTextFlags.flag_0 = allowSkippingDelayWithButtonPress;
-    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeed(), NULL, 2, 1, 3);
+    gTextFlags.canABSpeedUpPrint = allowSkippingDelayWithButtonPress;
+    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeedDelay(), NULL, 2, 1, 3);
 }
 
 void AddTextPrinterWithCustomSpeedForMessage(bool8 allowSkippingDelayWithButtonPress, u8 speed)
 {
-    gTextFlags.flag_0 = allowSkippingDelayWithButtonPress;
+    gTextFlags.canABSpeedUpPrint = allowSkippingDelayWithButtonPress;
     AddTextPrinterParameterized2(0, 1, gStringVar4, speed, NULL, 2, 1, 3);
 }
 
@@ -210,43 +208,43 @@ void sub_81973A4(void)
     LoadUserWindowBorderGfx(0, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM * 0x10);
 }
 
-void NewMenuHelpers_DrawDialogueFrame(u8 windowId, bool8 copyToVram)
+void DrawDialogueFrame(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, DrawDialogueFrame);
-    FillWindowPixelBuffer(windowId, 0x11);
+    CallWindowFunction(windowId, WindowFunc_DrawDialogueFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void NewMenuHelpers_DrawStdWindowFrame(u8 windowId, bool8 copyToVram)
+void DrawStdWindowFrame(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, DrawStandardFrame);
-    FillWindowPixelBuffer(windowId, 0x11);
+    CallWindowFunction(windowId, WindowFunc_DrawStandardFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_8197434(u8 windowId, bool8 copyToVram)
+void ClearDialogWindowAndFrame(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, sub_8197804);
-    FillWindowPixelBuffer(windowId, 0x11);
+    CallWindowFunction(windowId, WindowFunc_ClearDialogWindowAndFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     ClearWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_819746C(u8 windowId, bool8 copyToVram)
+void ClearStdWindowAndFrame(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, sub_81977BC);
-    FillWindowPixelBuffer(windowId, 0x11);
+    CallWindowFunction(windowId, WindowFunc_ClearStdWindowAndFrame);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     ClearWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void DrawStandardFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_DrawStandardFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     int i;
 
@@ -313,7 +311,7 @@ void DrawStandardFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height
                             STD_WINDOW_PALETTE_NUM);
 }
 
-void DrawDialogueFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_DrawDialogueFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg,
                             DLG_WINDOW_BASE_TILE_NUM + 1,
@@ -408,25 +406,25 @@ void DrawDialogueFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height
                             DLG_WINDOW_PALETTE_NUM);
 }
 
-void sub_81977BC(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_ClearStdWindowAndFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg, 0, tilemapLeft - 1, tilemapTop - 1, width + 2, height + 2, STD_WINDOW_PALETTE_NUM);
 }
 
-void sub_8197804(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_ClearDialogWindowAndFrame(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg, 0, tilemapLeft - 3, tilemapTop - 1, width + 6, height + 2, STD_WINDOW_PALETTE_NUM);
 }
 
 void SetStandardWindowBorderStyle(u8 windowId, bool8 copyToVram)
 {
-    SetWindowBorderStyle(windowId, copyToVram, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM);
+    DrawStdFrameWithCustomTileAndPalette(windowId, copyToVram, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM);
 }
 
 void sub_819786C(u8 windowId, bool8 copyToVram)
 {
     LoadMessageBoxGfx(windowId, DLG_WINDOW_BASE_TILE_NUM, DLG_WINDOW_PALETTE_NUM * 0x10);
-    sub_8197B1C(windowId, copyToVram, DLG_WINDOW_BASE_TILE_NUM, 0xF);
+    DrawDialogFrameWithCustomTileAndPalette(windowId, copyToVram, DLG_WINDOW_BASE_TILE_NUM, 0xF);
 }
 
 void sub_819789C(void)
@@ -454,54 +452,54 @@ u16 sub_81978D0(u8 colorNum)
 void DisplayItemMessageOnField(u8 taskId, const u8 *string, TaskFunc callback)
 {
     sub_81973A4();
-    DisplayMessageAndContinueTask(taskId, 0, DLG_WINDOW_BASE_TILE_NUM, DLG_WINDOW_PALETTE_NUM, 1, GetPlayerTextSpeed(), string, callback);
+    DisplayMessageAndContinueTask(taskId, 0, DLG_WINDOW_BASE_TILE_NUM, DLG_WINDOW_PALETTE_NUM, 1, GetPlayerTextSpeedDelay(), string, callback);
     CopyWindowToVram(0, 3);
 }
 
-void sub_8197930(void)
+void DisplayYesNoMenuDefaultYes(void)
 {
-    CreateYesNoMenu(&gUnknown_0860F0A8, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM, 0);
+    CreateYesNoMenu(&sYesNo_WindowTemplates, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM, 0);
 }
 
-void sub_8197948(u8 initialCursorPos)
+void DisplayYesNoMenuWithDefault(u8 initialCursorPos)
 {
-    CreateYesNoMenu(&gUnknown_0860F0A8, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM, initialCursorPos);
+    CreateYesNoMenu(&sYesNo_WindowTemplates, STD_WINDOW_BASE_TILE_NUM, STD_WINDOW_PALETTE_NUM, initialCursorPos);
 }
 
-u32 sub_8197964(void)
+u32 GetPlayerTextSpeed(void)
 {
-    if (gTextFlags.flag_3)
-        return 1;
+    if (gTextFlags.forceMidTextSpeed)
+        return OPTIONS_TEXT_SPEED_MID;
     return gSaveBlock2Ptr->optionsTextSpeed;
 }
 
-u8 GetPlayerTextSpeed(void)
+u8 GetPlayerTextSpeedDelay(void)
 {
     u32 speed;
-    if (gSaveBlock2Ptr->optionsTextSpeed > 2)
-        gSaveBlock2Ptr->optionsTextSpeed = 1;
-    speed = sub_8197964();
+    if (gSaveBlock2Ptr->optionsTextSpeed > OPTIONS_TEXT_SPEED_FAST)
+        gSaveBlock2Ptr->optionsTextSpeed = OPTIONS_TEXT_SPEED_MID;
+    speed = GetPlayerTextSpeed();
     return gUnknown_0860F094[speed];
 }
 
 u8 sub_81979C4(u8 a1)
 {
-    if (gStartMenuWindowId == 0xFF)
-        gStartMenuWindowId = sub_8198AA4(0, 0x16, 1, 7, (a1 * 2) + 2, 0xF, 0x139);
-    return gStartMenuWindowId;
+    if (sStartMenuWindowId == 0xFF)
+        sStartMenuWindowId = sub_8198AA4(0, 0x16, 1, 7, (a1 * 2) + 2, 0xF, 0x139);
+    return sStartMenuWindowId;
 }
 
 u8 GetStartMenuWindowId(void)
 {
-    return gStartMenuWindowId;
+    return sStartMenuWindowId;
 }
 
 void RemoveStartMenuWindow(void)
 {
-    if (gStartMenuWindowId != 0xFF)
+    if (sStartMenuWindowId != 0xFF)
     {
-        RemoveWindow(gStartMenuWindowId);
-        gStartMenuWindowId = 0xFF;
+        RemoveWindow(sStartMenuWindowId);
+        sStartMenuWindowId = 0xFF;
     }
 }
 
@@ -517,29 +515,29 @@ u16 sub_8197A38(void)
 
 u8 AddMapNamePopUpWindow(void)
 {
-    if (gUnknown_0203CD8D == 0xFF)
-        gUnknown_0203CD8D = sub_8198AA4(0, 1, 1, 10, 3, 14, 0x107);
-    return gUnknown_0203CD8D;
+    if (sMapNamePopupWindowId == 0xFF)
+        sMapNamePopupWindowId = sub_8198AA4(0, 1, 1, 10, 3, 14, 0x107);
+    return sMapNamePopupWindowId;
 }
 
 u8 GetMapNamePopUpWindowId(void)
 {
-    return gUnknown_0203CD8D;
+    return sMapNamePopupWindowId;
 }
 
 void RemoveMapNamePopUpWindow(void)
 {
-    if (gUnknown_0203CD8D != 0xFF)
+    if (sMapNamePopupWindowId != 0xFF)
     {
-        RemoveWindow(gUnknown_0203CD8D);
-        gUnknown_0203CD8D = 0xFF;
+        RemoveWindow(sMapNamePopupWindowId);
+        sMapNamePopupWindowId = 0xFF;
     }
 }
 
-void AddTextPrinterWithCallbackForMessage(bool8 a1, void (*callback)(struct TextSubPrinter *, u16))
+void AddTextPrinterWithCallbackForMessage(bool8 a1, void (*callback)(struct TextPrinterTemplate *, u16))
 {
-    gTextFlags.flag_0 = a1;
-    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeed(), callback, 2, 1, 3);
+    gTextFlags.canABSpeedUpPrint = a1;
+    AddTextPrinterParameterized2(0, 1, gStringVar4, GetPlayerTextSpeedDelay(), callback, 2, 1, 3);
 }
 
 void sub_8197AE8(bool8 copyToVram)
@@ -549,229 +547,232 @@ void sub_8197AE8(bool8 copyToVram)
         CopyBgTilemapBufferToVram(0);
 }
 
-void sub_8197B1C(u8 windowId, bool8 copyToVram, u16 a3, u8 a4)
+void DrawDialogFrameWithCustomTileAndPalette(u8 windowId, bool8 copyToVram, u16 tileNum, u8 paletteNum)
 {
-    gUnknown_0203CD9C = a3;
-    gUnknown_0203CD9E = a4;
-    CallWindowFunction(windowId, sub_8197BB4);
-    FillWindowPixelBuffer(windowId, 0x11);
+    sTileNum = tileNum;
+    sPaletteNum = paletteNum;
+    CallWindowFunction(windowId, WindowFunc_DrawDialogFrameWithCustomTileAndPalette);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_8197B64(u8 windowId, bool8 copyToVram, u16 a3)
+// Never used.
+void DrawDialogFrameWithCustomTile(u8 windowId, bool8 copyToVram, u16 tileNum)
 {
-    gUnknown_0203CD9C = a3;
-    gUnknown_0203CD9E = GetWindowAttribute(windowId, WINDOW_PALETTE_NUM);
-    CallWindowFunction(windowId, sub_8197BB4);
-    FillWindowPixelBuffer(windowId, 0x11);
+    sTileNum = tileNum;
+    sPaletteNum = GetWindowAttribute(windowId, WINDOW_PALETTE_NUM);
+    CallWindowFunction(windowId, WindowFunc_DrawDialogFrameWithCustomTileAndPalette);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_8197BB4(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_DrawDialogFrameWithCustomTileAndPalette(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 1,
+                            sTileNum + 1,
                             tilemapLeft - 2,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 3,
+                            sTileNum + 3,
                             tilemapLeft - 1,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 4,
+                            sTileNum + 4,
                             tilemapLeft,
                             tilemapTop - 1,
                             width - 1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 5,
+                            sTileNum + 5,
                             tilemapLeft + width - 1,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 6,
+                            sTileNum + 6,
                             tilemapLeft + width,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 7,
+                            sTileNum + 7,
                             tilemapLeft - 2,
                             tilemapTop,
                             1,
                             5,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 9,
+                            sTileNum + 9,
                             tilemapLeft - 1,
                             tilemapTop,
                             width + 1,
                             5,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 10,
+                            sTileNum + 10,
                             tilemapLeft + width,
                             tilemapTop,
                             1,
                             5,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            BG_TILE_V_FLIP(gUnknown_0203CD9C + 1),
+                            BG_TILE_V_FLIP(sTileNum + 1),
                             tilemapLeft - 2,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            BG_TILE_V_FLIP(gUnknown_0203CD9C + 3),
+                            BG_TILE_V_FLIP(sTileNum + 3),
                             tilemapLeft - 1,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            BG_TILE_V_FLIP(gUnknown_0203CD9C + 4),
+                            BG_TILE_V_FLIP(sTileNum + 4),
                             tilemapLeft,
                             tilemapTop + height,
                             width - 1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            BG_TILE_V_FLIP(gUnknown_0203CD9C + 5),
+                            BG_TILE_V_FLIP(sTileNum + 5),
                             tilemapLeft + width - 1,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            BG_TILE_V_FLIP(gUnknown_0203CD9C + 6),
+                            BG_TILE_V_FLIP(sTileNum + 6),
                             tilemapLeft + width,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
 }
 
-void sub_8197DF8(u8 windowId, bool8 copyToVram)
+void ClearDialogWindowAndFrameToTransparent(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, sub_8197E30);
-    FillWindowPixelBuffer(windowId, 0);
+    // The palette slot doesn't matter, since the tiles are transparent.
+    CallWindowFunction(windowId, WindowFunc_ClearDialogWindowAndFrameNullPalette);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
     ClearWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_8197E30(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_ClearDialogWindowAndFrameNullPalette(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg, 0, tilemapLeft - 3, tilemapTop - 1, width + 6, height + 2, 0);
 }
 
-void SetWindowBorderStyle(u8 windowId, bool8 copyToVram, u16 baseTileNum, u8 paletteNum)
+void DrawStdFrameWithCustomTileAndPalette(u8 windowId, bool8 copyToVram, u16 baseTileNum, u8 paletteNum)
 {
-    gUnknown_0203CD9C = baseTileNum;
-    gUnknown_0203CD9E = paletteNum;
-    CallWindowFunction(windowId, DrawWindowBorder);
-    FillWindowPixelBuffer(windowId, 0x11);
+    sTileNum = baseTileNum;
+    sPaletteNum = paletteNum;
+    CallWindowFunction(windowId, WindowFunc_DrawStdFrameWithCustomTileAndPalette);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_8197EC8(u8 windowId, bool8 copyToVram, u16 baseTileNum)
+// Never used.
+void DrawStdFrameWithCustomTile(u8 windowId, bool8 copyToVram, u16 baseTileNum)
 {
-    gUnknown_0203CD9C = baseTileNum;
-    gUnknown_0203CD9E = GetWindowAttribute(windowId, WINDOW_PALETTE_NUM);
-    CallWindowFunction(windowId, DrawWindowBorder);
-    FillWindowPixelBuffer(windowId, 0x11);
+    sTileNum = baseTileNum;
+    sPaletteNum = GetWindowAttribute(windowId, WINDOW_PALETTE_NUM);
+    CallWindowFunction(windowId, WindowFunc_DrawStdFrameWithCustomTileAndPalette);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void DrawWindowBorder(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_DrawStdFrameWithCustomTileAndPalette(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 0,
+                            sTileNum + 0,
                             tilemapLeft - 1,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 1,
+                            sTileNum + 1,
                             tilemapLeft,
                             tilemapTop - 1,
                             width,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 2,
+                            sTileNum + 2,
                             tilemapLeft + width,
                             tilemapTop - 1,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 3,
+                            sTileNum + 3,
                             tilemapLeft - 1,
                             tilemapTop,
                             1,
                             height,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 5,
+                            sTileNum + 5,
                             tilemapLeft + width,
                             tilemapTop,
                             1,
                             height,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 6,
+                            sTileNum + 6,
                             tilemapLeft - 1,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 7,
+                            sTileNum + 7,
                             tilemapLeft,
                             tilemapTop + height,
                             width,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
     FillBgTilemapBufferRect(bg,
-                            gUnknown_0203CD9C + 8,
+                            sTileNum + 8,
                             tilemapLeft + width,
                             tilemapTop + height,
                             1,
                             1,
-                            gUnknown_0203CD9E);
+                            sPaletteNum);
 }
 
-void sub_8198070(u8 windowId, bool8 copyToVram)
+void ClearStdWindowAndFrameToTransparent(u8 windowId, bool8 copyToVram)
 {
-    CallWindowFunction(windowId, sub_81980A8);
-    FillWindowPixelBuffer(windowId, 0);
+    CallWindowFunction(windowId, WindowFunc_ClearStdWindowAndFrameToTransparent);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
     ClearWindowTilemap(windowId);
     if (copyToVram == TRUE)
         CopyWindowToVram(windowId, 3);
 }
 
-void sub_81980A8(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
+void WindowFunc_ClearStdWindowAndFrameToTransparent(u8 bg, u8 tilemapLeft, u8 tilemapTop, u8 width, u8 height, u8 paletteNum)
 {
     FillBgTilemapBufferRect(bg, 0, tilemapLeft - 1, tilemapTop - 1, width + 2, height + 2, 0);
 }
@@ -782,9 +783,9 @@ u8 sub_81980F0(u8 bg, u8 xPos, u8 yPos, u8 palette, u16 baseTile)
     memset(&window, 0, sizeof(window));
 
     if (bg > 3)
-        window.priority = 0;
+        window.bg = 0;
     else
-        window.priority = bg;
+        window.bg = bg;
 
     window.tilemapTop = yPos;
     window.height = 2;
@@ -793,7 +794,7 @@ u8 sub_81980F0(u8 bg, u8 xPos, u8 yPos, u8 palette, u16 baseTile)
     window.paletteNum = palette;
     window.baseBlock = baseTile;
 
-    gUnknown_0203CDA0 = AddWindow(&window);
+    sWindowId = AddWindow(&window);
 
     if (palette > 15)
         palette = 15 * 16;
@@ -801,27 +802,27 @@ u8 sub_81980F0(u8 bg, u8 xPos, u8 yPos, u8 palette, u16 baseTile)
         palette *= 16;
 
     LoadPalette(gUnknown_0860F0B0, palette, sizeof(gUnknown_0860F0B0));
-    return gUnknown_0203CDA0;
+    return sWindowId;
 }
 
 void sub_8198180(const u8 *string, u8 a2, bool8 copyToVram)
 {
     u16 width = 0;
 
-    if (gUnknown_0203CDA0 != 0xFF)
+    if (sWindowId != 0xFF)
     {
-        PutWindowTilemap(gUnknown_0203CDA0);
-        FillWindowPixelBuffer(gUnknown_0203CDA0, 0xFF);
+        PutWindowTilemap(sWindowId);
+        FillWindowPixelBuffer(sWindowId, PIXEL_FILL(15));
         width = GetStringWidth(0, string, 0);
-        AddTextPrinterParameterized3(gUnknown_0203CDA0,
+        AddTextPrinterParameterized3(sWindowId,
                   0,
-                  0xEC - (GetWindowAttribute(gUnknown_0203CDA0, WINDOW_TILEMAP_LEFT) * 8) - a2 - width,
+                  0xEC - (GetWindowAttribute(sWindowId, WINDOW_TILEMAP_LEFT) * 8) - a2 - width,
                   1,
                   gUnknown_0860F0D0,
                   0,
                   string);
         if (copyToVram)
-            CopyWindowToVram(gUnknown_0203CDA0, 3);
+            CopyWindowToVram(sWindowId, 3);
     }
 }
 
@@ -830,7 +831,7 @@ void sub_8198204(const u8 *string, const u8 *string2, u8 a3, u8 a4, bool8 copyTo
     u8 color[3];
     u16 width = 0;
 
-    if (gUnknown_0203CDA0 != 0xFF)
+    if (sWindowId != 0xFF)
     {
         if (a3 != 0)
         {
@@ -844,49 +845,49 @@ void sub_8198204(const u8 *string, const u8 *string2, u8 a3, u8 a4, bool8 copyTo
             color[1] = 1;
             color[2] = 2;
         }
-        PutWindowTilemap(gUnknown_0203CDA0);
-        FillWindowPixelBuffer(gUnknown_0203CDA0, 0xFF);
+        PutWindowTilemap(sWindowId);
+        FillWindowPixelBuffer(sWindowId, PIXEL_FILL(15));
         if (string2 != NULL)
         {
             width = GetStringWidth(0, string2, 0);
-            AddTextPrinterParameterized3(gUnknown_0203CDA0,
+            AddTextPrinterParameterized3(sWindowId,
                       0,
-                      0xEC - (GetWindowAttribute(gUnknown_0203CDA0, WINDOW_TILEMAP_LEFT) * 8) - a4 - width,
+                      0xEC - (GetWindowAttribute(sWindowId, WINDOW_TILEMAP_LEFT) * 8) - a4 - width,
                       1,
                       color,
                       0,
                       string2);
         }
-        AddTextPrinterParameterized4(gUnknown_0203CDA0, 1, 4, 1, 0, 0, color, 0, string);
+        AddTextPrinterParameterized4(sWindowId, 1, 4, 1, 0, 0, color, 0, string);
         if (copyToVram)
-            CopyWindowToVram(gUnknown_0203CDA0, 3);
+            CopyWindowToVram(sWindowId, 3);
     }
 }
 
 void sub_81982D8(void)
 {
-    if (gUnknown_0203CDA0 != 0xFF)
-        CopyWindowToVram(gUnknown_0203CDA0, 3);
+    if (sWindowId != 0xFF)
+        CopyWindowToVram(sWindowId, 3);
 }
 
 void sub_81982F0(void)
 {
-    if (gUnknown_0203CDA0 != 0xFF)
+    if (sWindowId != 0xFF)
     {
-        FillWindowPixelBuffer(gUnknown_0203CDA0, 0xFF);
-        CopyWindowToVram(gUnknown_0203CDA0, 3);
+        FillWindowPixelBuffer(sWindowId, PIXEL_FILL(15));
+        CopyWindowToVram(sWindowId, 3);
     }
 }
 
 void sub_8198314(void)
 {
-    if (gUnknown_0203CDA0 != 0xFF)
+    if (sWindowId != 0xFF)
     {
-        FillWindowPixelBuffer(gUnknown_0203CDA0, 0);
-        ClearWindowTilemap(gUnknown_0203CDA0);
-        CopyWindowToVram(gUnknown_0203CDA0, 3);
-        RemoveWindow(gUnknown_0203CDA0);
-        gUnknown_0203CDA0 = 0xFF;
+        FillWindowPixelBuffer(sWindowId, PIXEL_FILL(0));
+        ClearWindowTilemap(sWindowId);
+        CopyWindowToVram(sWindowId, 3);
+        RemoveWindow(sWindowId);
+        sWindowId = 0xFF;
     }
 }
 
@@ -894,24 +895,24 @@ u8 sub_8198348(u8 windowId, u8 fontId, u8 left, u8 top, u8 cursorHeight, u8 numC
 {
     s32 pos;
 
-    gUnknown_0203CD90.left = left;
-    gUnknown_0203CD90.top = top;
-    gUnknown_0203CD90.minCursorPos = 0;
-    gUnknown_0203CD90.maxCursorPos = numChoices - 1;
-    gUnknown_0203CD90.windowId = windowId;
-    gUnknown_0203CD90.fontId = fontId;
-    gUnknown_0203CD90.optionHeight = cursorHeight;
-    gUnknown_0203CD90.APressMuted = a7;
+    sMenu.left = left;
+    sMenu.top = top;
+    sMenu.minCursorPos = 0;
+    sMenu.maxCursorPos = numChoices - 1;
+    sMenu.windowId = windowId;
+    sMenu.fontId = fontId;
+    sMenu.optionHeight = cursorHeight;
+    sMenu.APressMuted = a7;
 
     pos = initialCursorPos;
 
-    if (pos < 0 || pos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = 0;
+    if (pos < 0 || pos > sMenu.maxCursorPos)
+        sMenu.cursorPos = 0;
     else
-        gUnknown_0203CD90.cursorPos = pos;
+        sMenu.cursorPos = pos;
 
-    MoveMenuCursor(0);
-    return gUnknown_0203CD90.cursorPos;
+    Menu_MoveCursor(0);
+    return sMenu.cursorPos;
 }
 
 u8 sub_81983AC(u8 windowId, u8 fontId, u8 left, u8 top, u8 cursorHeight, u8 numChoices, u8 initialCursorPos)
@@ -929,56 +930,56 @@ void RedrawMenuCursor(u8 oldPos, u8 newPos)
 {
     u8 width, height;
 
-    width = GetMenuCursorDimensionByFont(gUnknown_0203CD90.fontId, 0);
-    height = GetMenuCursorDimensionByFont(gUnknown_0203CD90.fontId, 1);
-    FillWindowPixelRect(gUnknown_0203CD90.windowId, 0x11, gUnknown_0203CD90.left, gUnknown_0203CD90.optionHeight * oldPos + gUnknown_0203CD90.top, width, height);
-    AddTextPrinterParameterized(gUnknown_0203CD90.windowId, gUnknown_0203CD90.fontId, gText_SelectorArrow3, gUnknown_0203CD90.left, gUnknown_0203CD90.optionHeight * newPos + gUnknown_0203CD90.top, 0, 0);
+    width = GetMenuCursorDimensionByFont(sMenu.fontId, 0);
+    height = GetMenuCursorDimensionByFont(sMenu.fontId, 1);
+    FillWindowPixelRect(sMenu.windowId, PIXEL_FILL(1), sMenu.left, sMenu.optionHeight * oldPos + sMenu.top, width, height);
+    AddTextPrinterParameterized(sMenu.windowId, sMenu.fontId, gText_SelectorArrow3, sMenu.left, sMenu.optionHeight * newPos + sMenu.top, 0, 0);
 }
 
-u8 MoveMenuCursor(s8 cursorDelta)
+u8 Menu_MoveCursor(s8 cursorDelta)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
-    int newPos = gUnknown_0203CD90.cursorPos + cursorDelta;
+    u8 oldPos = sMenu.cursorPos;
+    int newPos = sMenu.cursorPos + cursorDelta;
 
-    if (newPos < gUnknown_0203CD90.minCursorPos)
-        gUnknown_0203CD90.cursorPos = gUnknown_0203CD90.maxCursorPos;
-    else if (newPos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = gUnknown_0203CD90.minCursorPos;
+    if (newPos < sMenu.minCursorPos)
+        sMenu.cursorPos = sMenu.maxCursorPos;
+    else if (newPos > sMenu.maxCursorPos)
+        sMenu.cursorPos = sMenu.minCursorPos;
     else
-        gUnknown_0203CD90.cursorPos += cursorDelta;
+        sMenu.cursorPos += cursorDelta;
 
-    RedrawMenuCursor(oldPos, gUnknown_0203CD90.cursorPos);
-    return gUnknown_0203CD90.cursorPos;
+    RedrawMenuCursor(oldPos, sMenu.cursorPos);
+    return sMenu.cursorPos;
 }
 
-u8 MoveMenuCursorNoWrapAround(s8 cursorDelta)
+u8 Menu_MoveCursorNoWrapAround(s8 cursorDelta)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
-    int newPos = gUnknown_0203CD90.cursorPos + cursorDelta;
+    u8 oldPos = sMenu.cursorPos;
+    int newPos = sMenu.cursorPos + cursorDelta;
 
-    if (newPos < gUnknown_0203CD90.minCursorPos)
-        gUnknown_0203CD90.cursorPos = gUnknown_0203CD90.minCursorPos;
-    else if (newPos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = gUnknown_0203CD90.maxCursorPos;
+    if (newPos < sMenu.minCursorPos)
+        sMenu.cursorPos = sMenu.minCursorPos;
+    else if (newPos > sMenu.maxCursorPos)
+        sMenu.cursorPos = sMenu.maxCursorPos;
     else
-        gUnknown_0203CD90.cursorPos += cursorDelta;
+        sMenu.cursorPos += cursorDelta;
 
-    RedrawMenuCursor(oldPos, gUnknown_0203CD90.cursorPos);
-    return gUnknown_0203CD90.cursorPos;
+    RedrawMenuCursor(oldPos, sMenu.cursorPos);
+    return sMenu.cursorPos;
 }
 
-u8 GetMenuCursorPos(void)
+u8 Menu_GetCursorPos(void)
 {
-    return gUnknown_0203CD90.cursorPos;
+    return sMenu.cursorPos;
 }
 
-s8 ProcessMenuInput(void)
+s8 Menu_ProcessInput(void)
 {
     if (gMain.newKeys & A_BUTTON)
     {
-        if (!gUnknown_0203CD90.APressMuted)
+        if (!sMenu.APressMuted)
             PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -987,28 +988,28 @@ s8 ProcessMenuInput(void)
     else if (gMain.newKeys & DPAD_UP)
     {
         PlaySE(SE_SELECT);
-        MoveMenuCursor(-1);
+        Menu_MoveCursor(-1);
         return MENU_NOTHING_CHOSEN;
     }
     else if (gMain.newKeys & DPAD_DOWN)
     {
         PlaySE(SE_SELECT);
-        MoveMenuCursor(1);
+        Menu_MoveCursor(1);
         return MENU_NOTHING_CHOSEN;
     }
 
     return MENU_NOTHING_CHOSEN;
 }
 
-s8 Menu_ProcessInputNoWrapAround(void)
+s8 Menu_ProcessInputNoWrap(void)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (gMain.newKeys & A_BUTTON)
     {
-        if (!gUnknown_0203CD90.APressMuted)
+        if (!sMenu.APressMuted)
             PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1016,13 +1017,13 @@ s8 Menu_ProcessInputNoWrapAround(void)
     }
     else if (gMain.newKeys & DPAD_UP)
     {
-        if (oldPos != MoveMenuCursorNoWrapAround(-1))
+        if (oldPos != Menu_MoveCursorNoWrapAround(-1))
             PlaySE(SE_SELECT);
         return MENU_NOTHING_CHOSEN;
     }
     else if (gMain.newKeys & DPAD_DOWN)
     {
-        if (oldPos != MoveMenuCursorNoWrapAround(1))
+        if (oldPos != Menu_MoveCursorNoWrapAround(1))
             PlaySE(SE_SELECT);
         return MENU_NOTHING_CHOSEN;
     }
@@ -1034,9 +1035,9 @@ s8 ProcessMenuInput_other(void)
 {
     if (gMain.newKeys & A_BUTTON)
     {
-        if (!gUnknown_0203CD90.APressMuted)
+        if (!sMenu.APressMuted)
             PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1045,13 +1046,13 @@ s8 ProcessMenuInput_other(void)
     else if ((gMain.newAndRepeatedKeys & DPAD_ANY) == DPAD_UP)
     {
         PlaySE(SE_SELECT);
-        MoveMenuCursor(-1);
+        Menu_MoveCursor(-1);
         return MENU_NOTHING_CHOSEN;
     }
     else if ((gMain.newAndRepeatedKeys & DPAD_ANY) == DPAD_DOWN)
     {
         PlaySE(SE_SELECT);
-        MoveMenuCursor(1);
+        Menu_MoveCursor(1);
         return MENU_NOTHING_CHOSEN;
     }
 
@@ -1060,13 +1061,13 @@ s8 ProcessMenuInput_other(void)
 
 s8 Menu_ProcessInputNoWrapAround_other(void)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (gMain.newKeys & A_BUTTON)
     {
-        if (!gUnknown_0203CD90.APressMuted)
+        if (!sMenu.APressMuted)
             PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1074,13 +1075,13 @@ s8 Menu_ProcessInputNoWrapAround_other(void)
     }
     else if ((gMain.newAndRepeatedKeys & DPAD_ANY) == DPAD_UP)
     {
-        if (oldPos != MoveMenuCursorNoWrapAround(-1))
+        if (oldPos != Menu_MoveCursorNoWrapAround(-1))
             PlaySE(SE_SELECT);
         return MENU_NOTHING_CHOSEN;
     }
     else if ((gMain.newAndRepeatedKeys & DPAD_ANY) == DPAD_DOWN)
     {
-        if (oldPos != MoveMenuCursorNoWrapAround(1))
+        if (oldPos != Menu_MoveCursorNoWrapAround(1))
             PlaySE(SE_SELECT);
         return MENU_NOTHING_CHOSEN;
     }
@@ -1116,14 +1117,14 @@ void sub_8198854(u8 windowId, u8 fontId, u8 lineHeight, u8 itemCount, const stru
 void AddItemMenuActionTextPrinters(u8 windowId, u8 fontId, u8 left, u8 top, u8 letterSpacing, u8 lineHeight, u8 itemCount, const struct MenuAction *strs, const u8 *a8)
 {
     u8 i;
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
     printer.windowId = windowId;
     printer.fontId = fontId;
     printer.fgColor = GetFontAttribute(fontId, FONTATTR_COLOR_FOREGROUND);
     printer.bgColor = GetFontAttribute(fontId, FONTATTR_COLOR_BACKGROUND);
     printer.shadowColor = GetFontAttribute(fontId, FONTATTR_COLOR_SHADOW);
-    printer.fontColor_l = GetFontAttribute(fontId, FONTATTR_COLOR_LOWNIBBLE);
+    printer.unk = GetFontAttribute(fontId, FONTATTR_UNKNOWN);
     printer.letterSpacing = letterSpacing;
     printer.lineSpacing = GetFontAttribute(fontId, FONTATTR_LINE_SPACING);
     printer.x = left;
@@ -1131,7 +1132,7 @@ void AddItemMenuActionTextPrinters(u8 windowId, u8 fontId, u8 left, u8 top, u8 l
 
     for (i = 0; i < itemCount; i++)
     {
-        printer.current_text_offset = strs[a8[i]].text;
+        printer.currentChar = strs[a8[i]].text;
         printer.y = (lineHeight * i) + top;
         printer.currentY = printer.y;
         AddTextPrinter(&printer, 0xFF, NULL);
@@ -1147,7 +1148,7 @@ void sub_81989B8(u8 windowId, u8 fontId, u8 lineHeight, u8 itemCount, const stru
 
 void SetWindowTemplateFields(struct WindowTemplate *template, u8 bg, u8 left, u8 top, u8 width, u8 height, u8 paletteNum, u16 baseBlock)
 {
-    template->priority = bg;
+    template->bg = bg;
     template->tilemapLeft = left;
     template->tilemapTop = top;
     template->width = width;
@@ -1172,13 +1173,13 @@ u16 sub_8198AA4(u8 bg, u8 left, u8 top, u8 width, u8 height, u8 paletteNum, u16 
 
 void sub_8198AF8(const struct WindowTemplate *window, u8 fontId, u8 left, u8 top, u16 baseTileNum, u8 paletteNum, u8 initialCursorPos)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    gUnknown_0203CD9F = AddWindow(window);
-    SetWindowBorderStyle(gUnknown_0203CD9F, TRUE, baseTileNum, paletteNum);
+    sYesNoWindowId = AddWindow(window);
+    DrawStdFrameWithCustomTileAndPalette(sYesNoWindowId, TRUE, baseTileNum, paletteNum);
 
-    printer.current_text_offset = gText_YesNo;
-    printer.windowId = gUnknown_0203CD9F;
+    printer.currentChar = gText_YesNo;
+    printer.windowId = sYesNoWindowId;
     printer.fontId = fontId;
     printer.x = GetFontAttribute(fontId, FONTATTR_MAX_LETTER_WIDTH) + left;
     printer.y = top;
@@ -1187,13 +1188,13 @@ void sub_8198AF8(const struct WindowTemplate *window, u8 fontId, u8 left, u8 top
     printer.fgColor = GetFontAttribute(fontId, FONTATTR_COLOR_FOREGROUND);
     printer.bgColor = GetFontAttribute(fontId, FONTATTR_COLOR_BACKGROUND);
     printer.shadowColor = GetFontAttribute(fontId, FONTATTR_COLOR_SHADOW);
-    printer.fontColor_l = GetFontAttribute(fontId, FONTATTR_COLOR_LOWNIBBLE);
+    printer.unk = GetFontAttribute(fontId, FONTATTR_UNKNOWN);
     printer.letterSpacing = GetFontAttribute(fontId, FONTATTR_LETTER_SPACING);
     printer.lineSpacing = GetFontAttribute(fontId, FONTATTR_LINE_SPACING);
 
     AddTextPrinter(&printer, 0xFF, NULL);
 
-    sub_81983AC(gUnknown_0203CD9F, fontId, left, top, GetFontAttribute(fontId, FONTATTR_MAX_LETTER_HEIGHT), 2, initialCursorPos);
+    sub_81983AC(sYesNoWindowId, fontId, left, top, GetFontAttribute(fontId, FONTATTR_MAX_LETTER_HEIGHT), 2, initialCursorPos);
 }
 
 void sub_8198C34(const struct WindowTemplate *window, u8 fontId, u16 baseTileNum, u8 paletteNum)
@@ -1201,9 +1202,9 @@ void sub_8198C34(const struct WindowTemplate *window, u8 fontId, u16 baseTileNum
     sub_8198AF8(window, fontId, 0, 1, baseTileNum, paletteNum, 0);
 }
 
-s8 Menu_ProcessInputNoWrap_(void)
+s8 Menu_ProcessInputNoWrapClearOnChoose(void)
 {
-    s8 result = Menu_ProcessInputNoWrapAround();
+    s8 result = Menu_ProcessInputNoWrap();
     if (result != MENU_NOTHING_CHOSEN)
         sub_8198C78();
     return result;
@@ -1211,8 +1212,8 @@ s8 Menu_ProcessInputNoWrap_(void)
 
 void sub_8198C78(void)
 {
-    sub_8198070(gUnknown_0203CD9F, TRUE);
-    RemoveWindow(gUnknown_0203CD9F);
+    ClearStdWindowAndFrameToTransparent(sYesNoWindowId, TRUE);
+    RemoveWindow(sYesNoWindowId);
 }
 
 void sub_8198C94(u8 windowId, u8 fontId, u8 left, u8 top, u8 a4, u8 a5, u8 a6, u8 a7, const struct MenuAction *strs)
@@ -1238,22 +1239,22 @@ void sub_8198DBC(u8 windowId, u8 fontId, u8 left, u8 top, u8 a4, u8 itemCount, u
 {
     u8 i;
     u8 j;
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
     printer.windowId = windowId;
     printer.fontId = fontId;
-    printer.fgColor = GetFontAttribute(fontId, 5);
-    printer.bgColor = GetFontAttribute(fontId, 6);
-    printer.shadowColor = GetFontAttribute(fontId, 7);
-    printer.fontColor_l = GetFontAttribute(fontId, 4);
-    printer.letterSpacing = GetFontAttribute(fontId, 2);
-    printer.lineSpacing = GetFontAttribute(fontId, 3);
+    printer.fgColor = GetFontAttribute(fontId, FONTATTR_COLOR_FOREGROUND);
+    printer.bgColor = GetFontAttribute(fontId, FONTATTR_COLOR_BACKGROUND);
+    printer.shadowColor = GetFontAttribute(fontId, FONTATTR_COLOR_SHADOW);
+    printer.unk = GetFontAttribute(fontId, FONTATTR_UNKNOWN);
+    printer.letterSpacing = GetFontAttribute(fontId, FONTATTR_LETTER_SPACING);
+    printer.lineSpacing = GetFontAttribute(fontId, FONTATTR_LINE_SPACING);
 
     for (i = 0; i < itemCount2; i++)
     {
         for (j = 0; j < itemCount; j++)
         {
-            printer.current_text_offset = strs[a8[(itemCount * i) + j]].text;
+            printer.currentChar = strs[a8[(itemCount * i) + j]].text;
             printer.x = (a4 * j) + left;
             printer.y = (GetFontAttribute(fontId, 1) * i) + top;
             printer.currentX = printer.x;
@@ -1274,26 +1275,26 @@ u8 sub_8198F58(u8 windowId, u8 fontId, u8 left, u8 top, u8 a4, u8 cursorHeight, 
 {
     s32 pos;
 
-    gUnknown_0203CD90.left = left;
-    gUnknown_0203CD90.top = top;
-    gUnknown_0203CD90.minCursorPos = 0;
-    gUnknown_0203CD90.maxCursorPos = numChoices - 1;
-    gUnknown_0203CD90.windowId = windowId;
-    gUnknown_0203CD90.fontId = fontId;
-    gUnknown_0203CD90.optionWidth = a4;
-    gUnknown_0203CD90.optionHeight = cursorHeight;
-    gUnknown_0203CD90.horizontalCount = a6;
-    gUnknown_0203CD90.verticalCount = a7;
+    sMenu.left = left;
+    sMenu.top = top;
+    sMenu.minCursorPos = 0;
+    sMenu.maxCursorPos = numChoices - 1;
+    sMenu.windowId = windowId;
+    sMenu.fontId = fontId;
+    sMenu.optionWidth = a4;
+    sMenu.optionHeight = cursorHeight;
+    sMenu.horizontalCount = a6;
+    sMenu.verticalCount = a7;
 
     pos = a9;
 
-    if (pos < 0 || pos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = 0;
+    if (pos < 0 || pos > sMenu.maxCursorPos)
+        sMenu.cursorPos = 0;
     else
-        gUnknown_0203CD90.cursorPos = pos;
+        sMenu.cursorPos = pos;
 
     sub_8199134(0, 0);
-    return gUnknown_0203CD90.cursorPos;
+    return sMenu.cursorPos;
 }
 
 u8 sub_8198FD4(u8 windowId, u8 fontId, u8 left, u8 top, u8 a4, u8 a5, u8 a6, u8 a7)
@@ -1305,20 +1306,20 @@ u8 sub_8198FD4(u8 windowId, u8 fontId, u8 left, u8 top, u8 a4, u8 a5, u8 a6, u8 
 
 void sub_8199060(u8 oldCursorPos, u8 newCursorPos)
 {
-    u8 cursorWidth = GetMenuCursorDimensionByFont(gUnknown_0203CD90.fontId, 0);
-    u8 cursorHeight = GetMenuCursorDimensionByFont(gUnknown_0203CD90.fontId, 1);
-    u8 xPos = (oldCursorPos % gUnknown_0203CD90.horizontalCount) * gUnknown_0203CD90.optionWidth + gUnknown_0203CD90.left;
-    u8 yPos = (oldCursorPos / gUnknown_0203CD90.horizontalCount) * gUnknown_0203CD90.optionHeight + gUnknown_0203CD90.top;
-    FillWindowPixelRect(gUnknown_0203CD90.windowId,
-                        0x11,
+    u8 cursorWidth = GetMenuCursorDimensionByFont(sMenu.fontId, 0);
+    u8 cursorHeight = GetMenuCursorDimensionByFont(sMenu.fontId, 1);
+    u8 xPos = (oldCursorPos % sMenu.horizontalCount) * sMenu.optionWidth + sMenu.left;
+    u8 yPos = (oldCursorPos / sMenu.horizontalCount) * sMenu.optionHeight + sMenu.top;
+    FillWindowPixelRect(sMenu.windowId,
+                        PIXEL_FILL(1),
                         xPos,
                         yPos,
                         cursorWidth,
                         cursorHeight);
-    xPos = (newCursorPos % gUnknown_0203CD90.horizontalCount) * gUnknown_0203CD90.optionWidth + gUnknown_0203CD90.left;
-    yPos = (newCursorPos / gUnknown_0203CD90.horizontalCount) * gUnknown_0203CD90.optionHeight + gUnknown_0203CD90.top;
-    AddTextPrinterParameterized(gUnknown_0203CD90.windowId,
-                      gUnknown_0203CD90.fontId,
+    xPos = (newCursorPos % sMenu.horizontalCount) * sMenu.optionWidth + sMenu.left;
+    yPos = (newCursorPos / sMenu.horizontalCount) * sMenu.optionHeight + sMenu.top;
+    AddTextPrinterParameterized(sMenu.windowId,
+                      sMenu.fontId,
                       gText_SelectorArrow3,
                       xPos,
                       yPos,
@@ -1328,83 +1329,83 @@ void sub_8199060(u8 oldCursorPos, u8 newCursorPos)
 
 u8 sub_8199134(s8 deltaX, s8 deltaY)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (deltaX != 0)
     {
-        if ((gUnknown_0203CD90.cursorPos % gUnknown_0203CD90.horizontalCount) + deltaX < 0)
+        if ((sMenu.cursorPos % sMenu.horizontalCount) + deltaX < 0)
         {
-            gUnknown_0203CD90.cursorPos += gUnknown_0203CD90.horizontalCount - 1;
+            sMenu.cursorPos += sMenu.horizontalCount - 1;
         }
-        else if ((gUnknown_0203CD90.cursorPos % gUnknown_0203CD90.horizontalCount) + deltaX >= gUnknown_0203CD90.horizontalCount)
+        else if ((sMenu.cursorPos % sMenu.horizontalCount) + deltaX >= sMenu.horizontalCount)
         {
-            gUnknown_0203CD90.cursorPos = (gUnknown_0203CD90.cursorPos / gUnknown_0203CD90.horizontalCount) * gUnknown_0203CD90.horizontalCount;
+            sMenu.cursorPos = (sMenu.cursorPos / sMenu.horizontalCount) * sMenu.horizontalCount;
         }
         else
         {
-            gUnknown_0203CD90.cursorPos += deltaX;
+            sMenu.cursorPos += deltaX;
         }
     }
 
     if (deltaY != 0)
     {
-        if ((gUnknown_0203CD90.cursorPos / gUnknown_0203CD90.horizontalCount) + deltaY < 0)
+        if ((sMenu.cursorPos / sMenu.horizontalCount) + deltaY < 0)
         {
-            gUnknown_0203CD90.cursorPos += gUnknown_0203CD90.horizontalCount * (gUnknown_0203CD90.verticalCount - 1);
+            sMenu.cursorPos += sMenu.horizontalCount * (sMenu.verticalCount - 1);
         }
-        else if ((gUnknown_0203CD90.cursorPos / gUnknown_0203CD90.horizontalCount) + deltaY >= gUnknown_0203CD90.verticalCount)
+        else if ((sMenu.cursorPos / sMenu.horizontalCount) + deltaY >= sMenu.verticalCount)
         {
-            gUnknown_0203CD90.cursorPos -= gUnknown_0203CD90.horizontalCount * (gUnknown_0203CD90.verticalCount - 1);
+            sMenu.cursorPos -= sMenu.horizontalCount * (sMenu.verticalCount - 1);
         }
         else
         {
-            gUnknown_0203CD90.cursorPos += (gUnknown_0203CD90.horizontalCount * deltaY);
+            sMenu.cursorPos += (sMenu.horizontalCount * deltaY);
         }
     }
 
-    if (gUnknown_0203CD90.cursorPos > gUnknown_0203CD90.maxCursorPos)
+    if (sMenu.cursorPos > sMenu.maxCursorPos)
     {
-        gUnknown_0203CD90.cursorPos = oldPos;
-        return gUnknown_0203CD90.cursorPos;
+        sMenu.cursorPos = oldPos;
+        return sMenu.cursorPos;
     }
     else
     {
-        sub_8199060(oldPos, gUnknown_0203CD90.cursorPos);
-        return gUnknown_0203CD90.cursorPos;
+        sub_8199060(oldPos, sMenu.cursorPos);
+        return sMenu.cursorPos;
     }
 }
 
 u8 sub_81991F8(s8 deltaX, s8 deltaY)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (deltaX != 0)
     {
-        if (((gUnknown_0203CD90.cursorPos % gUnknown_0203CD90.horizontalCount) + deltaX >= 0) &&
-        ((gUnknown_0203CD90.cursorPos % gUnknown_0203CD90.horizontalCount) + deltaX < gUnknown_0203CD90.horizontalCount))
+        if (((sMenu.cursorPos % sMenu.horizontalCount) + deltaX >= 0) &&
+        ((sMenu.cursorPos % sMenu.horizontalCount) + deltaX < sMenu.horizontalCount))
         {
-            gUnknown_0203CD90.cursorPos += deltaX;
+            sMenu.cursorPos += deltaX;
         }
     }
 
     if (deltaY != 0)
     {
-        if (((gUnknown_0203CD90.cursorPos / gUnknown_0203CD90.horizontalCount) + deltaY >= 0) &&
-        ((gUnknown_0203CD90.cursorPos / gUnknown_0203CD90.horizontalCount) + deltaY < gUnknown_0203CD90.verticalCount))
+        if (((sMenu.cursorPos / sMenu.horizontalCount) + deltaY >= 0) &&
+        ((sMenu.cursorPos / sMenu.horizontalCount) + deltaY < sMenu.verticalCount))
         {
-            gUnknown_0203CD90.cursorPos += (gUnknown_0203CD90.horizontalCount * deltaY);
+            sMenu.cursorPos += (sMenu.horizontalCount * deltaY);
         }
     }
 
-    if (gUnknown_0203CD90.cursorPos > gUnknown_0203CD90.maxCursorPos)
+    if (sMenu.cursorPos > sMenu.maxCursorPos)
     {
-        gUnknown_0203CD90.cursorPos = oldPos;
-        return gUnknown_0203CD90.cursorPos;
+        sMenu.cursorPos = oldPos;
+        return sMenu.cursorPos;
     }
     else
     {
-        sub_8199060(oldPos, gUnknown_0203CD90.cursorPos);
-        return gUnknown_0203CD90.cursorPos;
+        sub_8199060(oldPos, sMenu.cursorPos);
+        return sMenu.cursorPos;
     }
 }
 
@@ -1413,7 +1414,7 @@ s8 sub_8199284(void)
     if (gMain.newKeys & A_BUTTON)
     {
         PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1447,14 +1448,14 @@ s8 sub_8199284(void)
     return MENU_NOTHING_CHOSEN;
 }
 
-s8 sub_8199334(void)
+s8 Menu_ProcessInputGridLayout(void)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (gMain.newKeys & A_BUTTON)
     {
         PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1493,7 +1494,7 @@ s8 sub_81993D8(void)
     if (gMain.newKeys & A_BUTTON)
     {
         PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1529,12 +1530,12 @@ s8 sub_81993D8(void)
 
 s8 sub_8199484(void)
 {
-    u8 oldPos = gUnknown_0203CD90.cursorPos;
+    u8 oldPos = sMenu.cursorPos;
 
     if (gMain.newKeys & A_BUTTON)
     {
         PlaySE(SE_SELECT);
-        return gUnknown_0203CD90.cursorPos;
+        return sMenu.cursorPos;
     }
     else if (gMain.newKeys & B_BUTTON)
     {
@@ -1572,23 +1573,23 @@ u8 InitMenuInUpperLeftCorner(u8 windowId, u8 itemCount, u8 initialCursorPos, boo
 {
     s32 pos;
 
-    gUnknown_0203CD90.left = 0;
-    gUnknown_0203CD90.top = 1;
-    gUnknown_0203CD90.minCursorPos = 0;
-    gUnknown_0203CD90.maxCursorPos = itemCount - 1;
-    gUnknown_0203CD90.windowId = windowId;
-    gUnknown_0203CD90.fontId = 1;
-    gUnknown_0203CD90.optionHeight = 16;
-    gUnknown_0203CD90.APressMuted = APressMuted;
+    sMenu.left = 0;
+    sMenu.top = 1;
+    sMenu.minCursorPos = 0;
+    sMenu.maxCursorPos = itemCount - 1;
+    sMenu.windowId = windowId;
+    sMenu.fontId = 1;
+    sMenu.optionHeight = 16;
+    sMenu.APressMuted = APressMuted;
 
     pos = initialCursorPos;
 
-    if (pos < 0 || pos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = 0;
+    if (pos < 0 || pos > sMenu.maxCursorPos)
+        sMenu.cursorPos = 0;
     else
-        gUnknown_0203CD90.cursorPos = pos;
+        sMenu.cursorPos = pos;
 
-    return MoveMenuCursor(0);
+    return Menu_MoveCursor(0);
 }
 
 u8 InitMenuInUpperLeftCornerPlaySoundWhenAPressed(u8 windowId, u8 itemCount, u8 initialCursorPos)
@@ -1611,14 +1612,14 @@ void PrintMenuTable(u8 windowId, u8 itemCount, const struct MenuAction *strs)
 void sub_81995E4(u8 windowId, u8 itemCount, const struct MenuAction *strs, const u8 *a8)
 {
     u8 i;
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
     printer.windowId = windowId;
     printer.fontId = 1;
-    printer.fgColor = GetFontAttribute(1, 5);
-    printer.bgColor = GetFontAttribute(1, 6);
-    printer.shadowColor = GetFontAttribute(1, 7);
-    printer.fontColor_l = GetFontAttribute(1, 4);
+    printer.fgColor = GetFontAttribute(1, FONTATTR_COLOR_FOREGROUND);
+    printer.bgColor = GetFontAttribute(1, FONTATTR_COLOR_BACKGROUND);
+    printer.shadowColor = GetFontAttribute(1, FONTATTR_COLOR_SHADOW);
+    printer.unk = GetFontAttribute(1, FONTATTR_UNKNOWN);
     printer.letterSpacing = 0;
     printer.lineSpacing = 0;
     printer.x = 8;
@@ -1626,7 +1627,7 @@ void sub_81995E4(u8 windowId, u8 itemCount, const struct MenuAction *strs, const
 
     for (i = 0; i < itemCount; i++)
     {
-        printer.current_text_offset = strs[a8[i]].text;
+        printer.currentChar = strs[a8[i]].text;
         printer.y = (i * 16) + 1;
         printer.currentY = (i * 16) + 1;
         AddTextPrinter(&printer, 0xFF, NULL);
@@ -1637,27 +1638,27 @@ void sub_81995E4(u8 windowId, u8 itemCount, const struct MenuAction *strs, const
 
 void CreateYesNoMenu(const struct WindowTemplate *window, u16 baseTileNum, u8 paletteNum, u8 initialCursorPos)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    gUnknown_0203CD9F = AddWindow(window);
-    SetWindowBorderStyle(gUnknown_0203CD9F, TRUE, baseTileNum, paletteNum);
+    sYesNoWindowId = AddWindow(window);
+    DrawStdFrameWithCustomTileAndPalette(sYesNoWindowId, TRUE, baseTileNum, paletteNum);
 
-    printer.current_text_offset = gText_YesNo;
-    printer.windowId = gUnknown_0203CD9F;
+    printer.currentChar = gText_YesNo;
+    printer.windowId = sYesNoWindowId;
     printer.fontId = 1;
     printer.x = 8;
     printer.y = 1;
     printer.currentX = printer.x;
     printer.currentY = printer.y;
-    printer.fgColor = GetFontAttribute(1, 5);
-    printer.bgColor = GetFontAttribute(1, 6);
-    printer.shadowColor = GetFontAttribute(1, 7);
-    printer.fontColor_l = GetFontAttribute(1, 4);
+    printer.fgColor = GetFontAttribute(1, FONTATTR_COLOR_FOREGROUND);
+    printer.bgColor = GetFontAttribute(1, FONTATTR_COLOR_BACKGROUND);
+    printer.shadowColor = GetFontAttribute(1, FONTATTR_COLOR_SHADOW);
+    printer.unk = GetFontAttribute(1, FONTATTR_UNKNOWN);
     printer.letterSpacing = 0;
     printer.lineSpacing = 0;
 
     AddTextPrinter(&printer, 0xFF, NULL);
-    InitMenuInUpperLeftCornerPlaySoundWhenAPressed(gUnknown_0203CD9F, 2, initialCursorPos);
+    InitMenuInUpperLeftCornerPlaySoundWhenAPressed(sYesNoWindowId, 2, initialCursorPos);
 }
 
 void sub_81997AC(u8 windowId, u8 a4, u8 a6, u8 a7, const struct MenuAction *strs)
@@ -1678,14 +1679,14 @@ void sub_819983C(u8 windowId, u8 a4, u8 itemCount, u8 itemCount2, const struct M
 {
     u8 i;
     u8 j;
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
     printer.windowId = windowId;
     printer.fontId = 1;
-    printer.fgColor = GetFontAttribute(1, 5);
-    printer.bgColor = GetFontAttribute(1, 6);
-    printer.shadowColor = GetFontAttribute(1, 7);
-    printer.fontColor_l = GetFontAttribute(1, 4);
+    printer.fgColor = GetFontAttribute(1, FONTATTR_COLOR_FOREGROUND);
+    printer.bgColor = GetFontAttribute(1, FONTATTR_COLOR_BACKGROUND);
+    printer.shadowColor = GetFontAttribute(1, FONTATTR_COLOR_SHADOW);
+    printer.unk = GetFontAttribute(1, FONTATTR_UNKNOWN);
     printer.letterSpacing = 0;
     printer.lineSpacing = 0;
 
@@ -1693,7 +1694,7 @@ void sub_819983C(u8 windowId, u8 a4, u8 itemCount, u8 itemCount2, const struct M
     {
         for (j = 0; j < itemCount; j++)
         {
-            printer.current_text_offset = strs[a8[(itemCount * i) + j]].text;
+            printer.currentChar = strs[a8[(itemCount * i) + j]].text;
             printer.x = (a4 * j) + 8;
             printer.y = (16 * i) + 1;
             printer.currentX = printer.x;
@@ -1709,26 +1710,26 @@ u8 sub_8199944(u8 windowId, u8 optionWidth, u8 horizontalCount, u8 verticalCount
 {
     s32 pos;
 
-    gUnknown_0203CD90.left = 0;
-    gUnknown_0203CD90.top = 1;
-    gUnknown_0203CD90.minCursorPos = 0;
-    gUnknown_0203CD90.maxCursorPos = (horizontalCount * verticalCount) - 1;
-    gUnknown_0203CD90.windowId = windowId;
-    gUnknown_0203CD90.fontId = 1;
-    gUnknown_0203CD90.optionWidth = optionWidth;
-    gUnknown_0203CD90.optionHeight = 16;
-    gUnknown_0203CD90.horizontalCount = horizontalCount;
-    gUnknown_0203CD90.verticalCount = verticalCount;
+    sMenu.left = 0;
+    sMenu.top = 1;
+    sMenu.minCursorPos = 0;
+    sMenu.maxCursorPos = (horizontalCount * verticalCount) - 1;
+    sMenu.windowId = windowId;
+    sMenu.fontId = 1;
+    sMenu.optionWidth = optionWidth;
+    sMenu.optionHeight = 16;
+    sMenu.horizontalCount = horizontalCount;
+    sMenu.verticalCount = verticalCount;
 
     pos = initialCursorPos;
 
-    if (pos < 0 || pos > gUnknown_0203CD90.maxCursorPos)
-        gUnknown_0203CD90.cursorPos = 0;
+    if (pos < 0 || pos > sMenu.maxCursorPos)
+        sMenu.cursorPos = 0;
     else
-        gUnknown_0203CD90.cursorPos = pos;
+        sMenu.cursorPos = pos;
 
     sub_8199134(0, 0);
-    return gUnknown_0203CD90.cursorPos;
+    return sMenu.cursorPos;
 }
 
 void clear_scheduled_bg_copies_to_vram(void)
@@ -1797,9 +1798,9 @@ bool8 free_temp_tile_data_buffers_if_possible(void)
     }
 }
 
-void *decompress_and_copy_tile_data_to_vram(u8 bgId, const void *src, int size, u16 offset, u8 mode)
+void *decompress_and_copy_tile_data_to_vram(u8 bgId, const void *src, u32 size, u16 offset, u8 mode)
 {
-    int sizeOut;
+    u32 sizeOut;
     if (gUnknown_0203CDA8 < ARRAY_COUNT(gUnknown_0203CDAC))
     {
         void *ptr = malloc_and_decompress(src, &sizeOut);
@@ -1815,9 +1816,9 @@ void *decompress_and_copy_tile_data_to_vram(u8 bgId, const void *src, int size, 
     return NULL;
 }
 
-void DecompressAndLoadBgGfxUsingHeap(u8 bgId, const void *src, int size, u16 offset, u8 mode)
+void DecompressAndLoadBgGfxUsingHeap(u8 bgId, const void *src, u32 size, u16 offset, u8 mode)
 {
-    int sizeOut;
+    u32 sizeOut;
     void *ptr = malloc_and_decompress(src, &sizeOut);
     if (!size)
         size = sizeOut;
@@ -1838,7 +1839,7 @@ void task_free_buf_after_copying_tile_data_to_vram(u8 taskId)
     }
 }
 
-void *malloc_and_decompress(const void *src, int *size)
+void *malloc_and_decompress(const void *src, u32 *size)
 {
     void *ptr;
     u8 *sizeAsBytes = (u8 *)size;
@@ -1934,16 +1935,16 @@ void sub_8199D98(void)
 
 void sub_8199DF0(u32 bg, u8 a1, int a2, int a3)
 {
-    int temp = (!GetBgAttribute(bg, 4)) ? 0x20 : 0x40;
-    void *addr = (void *)((GetBgAttribute(bg, 1) * 0x4000) + (GetBgAttribute(bg, 10) + a2) * temp);
+    int temp = (!GetBgAttribute(bg, BG_ATTR_PALETTEMODE)) ? 0x20 : 0x40;
+    void *addr = (void *)((GetBgAttribute(bg, BG_ATTR_CHARBASEINDEX) * 0x4000) + (GetBgAttribute(bg, BG_ATTR_BASETILE) + a2) * temp);
     RequestDma3Fill(a1 << 24 | a1 << 16 | a1 << 8 | a1, addr + VRAM, a3 * temp, 1);
 }
 
 void AddTextPrinterParameterized3(u8 windowId, u8 fontId, u8 left, u8 top, const u8 *color, s8 speed, const u8 *str)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    printer.current_text_offset = str;
+    printer.currentChar = str;
     printer.windowId = windowId;
     printer.fontId = fontId;
     printer.x = left;
@@ -1952,7 +1953,7 @@ void AddTextPrinterParameterized3(u8 windowId, u8 fontId, u8 left, u8 top, const
     printer.currentY = printer.y;
     printer.letterSpacing = GetFontAttribute(fontId, 2);
     printer.lineSpacing = GetFontAttribute(fontId, 3);
-    printer.fontColor_l = 0;
+    printer.unk = 0;
     printer.fgColor = color[1];
     printer.bgColor = color[0];
     printer.shadowColor = color[2];
@@ -1962,9 +1963,9 @@ void AddTextPrinterParameterized3(u8 windowId, u8 fontId, u8 left, u8 top, const
 
 void AddTextPrinterParameterized4(u8 windowId, u8 fontId, u8 left, u8 top, u8 letterSpacing, u8 lineSpacing, const u8 *color, s8 speed, const u8 *str)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    printer.current_text_offset = str;
+    printer.currentChar = str;
     printer.windowId = windowId;
     printer.fontId = fontId;
     printer.x = left;
@@ -1973,7 +1974,7 @@ void AddTextPrinterParameterized4(u8 windowId, u8 fontId, u8 left, u8 top, u8 le
     printer.currentY = printer.y;
     printer.letterSpacing = letterSpacing;
     printer.lineSpacing = lineSpacing;
-    printer.fontColor_l = 0;
+    printer.unk = 0;
     printer.fgColor = color[1];
     printer.bgColor = color[0];
     printer.shadowColor = color[2];
@@ -1981,11 +1982,11 @@ void AddTextPrinterParameterized4(u8 windowId, u8 fontId, u8 left, u8 top, u8 le
     AddTextPrinter(&printer, speed, NULL);
 }
 
-void AddTextPrinterParameterized5(u8 windowId, u8 fontId, const u8 *str, u8 left, u8 top, u8 speed, void (*callback)(struct TextSubPrinter *, u16), u8 letterSpacing, u8 lineSpacing)
+void AddTextPrinterParameterized5(u8 windowId, u8 fontId, const u8 *str, u8 left, u8 top, u8 speed, void (*callback)(struct TextPrinterTemplate *, u16), u8 letterSpacing, u8 lineSpacing)
 {
-    struct TextSubPrinter printer;
+    struct TextPrinterTemplate printer;
 
-    printer.current_text_offset = str;
+    printer.currentChar = str;
     printer.windowId = windowId;
     printer.fontId = fontId;
     printer.x = left;
@@ -1994,7 +1995,7 @@ void AddTextPrinterParameterized5(u8 windowId, u8 fontId, const u8 *str, u8 left
     printer.currentY = top;
     printer.letterSpacing = letterSpacing;
     printer.lineSpacing = lineSpacing;
-    printer.fontColor_l = 0;
+    printer.unk = 0;
 
     printer.fgColor = GetFontAttribute(fontId, 5);
     printer.bgColor = GetFontAttribute(fontId, 6);
@@ -2096,253 +2097,253 @@ void sub_819A080(struct UnkStruct_819A080 *a0, struct UnkStruct_819A080 *a1, u16
 NAKED
 void sub_819A080(struct UnkStruct_819A080 *a0, struct UnkStruct_819A080 *a1, u16 a2, u16 a3, u16 a4, u16 a5, u16 a6, u16 a7)
 {
-	asm("push {r4-r7,lr}\n\
-	mov r7, r10\n\
-	mov r6, r9\n\
-	mov r5, r8\n\
-	push {r5-r7}\n\
-	sub sp, #0x28\n\
-	str r0, [sp]\n\
-	str r1, [sp, #0x4]\n\
-	ldr r0, [sp, #0x48]\n\
-	ldr r4, [sp, #0x4C]\n\
-	ldr r1, [sp, #0x50]\n\
-	ldr r5, [sp, #0x54]\n\
-	lsl r2, #16\n\
-	lsr r2, #16\n\
-	str r2, [sp, #0x8]\n\
-	lsl r3, #16\n\
-	lsr r3, #16\n\
-	lsl r0, #16\n\
-	lsr r0, #16\n\
-	str r0, [sp, #0xC]\n\
-	lsl r4, #16\n\
-	lsr r4, #16\n\
-	lsl r1, #16\n\
-	lsr r1, #16\n\
-	lsl r5, #16\n\
-	lsr r5, #16\n\
-	ldr r2, [sp, #0x4]\n\
-	ldrh r0, [r2, #0x4]\n\
-	ldr r2, [sp, #0xC]\n\
-	sub r0, r2\n\
-	ldr r2, [sp, #0x8]\n\
-	add r2, r1, r2\n\
-	str r2, [sp, #0x10]\n\
-	cmp r0, r1\n\
-	bge _0819A0CC\n\
-	ldr r1, [sp, #0x8]\n\
-	add r0, r1\n\
-	str r0, [sp, #0x10]\n\
+    asm("push {r4-r7,lr}\n\
+    mov r7, r10\n\
+    mov r6, r9\n\
+    mov r5, r8\n\
+    push {r5-r7}\n\
+    sub sp, #0x28\n\
+    str r0, [sp]\n\
+    str r1, [sp, #0x4]\n\
+    ldr r0, [sp, #0x48]\n\
+    ldr r4, [sp, #0x4C]\n\
+    ldr r1, [sp, #0x50]\n\
+    ldr r5, [sp, #0x54]\n\
+    lsl r2, #16\n\
+    lsr r2, #16\n\
+    str r2, [sp, #0x8]\n\
+    lsl r3, #16\n\
+    lsr r3, #16\n\
+    lsl r0, #16\n\
+    lsr r0, #16\n\
+    str r0, [sp, #0xC]\n\
+    lsl r4, #16\n\
+    lsr r4, #16\n\
+    lsl r1, #16\n\
+    lsr r1, #16\n\
+    lsl r5, #16\n\
+    lsr r5, #16\n\
+    ldr r2, [sp, #0x4]\n\
+    ldrh r0, [r2, #0x4]\n\
+    ldr r2, [sp, #0xC]\n\
+    sub r0, r2\n\
+    ldr r2, [sp, #0x8]\n\
+    add r2, r1, r2\n\
+    str r2, [sp, #0x10]\n\
+    cmp r0, r1\n\
+    bge _0819A0CC\n\
+    ldr r1, [sp, #0x8]\n\
+    add r0, r1\n\
+    str r0, [sp, #0x10]\n\
 _0819A0CC:\n\
-	ldr r2, [sp, #0x4]\n\
-	ldrh r1, [r2, #0x6]\n\
-	sub r0, r1, r4\n\
-	cmp r0, r5\n\
-	bge _0819A0DE\n\
-	add r0, r3, r1\n\
-	sub r0, r4\n\
-	str r0, [sp, #0x14]\n\
-	b _0819A0E2\n\
+    ldr r2, [sp, #0x4]\n\
+    ldrh r1, [r2, #0x6]\n\
+    sub r0, r1, r4\n\
+    cmp r0, r5\n\
+    bge _0819A0DE\n\
+    add r0, r3, r1\n\
+    sub r0, r4\n\
+    str r0, [sp, #0x14]\n\
+    b _0819A0E2\n\
 _0819A0DE:\n\
-	add r5, r3, r5\n\
-	str r5, [sp, #0x14]\n\
+    add r5, r3, r5\n\
+    str r5, [sp, #0x14]\n\
 _0819A0E2:\n\
-	ldr r0, [sp]\n\
-	ldrh r1, [r0, #0x4]\n\
-	mov r2, #0x7\n\
-	add r0, r1, #0\n\
-	and r0, r2\n\
-	add r1, r0\n\
-	asr r1, #3\n\
-	str r1, [sp, #0x18]\n\
-	ldr r0, [sp, #0x4]\n\
-	ldrh r1, [r0, #0x4]\n\
-	add r0, r1, #0\n\
-	and r0, r2\n\
-	add r1, r0\n\
-	asr r1, #3\n\
-	str r1, [sp, #0x1C]\n\
-	mov r12, r3\n\
-	mov r8, r4\n\
-	ldr r1, [sp, #0x14]\n\
-	cmp r12, r1\n\
-	blt _0819A10C\n\
-	b _0819A24A\n\
+    ldr r0, [sp]\n\
+    ldrh r1, [r0, #0x4]\n\
+    mov r2, #0x7\n\
+    add r0, r1, #0\n\
+    and r0, r2\n\
+    add r1, r0\n\
+    asr r1, #3\n\
+    str r1, [sp, #0x18]\n\
+    ldr r0, [sp, #0x4]\n\
+    ldrh r1, [r0, #0x4]\n\
+    add r0, r1, #0\n\
+    and r0, r2\n\
+    add r1, r0\n\
+    asr r1, #3\n\
+    str r1, [sp, #0x1C]\n\
+    mov r12, r3\n\
+    mov r8, r4\n\
+    ldr r1, [sp, #0x14]\n\
+    cmp r12, r1\n\
+    blt _0819A10C\n\
+    b _0819A24A\n\
 _0819A10C:\n\
-	ldr r5, [sp, #0x8]\n\
-	ldr r6, [sp, #0xC]\n\
-	mov r2, r12\n\
-	add r2, #0x1\n\
-	str r2, [sp, #0x20]\n\
-	mov r0, r8\n\
-	add r0, #0x1\n\
-	str r0, [sp, #0x24]\n\
-	ldr r1, [sp, #0x10]\n\
-	cmp r5, r1\n\
-	blt _0819A124\n\
-	b _0819A23A\n\
+    ldr r5, [sp, #0x8]\n\
+    ldr r6, [sp, #0xC]\n\
+    mov r2, r12\n\
+    add r2, #0x1\n\
+    str r2, [sp, #0x20]\n\
+    mov r0, r8\n\
+    add r0, #0x1\n\
+    str r0, [sp, #0x24]\n\
+    ldr r1, [sp, #0x10]\n\
+    cmp r5, r1\n\
+    blt _0819A124\n\
+    b _0819A23A\n\
 _0819A124:\n\
-	mov r7, #0x1\n\
-	mov r2, #0xF0\n\
-	mov r10, r2\n\
-	mov r0, #0xF\n\
-	mov r9, r0\n\
+    mov r7, #0x1\n\
+    mov r2, #0xF0\n\
+    mov r10, r2\n\
+    mov r0, #0xF\n\
+    mov r9, r0\n\
 _0819A12E:\n\
-	asr r0, r5, #1\n\
-	mov r1, #0x3\n\
-	and r0, r1\n\
-	ldr r2, [sp]\n\
-	ldr r1, [r2]\n\
-	add r1, r0\n\
-	asr r0, r5, #3\n\
-	lsl r0, #5\n\
-	add r1, r0\n\
-	mov r2, r12\n\
-	asr r0, r2, #3\n\
-	ldr r2, [sp, #0x18]\n\
-	mul r0, r2\n\
-	lsl r0, #5\n\
-	add r1, r0\n\
-	mov r2, r12\n\
-	lsl r0, r2, #29\n\
-	lsr r0, #27\n\
-	add r3, r1, r0\n\
-	asr r0, r6, #1\n\
-	mov r1, #0x3\n\
-	and r0, r1\n\
-	ldr r2, [sp, #0x4]\n\
-	ldr r1, [r2]\n\
-	add r1, r0\n\
-	asr r0, r6, #3\n\
-	lsl r0, #5\n\
-	add r1, r0\n\
-	mov r2, r8\n\
-	asr r0, r2, #3\n\
-	ldr r2, [sp, #0x1C]\n\
-	mul r0, r2\n\
-	lsl r0, #5\n\
-	add r1, r0\n\
-	mov r2, r8\n\
-	lsl r0, r2, #29\n\
-	lsr r0, #27\n\
-	add r4, r1, r0\n\
-	add r0, r4, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A1DA\n\
-	sub r4, #0x1\n\
-	add r0, r6, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A1B2\n\
-	ldrh r0, [r4]\n\
-	ldr r2, =0x00000fff\n\
-	and r2, r0\n\
-	add r0, r5, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A1A8\n\
-	ldrb r1, [r3]\n\
-	mov r0, r10\n\
-	and r0, r1\n\
-	lsl r0, #8\n\
-	b _0819A22A\n\
-	.pool\n\
+    asr r0, r5, #1\n\
+    mov r1, #0x3\n\
+    and r0, r1\n\
+    ldr r2, [sp]\n\
+    ldr r1, [r2]\n\
+    add r1, r0\n\
+    asr r0, r5, #3\n\
+    lsl r0, #5\n\
+    add r1, r0\n\
+    mov r2, r12\n\
+    asr r0, r2, #3\n\
+    ldr r2, [sp, #0x18]\n\
+    mul r0, r2\n\
+    lsl r0, #5\n\
+    add r1, r0\n\
+    mov r2, r12\n\
+    lsl r0, r2, #29\n\
+    lsr r0, #27\n\
+    add r3, r1, r0\n\
+    asr r0, r6, #1\n\
+    mov r1, #0x3\n\
+    and r0, r1\n\
+    ldr r2, [sp, #0x4]\n\
+    ldr r1, [r2]\n\
+    add r1, r0\n\
+    asr r0, r6, #3\n\
+    lsl r0, #5\n\
+    add r1, r0\n\
+    mov r2, r8\n\
+    asr r0, r2, #3\n\
+    ldr r2, [sp, #0x1C]\n\
+    mul r0, r2\n\
+    lsl r0, #5\n\
+    add r1, r0\n\
+    mov r2, r8\n\
+    lsl r0, r2, #29\n\
+    lsr r0, #27\n\
+    add r4, r1, r0\n\
+    add r0, r4, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A1DA\n\
+    sub r4, #0x1\n\
+    add r0, r6, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A1B2\n\
+    ldrh r0, [r4]\n\
+    ldr r2, =0x00000fff\n\
+    and r2, r0\n\
+    add r0, r5, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A1A8\n\
+    ldrb r1, [r3]\n\
+    mov r0, r10\n\
+    and r0, r1\n\
+    lsl r0, #8\n\
+    b _0819A22A\n\
+    .pool\n\
 _0819A1A8:\n\
-	ldrb r1, [r3]\n\
-	mov r0, r9\n\
-	and r0, r1\n\
-	lsl r0, #12\n\
-	b _0819A22A\n\
+    ldrb r1, [r3]\n\
+    mov r0, r9\n\
+    and r0, r1\n\
+    lsl r0, #12\n\
+    b _0819A22A\n\
 _0819A1B2:\n\
-	ldrh r0, [r4]\n\
-	ldr r2, =0x0000f0ff\n\
-	and r2, r0\n\
-	add r0, r5, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A1D0\n\
-	ldrb r1, [r3]\n\
-	mov r0, r10\n\
-	and r0, r1\n\
-	lsl r0, #4\n\
-	b _0819A22A\n\
-	.pool\n\
+    ldrh r0, [r4]\n\
+    ldr r2, =0x0000f0ff\n\
+    and r2, r0\n\
+    add r0, r5, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A1D0\n\
+    ldrb r1, [r3]\n\
+    mov r0, r10\n\
+    and r0, r1\n\
+    lsl r0, #4\n\
+    b _0819A22A\n\
+    .pool\n\
 _0819A1D0:\n\
-	ldrb r1, [r3]\n\
-	mov r0, r9\n\
-	and r0, r1\n\
-	lsl r0, #8\n\
-	b _0819A22A\n\
+    ldrb r1, [r3]\n\
+    mov r0, r9\n\
+    and r0, r1\n\
+    lsl r0, #8\n\
+    b _0819A22A\n\
 _0819A1DA:\n\
-	add r0, r6, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A206\n\
-	ldrh r0, [r4]\n\
-	ldr r2, =0x0000ff0f\n\
-	and r2, r0\n\
-	add r0, r5, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A1FC\n\
-	ldrb r1, [r3]\n\
-	mov r0, r10\n\
-	b _0819A228\n\
-	.pool\n\
+    add r0, r6, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A206\n\
+    ldrh r0, [r4]\n\
+    ldr r2, =0x0000ff0f\n\
+    and r2, r0\n\
+    add r0, r5, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A1FC\n\
+    ldrb r1, [r3]\n\
+    mov r0, r10\n\
+    b _0819A228\n\
+    .pool\n\
 _0819A1FC:\n\
-	ldrb r1, [r3]\n\
-	mov r0, r9\n\
-	and r0, r1\n\
-	lsl r0, #4\n\
-	b _0819A22A\n\
+    ldrb r1, [r3]\n\
+    mov r0, r9\n\
+    and r0, r1\n\
+    lsl r0, #4\n\
+    b _0819A22A\n\
 _0819A206:\n\
-	ldrh r0, [r4]\n\
-	ldr r2, =0x0000fff0\n\
-	and r2, r0\n\
-	add r0, r5, #0\n\
-	and r0, r7\n\
-	cmp r0, #0\n\
-	beq _0819A224\n\
-	ldrb r1, [r3]\n\
-	mov r0, r10\n\
-	and r0, r1\n\
-	lsr r0, #4\n\
-	b _0819A22A\n\
-	.pool\n\
+    ldrh r0, [r4]\n\
+    ldr r2, =0x0000fff0\n\
+    and r2, r0\n\
+    add r0, r5, #0\n\
+    and r0, r7\n\
+    cmp r0, #0\n\
+    beq _0819A224\n\
+    ldrb r1, [r3]\n\
+    mov r0, r10\n\
+    and r0, r1\n\
+    lsr r0, #4\n\
+    b _0819A22A\n\
+    .pool\n\
 _0819A224:\n\
-	ldrb r1, [r3]\n\
-	mov r0, r9\n\
+    ldrb r1, [r3]\n\
+    mov r0, r9\n\
 _0819A228:\n\
-	and r0, r1\n\
+    and r0, r1\n\
 _0819A22A:\n\
-	orr r2, r0\n\
-	strh r2, [r4]\n\
-	add r5, #0x1\n\
-	add r6, #0x1\n\
-	ldr r0, [sp, #0x10]\n\
-	cmp r5, r0\n\
-	bge _0819A23A\n\
-	b _0819A12E\n\
+    orr r2, r0\n\
+    strh r2, [r4]\n\
+    add r5, #0x1\n\
+    add r6, #0x1\n\
+    ldr r0, [sp, #0x10]\n\
+    cmp r5, r0\n\
+    bge _0819A23A\n\
+    b _0819A12E\n\
 _0819A23A:\n\
-	ldr r1, [sp, #0x20]\n\
-	mov r12, r1\n\
-	ldr r2, [sp, #0x24]\n\
-	mov r8, r2\n\
-	ldr r0, [sp, #0x14]\n\
-	cmp r12, r0\n\
-	bge _0819A24A\n\
-	b _0819A10C\n\
+    ldr r1, [sp, #0x20]\n\
+    mov r12, r1\n\
+    ldr r2, [sp, #0x24]\n\
+    mov r8, r2\n\
+    ldr r0, [sp, #0x14]\n\
+    cmp r12, r0\n\
+    bge _0819A24A\n\
+    b _0819A10C\n\
 _0819A24A:\n\
-	add sp, #0x28\n\
-	pop {r3-r5}\n\
-	mov r8, r3\n\
-	mov r9, r4\n\
-	mov r10, r5\n\
-	pop {r4-r7}\n\
-	pop {r0}\n\
-	bx r0\n");
+    add sp, #0x28\n\
+    pop {r3-r5}\n\
+    mov r8, r3\n\
+    mov r9, r4\n\
+    mov r10, r5\n\
+    pop {r4-r7}\n\
+    pop {r0}\n\
+    bx r0\n");
 }
 #endif
 

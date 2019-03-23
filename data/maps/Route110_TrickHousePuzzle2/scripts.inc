@@ -1,17 +1,17 @@
 Route110_TrickHousePuzzle2_MapScripts:: @ 826BB73
-	map_script 5, Route110_TrickHousePuzzle2_MapScript1_26BB7E
-	map_script 3, Route110_TrickHousePuzzle2_MapScript1_26BBAB
+	map_script MAP_SCRIPT_ON_RESUME, Route110_TrickHousePuzzle2_MapScript1_26BB7E
+	map_script MAP_SCRIPT_ON_TRANSITION, Route110_TrickHousePuzzle2_MapScript1_26BBAB
 	.byte 0
 
 Route110_TrickHousePuzzle2_MapScript1_26BB7E: @ 826BB7E
 	compare VAR_TEMP_1, 1
-	call_if 1, Route110_TrickHousePuzzle2_EventScript_26BC29
+	call_if_eq Route110_TrickHousePuzzle2_EventScript_26BC29
 	compare VAR_TEMP_2, 1
-	call_if 1, Route110_TrickHousePuzzle2_EventScript_26BC3C
+	call_if_eq Route110_TrickHousePuzzle2_EventScript_26BC3C
 	compare VAR_TEMP_3, 1
-	call_if 1, Route110_TrickHousePuzzle2_EventScript_26BC4F
+	call_if_eq Route110_TrickHousePuzzle2_EventScript_26BC4F
 	compare VAR_TEMP_4, 1
-	call_if 1, Route110_TrickHousePuzzle2_EventScript_26BC62
+	call_if_eq Route110_TrickHousePuzzle2_EventScript_26BC62
 	end
 
 Route110_TrickHousePuzzle2_MapScript1_26BBAB: @ 826BBAB
@@ -23,13 +23,13 @@ Route110_TrickHousePuzzle2_MapScript1_26BBAB: @ 826BBAB
 
 Route110_TrickHousePuzzle2_EventScript_26BBC0:: @ 826BBC0
 	lockall
-	compare VAR_0x40AC, 0
-	goto_eq Route110_TrickHousePuzzle2_EventScript_26BBD2
+	compare VAR_TRICK_HOUSE_PUZZLE_2_STATE, 0
+	goto_if_eq Route110_TrickHousePuzzle2_EventScript_26BBD2
 	goto Route110_TrickHousePuzzle2_EventScript_26A3DB
 	end
 
 Route110_TrickHousePuzzle2_EventScript_26BBD2:: @ 826BBD2
-	setvar VAR_0x40AC, 1
+	setvar VAR_TRICK_HOUSE_PUZZLE_2_STATE, 1
 	goto Route110_TrickHousePuzzle2_EventScript_26A3E5
 	end
 
@@ -90,18 +90,18 @@ Route110_TrickHousePuzzle2_EventScript_26BC62:: @ 826BC62
 	return
 
 Route110_TrickHousePuzzle2_EventScript_26BC75:: @ 826BC75
-	trainerbattle 0, TRAINER_TED, 0, Route110_TrickHousePuzzle2_Text_26BD25, Route110_TrickHousePuzzle2_Text_26BD45
-	msgbox Route110_TrickHousePuzzle2_Text_26BD70, 6
+	trainerbattle_single TRAINER_TED, Route110_TrickHousePuzzle2_Text_26BD25, Route110_TrickHousePuzzle2_Text_26BD45
+	msgbox Route110_TrickHousePuzzle2_Text_26BD70, MSGBOX_AUTOCLOSE
 	end
 
 Route110_TrickHousePuzzle2_EventScript_26BC8C:: @ 826BC8C
-	trainerbattle 0, TRAINER_PAUL, 0, Route110_TrickHousePuzzle2_Text_26BD9E, Route110_TrickHousePuzzle2_Text_26BDCF
-	msgbox Route110_TrickHousePuzzle2_Text_26BDEC, 6
+	trainerbattle_single TRAINER_PAUL, Route110_TrickHousePuzzle2_Text_26BD9E, Route110_TrickHousePuzzle2_Text_26BDCF
+	msgbox Route110_TrickHousePuzzle2_Text_26BDEC, MSGBOX_AUTOCLOSE
 	end
 
 Route110_TrickHousePuzzle2_EventScript_26BCA3:: @ 826BCA3
-	trainerbattle 0, TRAINER_GEORGIA, 0, Route110_TrickHousePuzzle2_Text_26BE31, Route110_TrickHousePuzzle2_Text_26BE77
-	msgbox Route110_TrickHousePuzzle2_Text_26BE97, 6
+	trainerbattle_single TRAINER_GEORGIA, Route110_TrickHousePuzzle2_Text_26BE31, Route110_TrickHousePuzzle2_Text_26BE77
+	msgbox Route110_TrickHousePuzzle2_Text_26BE97, MSGBOX_AUTOCLOSE
 	end
 
 Route110_TrickHousePuzzle2_Text_26BCBA: @ 826BCBA
@@ -115,7 +115,7 @@ Route110_TrickHousePuzzle2_Text_26BD25: @ 826BD25
 	.string "Which switch closes which hole?$"
 
 Route110_TrickHousePuzzle2_Text_26BD45: @ 826BD45
-	.string "After that battle, I’m even more\n"
+	.string "After that battle, I'm even more\n"
 	.string "confused!$"
 
 Route110_TrickHousePuzzle2_Text_26BD70: @ 826BD70
@@ -123,11 +123,11 @@ Route110_TrickHousePuzzle2_Text_26BD70: @ 826BD70
 	.string "for me?$"
 
 Route110_TrickHousePuzzle2_Text_26BD9E: @ 826BD9E
-	.string "Oh! You’re on your second TRICK HOUSE\n"
+	.string "Oh! You're on your second TRICK HOUSE\n"
 	.string "challenge!$"
 
 Route110_TrickHousePuzzle2_Text_26BDCF: @ 826BDCF
-	.string "You’re good at battling too?$"
+	.string "You're good at battling too?$"
 
 Route110_TrickHousePuzzle2_Text_26BDEC: @ 826BDEC
 	.string "The TRICK MASTER rigged all the tricks\n"
@@ -135,12 +135,12 @@ Route110_TrickHousePuzzle2_Text_26BDEC: @ 826BDEC
 
 Route110_TrickHousePuzzle2_Text_26BE31: @ 826BE31
 	.string "I want to make my own GYM one day.\n"
-	.string "So, I’m studying how to set traps.$"
+	.string "So, I'm studying how to set traps.$"
 
 Route110_TrickHousePuzzle2_Text_26BE77: @ 826BE77
-	.string "I didn’t study battling enough!$"
+	.string "I didn't study battling enough!$"
 
 Route110_TrickHousePuzzle2_Text_26BE97: @ 826BE97
-	.string "You’re strong, aren’t you?\n"
+	.string "You're strong, aren't you?\n"
 	.string "Maybe even enough to be a GYM LEADER!$"
 

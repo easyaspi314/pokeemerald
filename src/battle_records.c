@@ -18,11 +18,10 @@
 #include "international_string_util.h"
 #include "sound.h"
 #include "constants/songs.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "gpu_regs.h"
 #include "constants/game_stat.h"
-
-extern void PrintOnTrainerHillRecordsWindow(void); // pokenav.s
+#include "trainer_hill.h"
 
 // this file's functions
 static void Task_CloseTrainerHillRecordsOnButton(u8 taskId);
@@ -65,7 +64,7 @@ static const struct BgTemplate sTrainerHillRecordsBgTemplates[] =
 static const struct WindowTemplate sTrainerHillRecordsWindowTemplates[] =
 {
     {
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 1,
         .width = 26,
@@ -78,7 +77,7 @@ static const struct WindowTemplate sTrainerHillRecordsWindowTemplates[] =
 
 static const struct WindowTemplate sLinkBattleRecordsWindow =
 {
-    .priority = 0,
+    .bg = 0,
     .tilemapLeft = 2,
     .tilemapTop = 1,
     .width = 26,
@@ -320,8 +319,8 @@ void ShowLinkBattleRecords(void)
     s32 i, x;
 
     gRecordsWindowId = AddWindow(&sLinkBattleRecordsWindow);
-    NewMenuHelpers_DrawStdWindowFrame(gRecordsWindowId, FALSE);
-    FillWindowPixelBuffer(gRecordsWindowId, 0x11);
+    DrawStdWindowFrame(gRecordsWindowId, FALSE);
+    FillWindowPixelBuffer(gRecordsWindowId, PIXEL_FILL(1));
     StringExpandPlaceholders(gStringVar4, gText_PlayersBattleResults);
 
     x = GetStringCenterAlignXOffset(1, gStringVar4, 208);
@@ -342,7 +341,7 @@ void ShowLinkBattleRecords(void)
 
 void RemoveRecordsWindow(void)
 {
-    sub_819746C(gRecordsWindowId, FALSE);
+    ClearStdWindowAndFrame(gRecordsWindowId, FALSE);
     RemoveWindow(gRecordsWindowId);
 }
 
@@ -383,7 +382,7 @@ static void Task_ExitTrainerHillRecords(u8 taskId)
 
 static void RemoveTrainerHillRecordsWindow(u8 windowId)
 {
-    FillWindowPixelBuffer(windowId, 0);
+    FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
     ClearWindowTilemap(windowId);
     CopyWindowToVram(windowId, 2);
     RemoveWindow(windowId);

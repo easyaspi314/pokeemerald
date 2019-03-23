@@ -22,98 +22,23 @@
 #define ASM_FILE_H
 
 #include <string>
+#include <string.h>
 #include "scaninc.h"
+#include "file.h"
+#include <mio/mmap.hpp>
 
-enum class IncDirectiveType
-{
-    None,
-    Include,
-    Incbin
-};
-
-class AsmFile
+class AsmFile : public File<FileType::Assembly>
 {
 public:
-    AsmFile(std::string &path);
-    ~AsmFile();
-    IncDirectiveType ReadUntilIncDirective(std::string& path);
+    explicit AsmFile(const scaninc::string_view &path) : File(path) {}
+    void Find();
 
 private:
-    char *m_buffer;
-    int m_pos;
-    int m_size;
-    int m_lineNum;
-    std::string m_path;
-
-    int GetChar()
-    {
-        if (m_pos >= m_size)
-            return -1;
-
-        int c = m_buffer[m_pos++];
-
-        if (c == '\r')
-        {
-            if (m_pos < m_size && m_buffer[m_pos++] == '\n')
-            {
-                m_lineNum++;
-                return '\n';
-            }
-            else
-            {
-                FATAL_INPUT_ERROR("CR line endings are not supported\n");
-            }
-        }
-
-        if (c == '\n')
-            m_lineNum++;
-
-        return c;
-    }
-
-    // No newline translation because it's not needed for any use of this function.
-    int PeekChar()
-    {
-        if (m_pos >= m_size)
-            return -1;
-
-        return m_buffer[m_pos];
-    }
-
-    void SkipTabsAndSpaces()
-    {
-        while (m_pos < m_size && (m_buffer[m_pos] == '\t' || m_buffer[m_pos] == ' '))
-            m_pos++;
-    }
-
-    bool MatchIncDirective(std::string directiveName, std::string &path)
-    {
-        int length = directiveName.length();
-        int i;
-
-        for (i = 0; i < length && m_pos + i < m_size; i++)
-            if (directiveName[i] != m_buffer[m_pos + i])
-                return false;
-
-        if (i < length)
-            return false;
-
-        m_pos += length;
-
-        SkipTabsAndSpaces();
-
-        if (GetChar() != '"')
-            FATAL_INPUT_ERROR("no path after \".%s\" directive\n", directiveName.c_str());
-
-        path = ReadPath();
-
-        return true;
-    }
-
-    std::string ReadPath();
+    bool MatchIncDirective(const char *directiveName, std::string &path);
     void SkipEndOfLineComment();
     void SkipMultiLineComment();
     void SkipString();
 };
 
 #endif // ASM_FILE_H
+

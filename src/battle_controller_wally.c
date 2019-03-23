@@ -1,44 +1,37 @@
 #include "global.h"
 #include "battle.h"
-#include "battle_controllers.h"
-#include "battle_message.h"
-#include "battle_interface.h"
 #include "battle_anim.h"
-#include "constants/battle_anim.h"
+#include "battle_controllers.h"
+#include "battle_interface.h"
+#include "battle_message.h"
+#include "battle_setup.h"
 #include "battle_tv.h"
-#include "pokemon.h"
-#include "link.h"
-#include "util.h"
-#include "main.h"
+#include "bg.h"
+#include "data2.h"
 #include "item.h"
-#include "constants/items.h"
-#include "constants/songs.h"
-#include "sound.h"
-#include "constants/moves.h"
-#include "constants/trainers.h"
-#include "window.h"
+#include "item_menu.h"
+#include "link.h"
+#include "main.h"
 #include "m4a.h"
 #include "palette.h"
+#include "party_menu.h"
+#include "pokeball.h"
+#include "pokemon.h"
+#include "random.h"
+#include "reshow_battle_screen.h"
+#include "sound.h"
+#include "string_util.h"
 #include "task.h"
 #include "text.h"
-#include "string_util.h"
-#include "bg.h"
-#include "reshow_battle_screen.h"
-#include "random.h"
-#include "pokeball.h"
-#include "data2.h"
-#include "party_menu.h"
-#include "battle_setup.h"
-#include "item_menu.h"
-
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
-extern s32 gUnknown_0203CD70;
-extern struct UnusedControllerStruct gUnknown_02022D0C;
+#include "util.h"
+#include "window.h"
+#include "constants/battle_anim.h"
+#include "constants/items.h"
+#include "constants/moves.h"
+#include "constants/songs.h"
+#include "constants/trainers.h"
 
 extern const struct CompressedSpritePalette gTrainerBackPicPaletteTable[];
-
-extern void sub_8172EF0(u8 battlerId, struct Pokemon *mon);
 
 // this file's functions
 static void WallyHandleGetMonData(void);
@@ -97,7 +90,7 @@ static void WallyHandleBattleAnimation(void);
 static void WallyHandleLinkStandbyMsg(void);
 static void WallyHandleResetActionMoveSelection(void);
 static void WallyHandleCmd55(void);
-static void nullsub_118(void);
+static void WallyCmdEnd(void);
 
 static void WallyBufferRunCommand(void);
 static void WallyBufferExecCompleted(void);
@@ -166,10 +159,10 @@ static void (*const sWallyBufferCommands[CONTROLLER_CMDS_COUNT])(void) =
     WallyHandleLinkStandbyMsg,
     WallyHandleResetActionMoveSelection,
     WallyHandleCmd55,
-    nullsub_118
+    WallyCmdEnd
 };
 
-static void nullsub_117(void)
+static void SpriteCB_Null7(void)
 {
 }
 
@@ -442,7 +435,7 @@ static void WallyHandleGetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 size += CopyWallyMonData(i, monData + size);
@@ -468,7 +461,7 @@ static u32 CopyWallyMonData(u8 monId, u8 *dst)
     case REQUEST_ALL_BATTLE:
         battleMon.species = GetMonData(&gPlayerParty[monId], MON_DATA_SPECIES);
         battleMon.item = GetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM);
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             battleMon.moves[size] = GetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + size);
             battleMon.pp[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
@@ -515,7 +508,7 @@ static u32 CopyWallyMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             moveData.moves[size] = GetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + size);
             moveData.pp[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
@@ -535,7 +528,7 @@ static u32 CopyWallyMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_PP_DATA_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
             dst[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
         dst[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP_BONUSES);
         size++;
@@ -776,7 +769,7 @@ static void WallyHandleSetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 SetWallyMonData(i);
@@ -800,7 +793,7 @@ static void SetWallyMonData(u8 monId)
 
             SetMonData(&gPlayerParty[monId], MON_DATA_SPECIES, &battlePokemon->species);
             SetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM, &battlePokemon->item);
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
             {
                 SetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + i, &battlePokemon->moves[i]);
                 SetMonData(&gPlayerParty[monId], MON_DATA_PP1 + i, &battlePokemon->pp[i]);
@@ -839,7 +832,7 @@ static void SetWallyMonData(u8 monId)
         SetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM, &gBattleBufferA[gActiveBattler][3]);
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < MAX_MON_MOVES; i++)
         {
             SetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + i, &moveData->moves[i]);
             SetMonData(&gPlayerParty[monId], MON_DATA_PP1 + i, &moveData->pp[i]);
@@ -1041,7 +1034,7 @@ static void WallyHandleDrawTrainerPic(void)
     SetMultiuseSpriteTemplateToTrainerBack(TRAINER_BACK_PIC_WALLY, GetBattlerPosition(gActiveBattler));
     gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate,
                                                80,
-                                               80 + 4 * (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].coords),
+                                               80 + 4 * (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].size),
                                                30);
     gSprites[gBattlerSpriteIds[gActiveBattler]].oam.paletteNum = gActiveBattler;
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = 240;
@@ -1056,7 +1049,7 @@ static void WallyHandleTrainerSlide(void)
     SetMultiuseSpriteTemplateToTrainerBack(TRAINER_BACK_PIC_WALLY, GetBattlerPosition(gActiveBattler));
     gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate,
                                                80,
-                                               80 + 4 * (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].coords),
+                                               80 + 4 * (8 - gTrainerBackPicCoords[TRAINER_BACK_PIC_WALLY].size),
                                                30);
     gSprites[gBattlerSpriteIds[gActiveBattler]].oam.paletteNum = gActiveBattler;
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = -96;
@@ -1432,12 +1425,12 @@ static void WallyHandleIntroTrainerBallThrow(void)
     u8 paletteNum;
     u8 taskId;
 
-    oamt_add_pos2_onto_pos1(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
+    SetSpritePrimaryCoordsFromSecondaryCoords(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 50;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = -40;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[4] = gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.y;
-    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_80A6EEC;
+    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = StartAnimLinearTranslation;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[5] = gActiveBattler;
 
     StoreSpriteCallbackInData6(&gSprites[gBattlerSpriteIds[gActiveBattler]], sub_805CC00);
@@ -1469,7 +1462,7 @@ static void sub_816AA80(u8 battlerId)
     gBattlerSpriteIds[battlerId] = CreateSprite(&gMultiuseSpriteTemplate,
                                         GetBattlerSpriteCoord(battlerId, 2),
                                         GetBattlerSpriteDefault_Y(battlerId),
-                                        sub_80A82E4(battlerId));
+                                        GetBattlerSpriteSubpriority(battlerId));
 
     gSprites[gUnknown_03005D7C[battlerId]].data[1] = gBattlerSpriteIds[battlerId];
     gSprites[gUnknown_03005D7C[battlerId]].data[2] = battlerId;
@@ -1560,10 +1553,10 @@ static void WallyHandleCmd55(void)
     BeginFastPaletteFade(3);
     WallyBufferExecCompleted();
 
-    if (!(gBattleTypeFlags & BATTLE_TYPE_WILD) && gBattleTypeFlags & BATTLE_TYPE_LINK)
+    if (!(gBattleTypeFlags & BATTLE_TYPE_IS_MASTER) && gBattleTypeFlags & BATTLE_TYPE_LINK)
         gBattlerControllerFuncs[gActiveBattler] = sub_80587B0;
 }
 
-static void nullsub_118(void)
+static void WallyCmdEnd(void)
 {
 }

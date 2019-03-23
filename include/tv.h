@@ -1,6 +1,9 @@
 #ifndef GUARD_TV_H
 #define GUARD_TV_H
 
+#define SLOT_MACHINE 0
+#define ROULETTE 1
+
 extern u8 *const gTVStringVarPtrs[3];
 
 void ClearTVShowData(void);
@@ -23,9 +26,9 @@ bool8 GetPriceReduction(u8 newsKind);
 void sub_80F14F8(TVShow *shows);
 size_t CountDigits(int value);
 u8 GetRibbonCount(struct Pokemon *pokemon);
-void sub_80EDE70(u16 nCoinsSpent);
-void sub_80EDE84(u16 nCoinsSpent);
-void sub_80EDD78(u16 nCoinsPaidOut);
+void AlertTVThatPlayerPlayedSlotMachine(u16 nCoinsSpent);
+void AlertTVThatPlayerPlayedRoulette(u16 nCoinsSpent);
+void AlertTVOfNewCoinTotal(u16 nCoinsPaidOut);
 void sub_80EEA70(void);
 void sub_80EDB44(void);
 void sub_80EDC60(const u16 *words);
@@ -48,7 +51,19 @@ void PutPokemonTodayCaughtOnAir(void);
 void TV_PutSecretBaseVisitOnTheAir(void);
 void PutBattleUpdateOnTheAir(u8 opponentLinkPlayerId, u16 move, u16 speciesPlayer, u16 speciesOpponent);
 void BravoTrainerPokemonProfile_BeforeInterview1(u16 move);
+void InterviewBefore(void);
+void InterviewAfter(void);
 void UpdateTVScreensOnMap(int, int);
 void TV_PrintIntToStringVar(u8 varIdx, int value);
+void SaveRecordedItemPurchasesForTVShow(void);
+bool8 sub_80EE818(void);
+void sub_80EE8C8(u16 winStreak, u8 facilityAndMode);
+void BravoTrainerPokemonProfile_BeforeInterview2(u8 contestStandingPlace);
+void ContestLiveUpdates_BeforeInterview_1(u8 a0);
+void ContestLiveUpdates_BeforeInterview_2(u8 a0);
+void ContestLiveUpdates_BeforeInterview_3(u8 a0);
+void ContestLiveUpdates_BeforeInterview_4(u16 a0);
+void ContestLiveUpdates_BeforeInterview_5(u8 a0, u8 a1);
+void ResetGabbyAndTy(void);
 
 #endif //GUARD_TV_H

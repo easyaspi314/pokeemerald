@@ -1,51 +1,47 @@
 NewMauville_Inside_MapScripts:: @ 82373D7
-	map_script 5, NewMauville_Inside_MapScript1_2373E7
-	map_script 3, NewMauville_Inside_MapScript1_23741B
-	map_script 1, NewMauville_Inside_MapScript1_23744D
+	map_script MAP_SCRIPT_ON_RESUME, NewMauville_Inside_MapScript1_2373E7
+	map_script MAP_SCRIPT_ON_TRANSITION, NewMauville_Inside_MapScript1_23741B
+	map_script MAP_SCRIPT_ON_LOAD, NewMauville_Inside_MapScript1_23744D
 	.byte 0
 
 NewMauville_Inside_MapScript1_2373E7: @ 82373E7
 	compare VAR_TEMP_1, 1
-	call_if 1, NewMauville_Inside_EventScript_237489
+	call_if_eq NewMauville_Inside_EventScript_237489
 	compare VAR_TEMP_2, 1
-	call_if 1, NewMauville_Inside_EventScript_2375D7
-	checkflag FLAG_SYS_CTRL_OBJ_DELETE
-	call_if 1, NewMauville_Inside_EventScript_237407
+	call_if_eq NewMauville_Inside_EventScript_2375D7
+	call_if_set FLAG_SYS_CTRL_OBJ_DELETE, NewMauville_Inside_EventScript_237407
 	end
 
 NewMauville_Inside_EventScript_237407:: @ 8237407
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 7
-	goto_if 5, NewMauville_Inside_EventScript_27374E
+	goto_if_ne Common_EventScript_NopReturn
 	removeobject VAR_LAST_TALKED
 	return
 
 NewMauville_Inside_MapScript1_23741B: @ 823741B
 	setvar VAR_TEMP_1, 0
 	setvar VAR_TEMP_2, 0
-	checkflag FLAG_0x1C1
-	call_if 0, NewMauville_Inside_EventScript_237441
-	checkflag FLAG_0x1C2
-	call_if 0, NewMauville_Inside_EventScript_237445
-	checkflag FLAG_0x1C3
-	call_if 0, NewMauville_Inside_EventScript_237449
+	call_if_unset FLAG_DEFEATED_VOLTORB_1_NEW_MAUVILLE, NewMauville_Inside_EventScript_237441
+	call_if_unset FLAG_DEFEATED_VOLTORB_2_NEW_MAUVILLE, NewMauville_Inside_EventScript_237445
+	call_if_unset FLAG_DEFEATED_VOLTORB_3_NEW_MAUVILLE, NewMauville_Inside_EventScript_237449
 	end
 
 NewMauville_Inside_EventScript_237441:: @ 8237441
-	clearflag FLAG_0x3CE
+	clearflag FLAG_HIDE_NEW_MAUVILLE_VOLTORB_1
 	return
 
 NewMauville_Inside_EventScript_237445:: @ 8237445
-	clearflag FLAG_0x3CF
+	clearflag FLAG_HIDE_NEW_MAUVILLE_VOLTORB_2
 	return
 
 NewMauville_Inside_EventScript_237449:: @ 8237449
-	clearflag FLAG_0x3D0
+	clearflag FLAG_HIDE_NEW_MAUVILLE_VOLTORB_3
 	return
 
 NewMauville_Inside_MapScript1_23744D: @ 823744D
-	compare VAR_0x40BA, 2
-	call_if 1, NewMauville_Inside_EventScript_23773A
+	compare VAR_NEW_MAUVILLE_STATE, 2
+	call_if_eq NewMauville_Inside_EventScript_23773A
 	end
 
 NewMauville_Inside_EventScript_237459:: @ 8237459
@@ -150,9 +146,9 @@ NewMauville_Inside_EventScript_2375D7:: @ 82375D7
 
 NewMauville_Inside_EventScript_237725:: @ 8237725
 	lockall
-	msgbox NewMauville_Inside_Text_237932, 4
+	msgbox NewMauville_Inside_Text_237932, MSGBOX_DEFAULT
 	call NewMauville_Inside_EventScript_23773A
-	setvar VAR_0x40BA, 2
+	setvar VAR_NEW_MAUVILLE_STATE, 2
 	releaseall
 	end
 
@@ -171,14 +167,14 @@ NewMauville_Inside_EventScript_23773A:: @ 823773A
 
 NewMauville_Inside_EventScript_23778F:: @ 823778F
 	lockall
-	compare VAR_0x40BA, 2
-	goto_eq NewMauville_Inside_EventScript_2377A5
-	msgbox NewMauville_Inside_Text_237896, 4
+	compare VAR_NEW_MAUVILLE_STATE, 2
+	goto_if_eq NewMauville_Inside_EventScript_2377A5
+	msgbox NewMauville_Inside_Text_237896, MSGBOX_DEFAULT
 	releaseall
 	end
 
 NewMauville_Inside_EventScript_2377A5:: @ 82377A5
-	msgbox NewMauville_Inside_Text_237916, 4
+	msgbox NewMauville_Inside_Text_237916, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -195,17 +191,17 @@ NewMauville_Inside_EventScript_2377AF:: @ 82377AF
 	clearflag FLAG_SYS_CTRL_OBJ_DELETE
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 1
-	goto_eq NewMauville_Inside_EventScript_2377F3
+	goto_if_eq NewMauville_Inside_EventScript_2377F3
 	compare VAR_RESULT, 4
-	goto_eq NewMauville_Inside_EventScript_2377F3
+	goto_if_eq NewMauville_Inside_EventScript_2377F3
 	compare VAR_RESULT, 5
-	goto_eq NewMauville_Inside_EventScript_2377F3
-	setflag FLAG_0x1C1
+	goto_if_eq NewMauville_Inside_EventScript_2377F3
+	setflag FLAG_DEFEATED_VOLTORB_1_NEW_MAUVILLE
 	release
 	end
 
 NewMauville_Inside_EventScript_2377F3:: @ 82377F3
-	setflag FLAG_0x1C1
+	setflag FLAG_DEFEATED_VOLTORB_1_NEW_MAUVILLE
 	goto NewMauville_Inside_EventScript_27376D
 	end
 
@@ -222,17 +218,17 @@ NewMauville_Inside_EventScript_2377FC:: @ 82377FC
 	clearflag FLAG_SYS_CTRL_OBJ_DELETE
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 1
-	goto_eq NewMauville_Inside_EventScript_237840
+	goto_if_eq NewMauville_Inside_EventScript_237840
 	compare VAR_RESULT, 4
-	goto_eq NewMauville_Inside_EventScript_237840
+	goto_if_eq NewMauville_Inside_EventScript_237840
 	compare VAR_RESULT, 5
-	goto_eq NewMauville_Inside_EventScript_237840
-	setflag FLAG_0x1C2
+	goto_if_eq NewMauville_Inside_EventScript_237840
+	setflag FLAG_DEFEATED_VOLTORB_2_NEW_MAUVILLE
 	release
 	end
 
 NewMauville_Inside_EventScript_237840:: @ 8237840
-	setflag FLAG_0x1C2
+	setflag FLAG_DEFEATED_VOLTORB_2_NEW_MAUVILLE
 	goto NewMauville_Inside_EventScript_27376D
 	end
 
@@ -249,17 +245,17 @@ NewMauville_Inside_EventScript_237849:: @ 8237849
 	clearflag FLAG_SYS_CTRL_OBJ_DELETE
 	specialvar VAR_RESULT, GetBattleOutcome
 	compare VAR_RESULT, 1
-	goto_eq NewMauville_Inside_EventScript_23788D
+	goto_if_eq NewMauville_Inside_EventScript_23788D
 	compare VAR_RESULT, 4
-	goto_eq NewMauville_Inside_EventScript_23788D
+	goto_if_eq NewMauville_Inside_EventScript_23788D
 	compare VAR_RESULT, 5
-	goto_eq NewMauville_Inside_EventScript_23788D
-	setflag FLAG_0x1C3
+	goto_if_eq NewMauville_Inside_EventScript_23788D
+	setflag FLAG_DEFEATED_VOLTORB_3_NEW_MAUVILLE
 	release
 	end
 
 NewMauville_Inside_EventScript_23788D:: @ 823788D
-	setflag FLAG_0x1C3
+	setflag FLAG_DEFEATED_VOLTORB_3_NEW_MAUVILLE
 	goto NewMauville_Inside_EventScript_27376D
 	end
 
@@ -279,4 +275,3 @@ NewMauville_Inside_Text_237932: @ 8237932
 	.string "… … … … … … … …\p"
 	.string "The generator appears to have\n"
 	.string "stopped…$"
-

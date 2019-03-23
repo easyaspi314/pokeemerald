@@ -1,27 +1,25 @@
 #include "global.h"
-#include "fldeff_cut.h"
+#include "event_obj_lock.h"
+#include "event_object_movement.h"
 #include "field_camera.h"
 #include "field_effect.h"
-#include "event_object_movement.h"
 #include "field_player_avatar.h"
 #include "fieldmap.h"
-#include "event_obj_lock.h"
+#include "fldeff.h"
+#include "alloc.h"
 #include "metatile_behavior.h"
-#include "party_menu.h"
 #include "overworld.h"
+#include "party_menu.h"
 #include "script.h"
 #include "sound.h"
 #include "sprite.h"
 #include "task.h"
 #include "trig.h"
-#include "malloc.h"
-#include "constants/event_objects.h"
-#include "constants/songs.h"
 #include "constants/abilities.h"
+#include "constants/event_objects.h"
+#include "constants/field_effects.h"
+#include "constants/songs.h"
 
-extern bool8 CheckObjectGraphicsInFrontOfPlayer(u8);
-extern u8 oei_task_add(void);
-extern void ScriptUnfreezeEventObjects(void);
 extern bool8 IsMewPlayingHideAndSeek(void);
 
 extern struct MapPosition gPlayerFacingPosition;
@@ -134,10 +132,10 @@ static const struct OamData sOamData_CutGrass =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(8x8),
     .x = 0,
     .matrixNum = 0,
-    .size = 0,
+    .size = SPRITE_SIZE(8x8),
     .tileNum = 1,
     .priority = 1,
     .paletteNum = 1,
@@ -625,7 +623,7 @@ static void CutGrassSpriteCallbackEnd(struct Sprite *sprite)
         ScriptContext1_SetupScript(FarawayIsland_Interior_EventScript_267EDB);
 }
 
-void sub_80D423C(s16 x, s16 y)
+void FixLongGrassMetatilesWindowTop(s16 x, s16 y)
 {
     u8 metatileBehavior = MapGridGetMetatileBehaviorAt(x, y);
     if (MetatileBehavior_IsLongGrass_Duplicate(metatileBehavior))
@@ -648,7 +646,7 @@ void sub_80D423C(s16 x, s16 y)
     }
 }
 
-void sub_80D42B8(s16 x, s16 y)
+void FixLongGrassMetatilesWindowBottom(s16 x, s16 y)
 {
     if (MapGridGetMetatileIdAt(x, y) == METATILE_ID_GRASS)
     {

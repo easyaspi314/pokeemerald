@@ -1,7 +1,12 @@
 #ifndef GUARD_GLOBAL_FIELDMAP_H
 #define GUARD_GLOBAL_FIELDMAP_H
 
-#define NUM_EVENT_OBJECTS 16
+#define METATILE_COLLISION_MASK 0x0C00
+#define METATILE_ID_MASK 0x03FF
+#define METATILE_ID_UNDEFINED 0x03FF
+#define METATILE_ELEVATION_SHIFT 12
+#define METATILE_COLLISION_SHIFT 10
+#define METATILE_ELEVATION_MASK 0xF000
 
 enum
 {
@@ -21,8 +26,8 @@ struct Tileset
     /*0x01*/ bool8 isSecondary;
     /*0x04*/ void *tiles;
     /*0x08*/ void *palettes;
-    /*0x0c*/ void *metatiles;
-    /*0x10*/ void *metatileAttributes;
+    /*0x0c*/ u16 *metatiles;
+    /*0x10*/ u16 *metatileAttributes;
     /*0x14*/ TilesetCB callback;
 };
 
@@ -63,17 +68,16 @@ struct EventObjectTemplate
 struct WarpEvent
 {
     s16 x, y;
-    s8 warpId;
-    u8 mapGroup;
+    u8 elevation;
+    u8 warpId;
     u8 mapNum;
-    u8 unk7;
+    u8 mapGroup;
 };
 
 struct CoordEvent
 {
     s16 x, y;
-    u8 unk4;
-    u8 filler_5;
+    u8 elevation;
     u16 trigger;
     u16 index;
     u8 filler_A[0x2];
@@ -83,16 +87,15 @@ struct CoordEvent
 struct BgEvent
 {
     u16 x, y;
-    u8 unk4;
+    u8 elevation;
     u8 kind;
-    // 0x2 padding for the union beginning.
     union { // carried over from diego's FR/LG work, seems to be the same struct
         // in gen 3, "kind" (0x3 in BgEvent struct) determines the method to read the union.
         u8 *script;
 
-        // hidden item type probably
+        // hidden item type
         struct {
-            u8 filler6[0x2];
+            u16 item;
             u16 hiddenItemId; // flag offset to determine flag lookup
         } hiddenItem;
 
@@ -141,8 +144,7 @@ struct MapHeader
     /* 0x15 */ u8 cave;
     /* 0x16 */ u8 weather;
     /* 0x17 */ u8 mapType;
-    /* 0x18 */ u8 filler_18;
-    /* 0x19 */ u8 escapeRope;
+    /* 0x18 */ u8 filler_18[2];
     /* 0x1A */ u8 flags;
     /* 0x1B */ u8 battleType;
 };
@@ -196,8 +198,8 @@ struct EventObject
         struct __attribute__((packed)) {
             u8 x:4;
             u8 y:4;
-        } __attribute__((aligned (1))) as_nybbles;
-    } __attribute__((aligned (1))) range;
+        } ALIGNED(1) as_nybbles;
+    } ALIGNED(1) range;
     /*0x1A*/ u8 fieldEffectSpriteId;
     /*0x1B*/ u8 warpArrowSpriteId;
     /*0x1C*/ u8 movementActionId;
@@ -230,14 +232,14 @@ struct EventObjectGraphicsInfo
     /*0x20*/ const union AffineAnimCmd *const *affineAnims;
 };
 
-#define PLAYER_AVATAR_FLAG_ON_FOOT   (1 << 0)
-#define PLAYER_AVATAR_FLAG_MACH_BIKE (1 << 1)
-#define PLAYER_AVATAR_FLAG_ACRO_BIKE (1 << 2)
-#define PLAYER_AVATAR_FLAG_SURFING   (1 << 3)
-#define PLAYER_AVATAR_FLAG_4         (1 << 4)
-#define PLAYER_AVATAR_FLAG_5         (1 << 5)
-#define PLAYER_AVATAR_FLAG_6         (1 << 6)
-#define PLAYER_AVATAR_FLAG_DASH      (1 << 7)
+#define PLAYER_AVATAR_FLAG_ON_FOOT    (1 << 0)
+#define PLAYER_AVATAR_FLAG_MACH_BIKE  (1 << 1)
+#define PLAYER_AVATAR_FLAG_ACRO_BIKE  (1 << 2)
+#define PLAYER_AVATAR_FLAG_SURFING    (1 << 3)
+#define PLAYER_AVATAR_FLAG_UNDERWATER (1 << 4)
+#define PLAYER_AVATAR_FLAG_5          (1 << 5)
+#define PLAYER_AVATAR_FLAG_6          (1 << 6)
+#define PLAYER_AVATAR_FLAG_DASH       (1 << 7)
 
 enum
 {
@@ -298,10 +300,10 @@ struct PlayerAvatar
     /*0x09*/ u8 newDirBackup; // during bike movement, the new direction as opposed to player's direction is backed up here.
     /*0x0A*/ u8 bikeFrameCounter; // on the mach bike, when this value is 1, the bike is moving but not accelerating yet for 1 tile. on the acro bike, this acts as a timer for acro bike.
     /*0x0B*/ u8 bikeSpeed;
-	// acro bike only
+    // acro bike only
     /*0x0C*/ u32 directionHistory; // up/down/left/right history is stored in each nybble, but using the field directions and not the io inputs.
     /*0x10*/ u32 abStartSelectHistory; // same as above but for A + B + start + select only
-	// these two are timer history arrays which [0] is the active timer for acro bike. every element is backed up to the next element upon update.
+    // these two are timer history arrays which [0] is the active timer for acro bike. every element is backed up to the next element upon update.
     /*0x14*/ u8 dirTimerHistory[8];
     /*0x1C*/ u8 abStartSelectTimerHistory[8];
 };
@@ -313,7 +315,7 @@ struct Camera
     s32 y;
 };
 
-extern struct EventObject gEventObjects[NUM_EVENT_OBJECTS];
+extern struct EventObject gEventObjects[EVENT_OBJECTS_COUNT];
 extern u8 gSelectedEventObject;
 extern struct MapHeader gMapHeader;
 extern struct PlayerAvatar gPlayerAvatar;

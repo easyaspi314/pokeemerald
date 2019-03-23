@@ -1,15 +1,15 @@
 MossdeepCity_GameCorner_1F_MapScripts:: @ 8224B27
-	map_script 2, MossdeepCity_GameCorner_1F_MapScript2_224B41
-	map_script 4, MossdeepCity_GameCorner_1F_MapScript2_224B37
-	map_script 1, MossdeepCity_GameCorner_1F_MapScript1_276BBE
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, MossdeepCity_GameCorner_1F_MapScript2_224B41
+	map_script MAP_SCRIPT_ON_WARP_INTO_MAP_TABLE, MossdeepCity_GameCorner_1F_MapScript2_224B37
+	map_script MAP_SCRIPT_ON_LOAD, MossdeepCity_GameCorner_1F_MapScript1_276BBE
 	.byte 0
 
 MossdeepCity_GameCorner_1F_MapScript2_224B37: @ 8224B37
-	map_script_2 VAR_0x4087, 8, MossdeepCity_GameCorner_1F_EventScript_276BAE
+	map_script_2 VAR_CABLE_CLUB_STATE, 8, MossdeepCity_GameCorner_1F_EventScript_276BAE
 	.2byte 0
 
 MossdeepCity_GameCorner_1F_MapScript2_224B41: @ 8224B41
-	map_script_2 VAR_0x4087, 8, MossdeepCity_GameCorner_1F_EventScript_276C9D
+	map_script_2 VAR_CABLE_CLUB_STATE, 8, MossdeepCity_GameCorner_1F_EventScript_276C9D
 	.2byte 0
 
 MossdeepCity_GameCorner_1F_EventScript_224B4B:: @ 8224B4B
@@ -27,13 +27,13 @@ MossdeepCity_GameCorner_1F_EventScript_224B54:: @ 8224B54
 	end
 
 MossdeepCity_GameCorner_1F_EventScript_224B5D:: @ 8224B5D
-	msgbox MossdeepCity_GameCorner_1F_Text_224BFD, 3
+	msgbox MossdeepCity_GameCorner_1F_Text_224BFD, MSGBOX_SIGN
 	end
 
 MossdeepCity_GameCorner_1F_Text_224B66: @ 8224B66
 	.string "When I was young, I traveled the world\n"
 	.string "as a POKéMON TRAINER.\p"
-	.string "Now that I’ve become an old buzzard,\n"
+	.string "Now that I've become an old buzzard,\n"
 	.string "my only amusement is watching young\l"
 	.string "TRAINERS battle.$"
 
@@ -47,12 +47,12 @@ MossdeepCity_GameCorner_1F_Text_224C1C: @ 8224C1C
 	.string "{STR_VAR_1}?$"
 
 MossdeepCity_GameCorner_1F_Text_224C64: @ 8224C64
-	.string "You won’t battle? I’m disappointed\n"
-	.string "that I can’t see you battle…$"
+	.string "You won't battle? I'm disappointed\n"
+	.string "that I can't see you battle…$"
 
 MossdeepCity_GameCorner_1F_Text_224CA4: @ 8224CA4
 	.string "Oh, good, good!\p"
-	.string "But my house isn’t all that sturdy.\p"
+	.string "But my house isn't all that sturdy.\p"
 	.string "Could I ask you to keep it down to\n"
 	.string "a 3-on-3 match?$"
 

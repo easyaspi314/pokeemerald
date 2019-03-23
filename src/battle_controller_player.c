@@ -1,53 +1,43 @@
 #include "global.h"
 #include "battle.h"
-#include "battle_controllers.h"
-#include "battle_message.h"
-#include "battle_interface.h"
 #include "battle_anim.h"
-#include "constants/battle_anim.h"
+#include "battle_arena.h"
+#include "battle_controllers.h"
+#include "battle_dome.h"
+#include "battle_interface.h"
+#include "battle_message.h"
+#include "battle_setup.h"
 #include "battle_tv.h"
-#include "pokemon.h"
-#include "link.h"
-#include "util.h"
-#include "main.h"
+#include "bg.h"
+#include "data2.h"
 #include "item.h"
-#include "constants/items.h"
-#include "constants/songs.h"
-#include "sound.h"
-#include "constants/moves.h"
-#include "constants/trainers.h"
-#include "window.h"
+#include "item_menu.h"
+#include "link.h"
+#include "main.h"
 #include "m4a.h"
 #include "palette.h"
+#include "party_menu.h"
+#include "pokeball.h"
+#include "pokemon.h"
+#include "random.h"
+#include "recorded_battle.h"
+#include "reshow_battle_screen.h"
+#include "sound.h"
+#include "string_util.h"
 #include "task.h"
 #include "text.h"
-#include "string_util.h"
-#include "bg.h"
-#include "reshow_battle_screen.h"
-#include "random.h"
-#include "pokeball.h"
-#include "data2.h"
-#include "battle_setup.h"
-#include "item_menu.h"
-#include "recorded_battle.h"
-#include "party_menu.h"
-#include "battle_dome.h"
+#include "util.h"
+#include "window.h"
+#include "constants/battle_anim.h"
+#include "constants/items.h"
+#include "constants/moves.h"
+#include "constants/songs.h"
+#include "constants/trainers.h"
 
-extern u8 gUnknown_0203CEE8;
-extern u8 gUnknown_0203CEE9;
-extern u8 gUnknown_0203CF00[];
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
-extern struct UnusedControllerStruct gUnknown_02022D0C;
 extern struct MusicPlayerInfo gMPlayInfo_BGM;
 
 extern const struct CompressedSpritePalette gTrainerFrontPicPaletteTable[];
 extern const struct CompressedSpritePalette gTrainerBackPicPaletteTable[];
-
-extern void sub_8172EF0(u8 battlerId, struct Pokemon *mon);
-extern void sub_81AABB0(void);
-extern void sub_81A57E4(u8 battlerId, u16 stringId);
-extern void sub_81851A8(u8 *);
 
 // this file's functions
 static void PlayerHandleGetMonData(void);
@@ -105,7 +95,7 @@ static void PlayerHandleBattleAnimation(void);
 static void PlayerHandleLinkStandbyMsg(void);
 static void PlayerHandleResetActionMoveSelection(void);
 static void PlayerHandleCmd55(void);
-static void nullsub_22(void);
+static void PlayerCmdEnd(void);
 
 static void PlayerBufferRunCommand(void);
 static void HandleInputChooseTarget(void);
@@ -116,7 +106,7 @@ static void MoveSelectionDisplayPpNumber(void);
 static void MoveSelectionDisplayPpString(void);
 static void MoveSelectionDisplayMoveType(void);
 static void MoveSelectionDisplayMoveNames(void);
-static void HandleMoveSwitchting(void);
+static void HandleMoveSwitching(void);
 static void sub_8058FC0(void);
 static void WaitForMonSelection(void);
 static void CompleteWhenChoseItem(void);
@@ -192,7 +182,7 @@ static void (*const sPlayerBufferCommands[CONTROLLER_CMDS_COUNT])(void) =
     PlayerHandleLinkStandbyMsg,
     PlayerHandleResetActionMoveSelection,
     PlayerHandleCmd55,
-    nullsub_22
+    PlayerCmdEnd
 };
 
 static const u8 sTargetIdentities[] = {B_POSITION_PLAYER_LEFT, B_POSITION_PLAYER_RIGHT, B_POSITION_OPPONENT_RIGHT, B_POSITION_OPPONENT_LEFT};
@@ -409,7 +399,7 @@ static void HandleInputChooseTarget(void)
             do
             {
                 if (--i < 0)
-                    i = 4; // UB: array out of range
+                    i = MAX_BATTLERS_COUNT; // UB: array out of range
                 gMultiUsePlayerCursor = GetBattlerAtPosition(identities[i]);
             } while (gMultiUsePlayerCursor == gBattlersCount);
 
@@ -619,7 +609,7 @@ static void HandleInputChooseMove(void)
 
             MoveSelectionCreateCursorAt(gMultiUsePlayerCursor, 27);
             BattlePutTextOnWindow(gText_BattleSwitchWhich, 0xB);
-            gBattlerControllerFuncs[gActiveBattler] = HandleMoveSwitchting;
+            gBattlerControllerFuncs[gActiveBattler] = HandleMoveSwitching;
         }
     }
 }
@@ -674,7 +664,7 @@ u32 sub_8057FBC(void) // unused
     return var;
 }
 
-static void HandleMoveSwitchting(void)
+static void HandleMoveSwitching(void)
 {
     u8 perMovePPBonuses[4];
     struct ChooseMoveStruct moveStruct;
@@ -702,15 +692,15 @@ static void HandleMoveSwitchting(void)
             moveInfo->maxPp[gMoveSelectionCursor[gActiveBattler]] = moveInfo->maxPp[gMultiUsePlayerCursor];
             moveInfo->maxPp[gMultiUsePlayerCursor] = i;
 
-            if (gDisableStructs[gActiveBattler].unk18_b & gBitTable[gMoveSelectionCursor[gActiveBattler]])
+            if (gDisableStructs[gActiveBattler].mimickedMoves & gBitTable[gMoveSelectionCursor[gActiveBattler]])
             {
-                gDisableStructs[gActiveBattler].unk18_b &= (~gBitTable[gMoveSelectionCursor[gActiveBattler]]);
-                gDisableStructs[gActiveBattler].unk18_b |= gBitTable[gMultiUsePlayerCursor];
+                gDisableStructs[gActiveBattler].mimickedMoves &= (~gBitTable[gMoveSelectionCursor[gActiveBattler]]);
+                gDisableStructs[gActiveBattler].mimickedMoves |= gBitTable[gMultiUsePlayerCursor];
             }
 
             MoveSelectionDisplayMoveNames();
 
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
                 perMovePPBonuses[i] = (gBattleMons[gActiveBattler].ppBonuses & (3 << (i * 2))) >> (i * 2);
 
             totalPPBonuses = perMovePPBonuses[gMoveSelectionCursor[gActiveBattler]];
@@ -718,12 +708,12 @@ static void HandleMoveSwitchting(void)
             perMovePPBonuses[gMultiUsePlayerCursor] = totalPPBonuses;
 
             totalPPBonuses = 0;
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
                 totalPPBonuses |= perMovePPBonuses[i] << (i * 2);
 
             gBattleMons[gActiveBattler].ppBonuses = totalPPBonuses;
 
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
             {
                 gBattleMons[gActiveBattler].moves[i] = moveInfo->moves[i];
                 gBattleMons[gActiveBattler].pp[i] = moveInfo->currentPp[i];
@@ -731,14 +721,14 @@ static void HandleMoveSwitchting(void)
 
             if (!(gBattleMons[gActiveBattler].status2 & STATUS2_TRANSFORMED))
             {
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < MAX_MON_MOVES; i++)
                 {
                     moveStruct.moves[i] = GetMonData(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], MON_DATA_MOVE1 + i);
                     moveStruct.currentPp[i] = GetMonData(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], MON_DATA_PP1 + i);
                 }
 
                 totalPPBonuses = GetMonData(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], MON_DATA_PP_BONUSES);
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < MAX_MON_MOVES; i++)
                     perMovePPBonuses[i] = (totalPPBonuses & (3 << (i * 2))) >> (i * 2);
 
                 i = moveStruct.moves[gMoveSelectionCursor[gActiveBattler]];
@@ -754,10 +744,10 @@ static void HandleMoveSwitchting(void)
                 perMovePPBonuses[gMultiUsePlayerCursor] = totalPPBonuses;
 
                 totalPPBonuses = 0;
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < MAX_MON_MOVES; i++)
                     totalPPBonuses |= perMovePPBonuses[i] << (i * 2);
 
-                for (i = 0; i < 4; i++)
+                for (i = 0; i < MAX_MON_MOVES; i++)
                 {
                     SetMonData(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], MON_DATA_MOVE1 + i, &moveStruct.moves[i]);
                     SetMonData(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], MON_DATA_PP1 + i, &moveStruct.currentPp[i]);
@@ -875,7 +865,7 @@ static void sub_80586F8(void)
     }
     else
     {
-        if (sub_800A520())
+        if (IsLinkTaskFinished())
         {
             m4aSongNumStop(SE_HINSI);
             gMain.inBattle = 0;
@@ -894,7 +884,7 @@ void sub_80587B0(void)
     {
         if (gBattleTypeFlags & BATTLE_TYPE_LINK)
         {
-            if (sub_800A520())
+            if (IsLinkTaskFinished())
             {
                 if (gWirelessCommType == 0)
                     sub_800AC34();
@@ -1452,7 +1442,7 @@ static void MoveSelectionDisplayMoveNames(void)
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct*)(&gBattleBufferA[gActiveBattler][4]);
     gNumberOfMovesToChoose = 0;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MON_MOVES; i++)
     {
         MoveSelectionDestroyCursorAt(i);
         StringCopy(gDisplayedStringBattle, gMoveNames[moveInfo->moves[i]]);
@@ -1589,7 +1579,7 @@ static void PlayerHandleGetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 size += CopyPlayerMonData(i, monData + size);
@@ -1615,7 +1605,7 @@ static u32 CopyPlayerMonData(u8 monId, u8 *dst)
     case REQUEST_ALL_BATTLE:
         battleMon.species = GetMonData(&gPlayerParty[monId], MON_DATA_SPECIES);
         battleMon.item = GetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM);
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             battleMon.moves[size] = GetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + size);
             battleMon.pp[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
@@ -1662,7 +1652,7 @@ static u32 CopyPlayerMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
         {
             moveData.moves[size] = GetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + size);
             moveData.pp[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
@@ -1682,7 +1672,7 @@ static u32 CopyPlayerMonData(u8 monId, u8 *dst)
         size = 2;
         break;
     case REQUEST_PP_DATA_BATTLE:
-        for (size = 0; size < 4; size++)
+        for (size = 0; size < MAX_MON_MOVES; size++)
             dst[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP1 + size);
         dst[size] = GetMonData(&gPlayerParty[monId], MON_DATA_PP_BONUSES);
         size++;
@@ -1932,7 +1922,7 @@ static void PlayerHandleSetMonData(void)
     else
     {
         monToCheck = gBattleBufferA[gActiveBattler][2];
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < PARTY_SIZE; i++)
         {
             if (monToCheck & 1)
                 SetPlayerMonData(i);
@@ -1956,7 +1946,7 @@ static void SetPlayerMonData(u8 monId)
 
             SetMonData(&gPlayerParty[monId], MON_DATA_SPECIES, &battlePokemon->species);
             SetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM, &battlePokemon->item);
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < MAX_MON_MOVES; i++)
             {
                 SetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + i, &battlePokemon->moves[i]);
                 SetMonData(&gPlayerParty[monId], MON_DATA_PP1 + i, &battlePokemon->pp[i]);
@@ -1995,7 +1985,7 @@ static void SetPlayerMonData(u8 monId)
         SetMonData(&gPlayerParty[monId], MON_DATA_HELD_ITEM, &gBattleBufferA[gActiveBattler][3]);
         break;
     case REQUEST_MOVES_PP_BATTLE:
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < MAX_MON_MOVES; i++)
         {
             SetMonData(&gPlayerParty[monId], MON_DATA_MOVE1 + i, &moveData->moves[i]);
             SetMonData(&gPlayerParty[monId], MON_DATA_PP1 + i, &moveData->pp[i]);
@@ -2203,7 +2193,7 @@ static void sub_805B258(u8 battlerId, bool8 dontClearSubstituteBit)
       &gMultiuseSpriteTemplate,
       GetBattlerSpriteCoord(battlerId, 2),
       GetBattlerSpriteDefault_Y(battlerId),
-      sub_80A82E4(battlerId));
+      GetBattlerSpriteSubpriority(battlerId));
 
     gSprites[gUnknown_03005D7C[battlerId]].data[1] = gBattlerSpriteIds[battlerId];
     gSprites[gUnknown_03005D7C[battlerId]].data[2] = battlerId;
@@ -2297,18 +2287,18 @@ static void PlayerHandleDrawTrainerPic(void)
         if (gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER && gPartnerTrainerId != TRAINER_STEVEN_PARTNER)
         {
             xPos = 90;
-            yPos = (8 - gTrainerFrontPicCoords[trainerPicId].coords) * 4 + 80;
+            yPos = (8 - gTrainerFrontPicCoords[trainerPicId].size) * 4 + 80;
         }
         else
         {
-            yPos = (8 - gTrainerBackPicCoords[trainerPicId].coords) * 4 + 80;
+            yPos = (8 - gTrainerBackPicCoords[trainerPicId].size) * 4 + 80;
         }
 
     }
     else
     {
         xPos = 80;
-        yPos = (8 - gTrainerBackPicCoords[trainerPicId].coords) * 4 + 80;
+        yPos = (8 - gTrainerBackPicCoords[trainerPicId].size) * 4 + 80;
     }
 
     // Use front pic table for any tag battles unless your partner is Steven.
@@ -2317,7 +2307,7 @@ static void PlayerHandleDrawTrainerPic(void)
         trainerPicId = PlayerGenderToFrontTrainerPicId(gSaveBlock2Ptr->playerGender);
         DecompressTrainerFrontPic(trainerPicId, gActiveBattler);
         SetMultiuseSpriteTemplateToTrainerFront(trainerPicId, GetBattlerPosition(gActiveBattler));
-        gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, xPos, yPos, sub_80A82E4(gActiveBattler));
+        gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, xPos, yPos, GetBattlerSpriteSubpriority(gActiveBattler));
 
         gSprites[gBattlerSpriteIds[gActiveBattler]].oam.paletteNum = IndexOfSpritePaletteTag(gTrainerFrontPicPaletteTable[trainerPicId].tag);
         gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = 240;
@@ -2332,7 +2322,7 @@ static void PlayerHandleDrawTrainerPic(void)
     {
         DecompressTrainerBackPic(trainerPicId, gActiveBattler);
         SetMultiuseSpriteTemplateToTrainerBack(trainerPicId, GetBattlerPosition(gActiveBattler));
-        gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, xPos, yPos, sub_80A82E4(gActiveBattler));
+        gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, xPos, yPos, GetBattlerSpriteSubpriority(gActiveBattler));
 
         gSprites[gBattlerSpriteIds[gActiveBattler]].oam.paletteNum = gActiveBattler;
         gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = 240;
@@ -2371,7 +2361,7 @@ static void PlayerHandleTrainerSlide(void)
 
     DecompressTrainerBackPic(trainerPicId, gActiveBattler);
     SetMultiuseSpriteTemplateToTrainerBack(trainerPicId, GetBattlerPosition(gActiveBattler));
-    gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, 80, (8 - gTrainerBackPicCoords[trainerPicId].coords) * 4 + 80, 30);
+    gBattlerSpriteIds[gActiveBattler] = CreateSprite(&gMultiuseSpriteTemplate, 80, (8 - gTrainerBackPicCoords[trainerPicId].size) * 4 + 80, 30);
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].oam.paletteNum = gActiveBattler;
     gSprites[gBattlerSpriteIds[gActiveBattler]].pos2.x = -96;
@@ -2383,11 +2373,11 @@ static void PlayerHandleTrainerSlide(void)
 
 static void PlayerHandleTrainerSlideBack(void)
 {
-    oamt_add_pos2_onto_pos1(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
+    SetSpritePrimaryCoordsFromSecondaryCoords(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 50;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = -40;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[4] = gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.y;
-    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_80A6EEC;
+    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = StartAnimLinearTranslation;
     StoreSpriteCallbackInData6(&gSprites[gBattlerSpriteIds[gActiveBattler]], SpriteCallbackDummy);
     StartSpriteAnim(&gSprites[gBattlerSpriteIds[gActiveBattler]], 1);
     gBattlerControllerFuncs[gActiveBattler] = sub_80588B4;
@@ -2407,7 +2397,7 @@ static void PlayerHandleFaintAnimation(void)
         {
             gBattleSpritesDataPtr->healthBoxesData[gActiveBattler].animationState = 0;
             HandleLowHpMusicChange(&gPlayerParty[gBattlerPartyIndexes[gActiveBattler]], gActiveBattler);
-            PlaySE12WithPanning(SE_POKE_DEAD, PAN_SIDE_PLAYER);
+            PlaySE12WithPanning(SE_POKE_DEAD, SOUND_PAN_ATTACKER);
             gSprites[gBattlerSpriteIds[gActiveBattler]].data[1] = 0;
             gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = 5;
             gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_8039C00;
@@ -2537,7 +2527,7 @@ static void PlayerHandlePrintString(void)
     BattlePutTextOnWindow(gDisplayedStringBattle, 0);
     gBattlerControllerFuncs[gActiveBattler] = CompleteOnInactiveTextPrinter2;
     BattleTv_SetDataBasedOnString(*stringId);
-    sub_81A57E4(gActiveBattler, *stringId);
+    BattleArena_DeductMindPoints(gActiveBattler, *stringId);
 }
 
 static void PlayerHandlePrintSelectionString(void)
@@ -2600,9 +2590,11 @@ static void HandleChooseMoveAfterDma3(void)
     }
 }
 
+// arenaMindPoints is used here as a placeholder for a timer.
+
 static void PlayerChooseMoveInBattlePalace(void)
 {
-    if (--*(gBattleStruct->field_298 + gActiveBattler) == 0)
+    if (--*(gBattleStruct->arenaMindPoints + gActiveBattler) == 0)
     {
         gBattlePalaceMoveSelectionRngValue = gRngValue;
         BtlController_EmitTwoReturnValues(1, 10, ChooseMoveAndTargetInBattlePalace());
@@ -2614,7 +2606,7 @@ static void PlayerHandleChooseMove(void)
 {
     if (gBattleTypeFlags & BATTLE_TYPE_PALACE)
     {
-        *(gBattleStruct->field_298 + gActiveBattler) = 8;
+        *(gBattleStruct->arenaMindPoints + gActiveBattler) = 8;
         gBattlerControllerFuncs[gActiveBattler] = PlayerChooseMoveInBattlePalace;
     }
     else
@@ -2710,7 +2702,7 @@ static void PlayerHandleExpUpdate(void)
 {
     u8 monId = gBattleBufferA[gActiveBattler][1];
 
-    if (GetMonData(&gPlayerParty[monId], MON_DATA_LEVEL) >= MAX_MON_LEVEL)
+    if (GetMonData(&gPlayerParty[monId], MON_DATA_LEVEL) >= MAX_LEVEL)
     {
         PlayerBufferExecCompleted();
     }
@@ -2882,9 +2874,9 @@ static void PlayerHandlePlaySE(void)
     s8 pan;
 
     if (GetBattlerSide(gActiveBattler) == B_SIDE_PLAYER)
-        pan = PAN_SIDE_PLAYER;
+        pan = SOUND_PAN_ATTACKER;
     else
-        pan = PAN_SIDE_OPPONENT;
+        pan = SOUND_PAN_TARGET;
 
     PlaySE12WithPanning(gBattleBufferA[gActiveBattler][1] | (gBattleBufferA[gActiveBattler][2] << 8), pan);
     PlayerBufferExecCompleted();
@@ -2925,12 +2917,12 @@ static void PlayerHandleIntroTrainerBallThrow(void)
     u8 paletteNum;
     u8 taskId;
 
-    oamt_add_pos2_onto_pos1(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
+    SetSpritePrimaryCoordsFromSecondaryCoords(&gSprites[gBattlerSpriteIds[gActiveBattler]]);
 
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[0] = 50;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[2] = -40;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[4] = gSprites[gBattlerSpriteIds[gActiveBattler]].pos1.y;
-    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = sub_80A6EEC;
+    gSprites[gBattlerSpriteIds[gActiveBattler]].callback = StartAnimLinearTranslation;
     gSprites[gBattlerSpriteIds[gActiveBattler]].data[5] = gActiveBattler;
 
     StoreSpriteCallbackInData6(&gSprites[gBattlerSpriteIds[gActiveBattler]], sub_805CC00);
@@ -3109,6 +3101,6 @@ static void PlayerHandleCmd55(void)
     gBattlerControllerFuncs[gActiveBattler] = sub_80587B0;
 }
 
-static void nullsub_22(void)
+static void PlayerCmdEnd(void)
 {
 }

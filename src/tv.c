@@ -6,6 +6,8 @@
 #include "event_data.h"
 #include "fieldmap.h"
 #include "field_camera.h"
+#include "field_specials.h"
+#include "fldeff.h"
 #include "strings.h"
 #include "string_util.h"
 #include "international_string_util.h"
@@ -24,19 +26,20 @@
 #include "event_scripts.h"
 #include "shop.h"
 #include "lilycove_lady.h"
-#include "rom6.h"
 #include "pokedex.h"
 #include "event_object_movement.h"
 #include "text.h"
 #include "script_menu.h"
 #include "naming_screen.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "region_map.h"
 #include "constants/region_map_sections.h"
 #include "decoration.h"
 #include "secret_base.h"
 #include "tv.h"
 #include "data2.h"
+#include "constants/layouts.h"
+#include "constants/metatile_behaviors.h"
 
 // Static type declarations
 
@@ -60,7 +63,7 @@ IWRAM_DATA s8 sTVShowMixingCurSlot;
 EWRAM_DATA u16 sPokemonAnglerSpecies = 0;
 EWRAM_DATA u16 sPokemonAnglerAttemptCounters = 0;
 EWRAM_DATA u16 sFindThatGamerCoinsSpent = 0;
-EWRAM_DATA bool8 sFindThatGamerWhichGame = FALSE;
+EWRAM_DATA u8 sFindThatGamerWhichGame = SLOT_MACHINE;
 EWRAM_DATA ALIGNED(4) u8 sRecordMixingPartnersWithoutShowsToShare = 0;
 EWRAM_DATA ALIGNED(4) u8 sTVShowState = 0;
 EWRAM_DATA u8 sTVSecretBaseSecretsRandomValues[3] = {};
@@ -833,7 +836,7 @@ void UpdateTVScreensOnMap(int width, int height)
             {
                 SetTVMetatilesOnMap(width, height, 0x3);
             }
-            else if (FlagGet(FLAG_SYS_TV_START) && (FindAnyTVShowOnTheAir() != 0xff || FindAnyTVNewsOnTheAir() != 0xff || IsTVShowInSearchOfTrainersAiring()))
+            else if (FlagGet(FLAG_SYS_TV_START) && (FindAnyTVShowOnTheAir() != 0xFF || FindAnyTVNewsOnTheAir() != 0xFF || IsTVShowInSearchOfTrainersAiring()))
             {
                 FlagClear(FLAG_SYS_TV_WATCH);
                 SetTVMetatilesOnMap(width, height, 0x3);
@@ -851,9 +854,9 @@ void SetTVMetatilesOnMap(int width, int height, u16 tileId)
     {
         for (x = 0; x < width; x ++)
         {
-            if (MapGridGetMetatileBehaviorAt(x, y) == 0x86) // is this tile a TV?
+            if (MapGridGetMetatileBehaviorAt(x, y) == MB_TELEVISION)
             {
-                MapGridSetMetatileIdAt(x, y, tileId | 0xc00);
+                MapGridSetMetatileIdAt(x, y, tileId | METATILE_COLLISION_MASK);
             }
         }
     }
@@ -861,13 +864,13 @@ void SetTVMetatilesOnMap(int width, int height, u16 tileId)
 
 void TurnOffTVScreen(void)
 {
-    SetTVMetatilesOnMap(gUnknown_03005DC0.width, gUnknown_03005DC0.height, 0x0002);
+    SetTVMetatilesOnMap(gBackupMapLayout.width, gBackupMapLayout.height, 0x0002);
     DrawWholeMapView();
 }
 
 void TurnOnTVScreen(void)
 {
-    SetTVMetatilesOnMap(gUnknown_03005DC0.width, gUnknown_03005DC0.height, 0x0003);
+    SetTVMetatilesOnMap(gBackupMapLayout.width, gBackupMapLayout.height, 0x0003);
     DrawWholeMapView();
 }
 
@@ -912,13 +915,13 @@ void ResetGabbyAndTy(void)
     gSaveBlock1Ptr->gabbyAndTyData.quote[0] = -1;
     gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon = FALSE;
-    gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem = FALSE;
+    gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.playerThrewABall = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.onAir = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.valA_5 = 0;
     gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn2 = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon2 = FALSE;
-    gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem2 = FALSE;
+    gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem2 = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.playerThrewABall2 = FALSE;
     gSaveBlock1Ptr->gabbyAndTyData.valB_4 = 0;
     gSaveBlock1Ptr->gabbyAndTyData.mapnum = 0;
@@ -936,7 +939,7 @@ void GabbyAndTyBeforeInterview(void)
     {
         gSaveBlock1Ptr->gabbyAndTyData.battleNum ++;
     }
-    gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn = gBattleResults.unk5_0;
+    gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn = gBattleResults.playerMonWasDamaged;
     if (gBattleResults.playerFaintCounter != 0)
     {
         gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon = TRUE;
@@ -945,13 +948,13 @@ void GabbyAndTyBeforeInterview(void)
     {
         gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon = FALSE;
     }
-    if (gBattleResults.unk3 != 0)
+    if (gBattleResults.numHealingItemsUsed != 0)
     {
-        gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem = TRUE;
+        gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem = TRUE;
     }
     else
     {
-        gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem = FALSE;
+        gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem = FALSE;
     }
     if (!gBattleResults.usedMasterBall)
     {
@@ -971,7 +974,7 @@ void GabbyAndTyBeforeInterview(void)
     TakeTVShowInSearchOfTrainersOffTheAir();
     if (gSaveBlock1Ptr->gabbyAndTyData.lastMove == MOVE_NONE)
     {
-        FlagSet(0x0001);
+        FlagSet(FLAG_TEMP_1);
     }
 }
 
@@ -979,7 +982,7 @@ void GabbyAndTyAfterInterview(void)
 {
     gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn2 = gSaveBlock1Ptr->gabbyAndTyData.battleTookMoreThanOneTurn;
     gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon2 = gSaveBlock1Ptr->gabbyAndTyData.playerLostAMon;
-    gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem2 = gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem;
+    gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem2 = gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem;
     gSaveBlock1Ptr->gabbyAndTyData.playerThrewABall2 = gSaveBlock1Ptr->gabbyAndTyData.playerThrewABall;
     gSaveBlock1Ptr->gabbyAndTyData.onAir = TRUE;
     gSaveBlock1Ptr->gabbyAndTyData.mapnum = gMapHeader.regionMapSectionId;
@@ -1026,7 +1029,7 @@ u8 GabbyAndTyGetLastBattleTrivia(void)
     {
         return 2;
     }
-    if (gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem2)
+    if (gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem2)
     {
         return 3;
     }
@@ -1261,7 +1264,7 @@ static void InterviewAfter_ContestLiveUpdates(void)
         show2->contestLiveUpdates.active = TRUE;
         StringCopy(show2->contestLiveUpdates.playerName, gSaveBlock2Ptr->playerName);
         show2->contestLiveUpdates.category = gSpecialVar_ContestCategory;
-        show2->contestLiveUpdates.species = GetMonData(&gPlayerParty[gUnknown_02039F24], MON_DATA_SPECIES, NULL);
+        show2->contestLiveUpdates.species = GetMonData(&gPlayerParty[gContestMonPartyIndex], MON_DATA_SPECIES, NULL);
         show2->contestLiveUpdates.winningSpecies = show->contestLiveUpdates.winningSpecies;
         show2->contestLiveUpdates.appealFlags2 = show->contestLiveUpdates.appealFlags2;
         show2->contestLiveUpdates.round1Rank = show->contestLiveUpdates.round1Rank;
@@ -1452,7 +1455,7 @@ void ContestLiveUpdates_BeforeInterview_5(u8 a0, u8 a1)
         StringCopy(show->contestLiveUpdates.winningTrainerName, gContestMons[a1].trainerName);
         StripExtCtrlCodes(show->contestLiveUpdates.winningTrainerName);
         show->contestLiveUpdates.appealFlags2 = a0;
-        if (a1 + 1 > gUnknown_02039F30)
+        if (a1 + 1 > gNumLinkContestPlayers)
         {
             show->contestLiveUpdates.winningTrainerLanguage = gLinkPlayers[0].language;
         }
@@ -1515,7 +1518,7 @@ void BravoTrainerPokemonProfile_BeforeInterview1(u16 a0)
     }
 }
 
-void BravoTrainerPokemonProfile_BeforeInterview2(u8 a0)
+void BravoTrainerPokemonProfile_BeforeInterview2(u8 contestStandingPlace)
 {
     TVShow *show;
 
@@ -1523,13 +1526,13 @@ void BravoTrainerPokemonProfile_BeforeInterview2(u8 a0)
     sCurTVShowSlot = FindEmptyTVSlotWithinFirstFiveShowsOfArray(gSaveBlock1Ptr->tvShows);
     if (sCurTVShowSlot != -1)
     {
-        show->bravoTrainer.contestResult = a0;
+        show->bravoTrainer.contestResult = contestStandingPlace;
         show->bravoTrainer.contestCategory = gSpecialVar_ContestCategory;
         show->bravoTrainer.contestRank = gSpecialVar_ContestRank;
-        show->bravoTrainer.species = GetMonData(&gPlayerParty[gUnknown_02039F24], MON_DATA_SPECIES, NULL);
-        GetMonData(&gPlayerParty[gUnknown_02039F24], MON_DATA_NICKNAME, show->bravoTrainer.pokemonNickname);
+        show->bravoTrainer.species = GetMonData(&gPlayerParty[gContestMonPartyIndex], MON_DATA_SPECIES, NULL);
+        GetMonData(&gPlayerParty[gContestMonPartyIndex], MON_DATA_NICKNAME, show->bravoTrainer.pokemonNickname);
         StripExtCtrlCodes(show->bravoTrainer.pokemonNickname);
-        show->bravoTrainer.pokemonNameLanguage = GetMonData(&gPlayerParty[gUnknown_02039F24], MON_DATA_LANGUAGE);
+        show->bravoTrainer.pokemonNameLanguage = GetMonData(&gPlayerParty[gContestMonPartyIndex], MON_DATA_LANGUAGE);
     }
 }
 
@@ -1544,7 +1547,7 @@ static void InterviewAfter_BravoTrainerBattleTowerProfile(void)
     StringCopy(show->bravoTrainerTower.pokemonName, gSaveBlock2Ptr->frontier.field_BD8);
     show->bravoTrainerTower.species = gSaveBlock2Ptr->frontier.field_BD4;
     show->bravoTrainerTower.defeatedSpecies = gSaveBlock2Ptr->frontier.field_BD6;
-    show->bravoTrainerTower.numFights = sub_8164FCC(gSaveBlock2Ptr->frontier.field_D07, 0);
+    show->bravoTrainerTower.numFights = GetCurrentBattleTowerWinStreak(gSaveBlock2Ptr->frontier.field_D07, 0);
     show->bravoTrainerTower.wonTheChallenge = gSaveBlock2Ptr->frontier.field_D06;
     if (gSaveBlock2Ptr->frontier.field_D07 == 0)
     {
@@ -1580,7 +1583,7 @@ void SaveRecordedItemPurchasesForTVShow(void)
         if (sCurTVShowSlot != -1 && HasMixableShowAlreadyBeenSpawnedWithPlayerID(TVSHOW_SMART_SHOPPER, FALSE) != TRUE)
         {
             TV_SortPurchasesByQuantity();
-            if (gUnknown_02039F80[0].quantity >= 20)
+            if (gMartPurchaseHistory[0].quantity >= 20)
             {
                 show = &gSaveBlock1Ptr->tvShows[sCurTVShowSlot];
                 show->smartshopperShow.kind = TVSHOW_SMART_SHOPPER;
@@ -1588,8 +1591,8 @@ void SaveRecordedItemPurchasesForTVShow(void)
                 show->smartshopperShow.shopLocation = gMapHeader.regionMapSectionId;
                 for (i = 0; i < 3; i ++)
                 {
-                    show->smartshopperShow.itemIds[i] = gUnknown_02039F80[i].itemId;
-                    show->smartshopperShow.itemAmounts[i] = gUnknown_02039F80[i].quantity;
+                    show->smartshopperShow.itemIds[i] = gMartPurchaseHistory[i].itemId;
+                    show->smartshopperShow.itemAmounts[i] = gMartPurchaseHistory[i].quantity;
                 }
                 show->smartshopperShow.priceReduced = GetPriceReduction(1);
                 StringCopy(show->smartshopperShow.playerName, gSaveBlock2Ptr->playerName);
@@ -1972,7 +1975,7 @@ void sub_80EDB44(void)
                 show->rivalTrainer.nGoldSymbols ++;
             }
         }
-        show->rivalTrainer.battlePoints = gSaveBlock2Ptr->frontier.frontierBattlePoints;
+        show->rivalTrainer.battlePoints = gSaveBlock2Ptr->frontier.battlePoints;
         StringCopy(show->rivalTrainer.playerName, gSaveBlock2Ptr->playerName);
         tv_store_id_3x(show);
         show->rivalTrainer.language = gGameLanguage;
@@ -2017,7 +2020,7 @@ void sub_80EDCE8(void)
     }
 }
 
-void sub_80EDD78(u16 nCoinsPaidOut)
+void AlertTVOfNewCoinTotal(u16 nCoinsPaidOut)
 {
     TVShow *show;
     bool8 flag;
@@ -2029,7 +2032,7 @@ void sub_80EDD78(u16 nCoinsPaidOut)
         flag = FALSE;
         switch (sFindThatGamerWhichGame)
         {
-            case FALSE:
+            case SLOT_MACHINE:
                 if (nCoinsPaidOut >= sFindThatGamerCoinsSpent + 200)
                 {
                     flag = TRUE;
@@ -2042,7 +2045,7 @@ void sub_80EDD78(u16 nCoinsPaidOut)
                     break;
                 }
                 return;
-            case TRUE:
+            case ROULETTE:
                 if (nCoinsPaidOut >= sFindThatGamerCoinsSpent + 50)
                 {
                     flag = TRUE;
@@ -2070,15 +2073,15 @@ void sub_80EDD78(u16 nCoinsPaidOut)
     }
 }
 
-void sub_80EDE70(u16 nCoinsSpent)
+void AlertTVThatPlayerPlayedSlotMachine(u16 nCoinsSpent)
 {
-    sFindThatGamerWhichGame = FALSE;
+    sFindThatGamerWhichGame = SLOT_MACHINE;
     sFindThatGamerCoinsSpent = nCoinsSpent;
 }
 
-void sub_80EDE84(u16 nCoinsSpent)
+void AlertTVThatPlayerPlayedRoulette(u16 nCoinsSpent)
 {
-    sFindThatGamerWhichGame = TRUE;
+    sFindThatGamerWhichGame = ROULETTE;
     sFindThatGamerCoinsSpent = nCoinsSpent;
 }
 
@@ -2446,8 +2449,8 @@ void sub_80EE72C(void)
         show->trainerFanClub.kind = TVSHOW_TRAINER_FAN_CLUB;
         show->trainerFanClub.active = FALSE;
         StringCopy(show->trainerFanClub.playerName, gSaveBlock2Ptr->playerName);
-        show->trainerFanClub.words[0] = gSaveBlock1Ptr->unk2BB0[0];
-        show->trainerFanClub.words[1] = gSaveBlock1Ptr->unk2BB0[1];
+        show->trainerFanClub.words[0] = gSaveBlock1Ptr->easyChatProfile[0];
+        show->trainerFanClub.words[1] = gSaveBlock1Ptr->easyChatProfile[1];
         tv_store_id_3x(show);
         show->trainerFanClub.language = gGameLanguage;
     }
@@ -2500,7 +2503,7 @@ bool8 sub_80EE818(void)
     return TRUE;
 }
 
-void sub_80EE8C8(u16 winStreak, u8 facility)
+void sub_80EE8C8(u16 winStreak, u8 facilityAndMode)
 {
     TVShow *show;
 
@@ -2512,8 +2515,8 @@ void sub_80EE8C8(u16 winStreak, u8 facility)
         show->frontier.active = FALSE;
         StringCopy(show->frontier.playerName, gSaveBlock2Ptr->playerName);
         show->frontier.winStreak = winStreak;
-        show->frontier.facility = facility;
-        switch (facility)
+        show->frontier.facility = facilityAndMode;
+        switch (facilityAndMode)
         {
             case  1:
             case  5:
@@ -2540,8 +2543,8 @@ void sub_80EE8C8(u16 winStreak, u8 facility)
                 show->frontier.species2 = GetMonData(&gPlayerParty[1], MON_DATA_SPECIES, NULL);
                 break;
             case 4:
-                show->frontier.species1 = GetMonData(&gSaveBlock1Ptr->playerParty[gSaveBlock2Ptr->frontier.field_CAA[0] - 1], MON_DATA_SPECIES, NULL);
-                show->frontier.species2 = GetMonData(&gSaveBlock1Ptr->playerParty[gSaveBlock2Ptr->frontier.field_CAA[1] - 1], MON_DATA_SPECIES, NULL);
+                show->frontier.species1 = GetMonData(&gSaveBlock1Ptr->playerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[0] - 1], MON_DATA_SPECIES, NULL);
+                show->frontier.species2 = GetMonData(&gSaveBlock1Ptr->playerParty[gSaveBlock2Ptr->frontier.selectedPartyMons[1] - 1], MON_DATA_SPECIES, NULL);
                 break;
         }
         tv_store_id_3x(show);
@@ -2563,22 +2566,22 @@ void sub_80EEA70(void)
             show->secretBaseSecrets.kind = TVSHOW_SECRET_BASE_SECRETS;
             show->secretBaseSecrets.active = FALSE;
             StringCopy(show->secretBaseSecrets.playerName, gSaveBlock2Ptr->playerName);
-            show->secretBaseSecrets.stepsInBase = VarGet(0x40ec);
+            show->secretBaseSecrets.stepsInBase = VarGet(VAR_SECRET_BASE_STEP_COUNTER);
             sub_80E980C();
             StringCopy(strbuf, gStringVar1);
             StripExtCtrlCodes(strbuf);
             StringCopy(show->secretBaseSecrets.baseOwnersName, strbuf);
-            show->secretBaseSecrets.item = VarGet(0x40ed);
-            show->secretBaseSecrets.flags = VarGet(0x40ee) + (VarGet(0x40ef) << 16);
+            show->secretBaseSecrets.item = VarGet(VAR_SECRET_BASE_LAST_ITEM_USED);
+            show->secretBaseSecrets.flags = VarGet(VAR_SECRET_BASE_LOW_TV_FLAGS) + (VarGet(VAR_SECRET_BASE_HIGH_TV_FLAGS) << 16);
             tv_store_id_3x(show);
             show->secretBaseSecrets.language = gGameLanguage;
-            if (show->secretBaseSecrets.language == LANGUAGE_JAPANESE || gSaveBlock1Ptr->secretBases[VarGet(VAR_0x4054)].language == LANGUAGE_JAPANESE)
+            if (show->secretBaseSecrets.language == LANGUAGE_JAPANESE || gSaveBlock1Ptr->secretBases[VarGet(VAR_CURRENT_SECRET_BASE)].language == LANGUAGE_JAPANESE)
             {
                 show->secretBaseSecrets.baseOwnersNameLanguage = LANGUAGE_JAPANESE;
             }
             else
             {
-                show->secretBaseSecrets.baseOwnersNameLanguage = gSaveBlock1Ptr->secretBases[VarGet(VAR_0x4054)].language;
+                show->secretBaseSecrets.baseOwnersNameLanguage = gSaveBlock1Ptr->secretBases[VarGet(VAR_CURRENT_SECRET_BASE)].language;
             }
         }
     }
@@ -2742,7 +2745,7 @@ u8 FindAnyTVNewsOnTheAir(void)
             return i;
         }
     }
-    return -1;
+    return 0xFF;
 }
 
 void DoPokeNews(void)
@@ -2992,14 +2995,14 @@ void TV_SortPurchasesByQuantity(void)
     {
         for (j = i + 1; j < 3; j ++)
         {
-            if (gUnknown_02039F80[i].quantity < gUnknown_02039F80[j].quantity)
+            if (gMartPurchaseHistory[i].quantity < gMartPurchaseHistory[j].quantity)
             {
-                tmpId = gUnknown_02039F80[i].itemId;
-                tmpQn = gUnknown_02039F80[i].quantity;
-                gUnknown_02039F80[i].itemId = gUnknown_02039F80[j].itemId;
-                gUnknown_02039F80[i].quantity = gUnknown_02039F80[j].quantity;
-                gUnknown_02039F80[j].itemId = tmpId;
-                gUnknown_02039F80[j].quantity = tmpQn;
+                tmpId = gMartPurchaseHistory[i].itemId;
+                tmpQn = gMartPurchaseHistory[i].quantity;
+                gMartPurchaseHistory[i].itemId = gMartPurchaseHistory[j].itemId;
+                gMartPurchaseHistory[i].quantity = gMartPurchaseHistory[j].quantity;
+                gMartPurchaseHistory[j].itemId = tmpId;
+                gMartPurchaseHistory[j].quantity = tmpQn;
             }
         }
     }
@@ -3229,9 +3232,9 @@ u16 TV_GetSomeOtherSpeciesAlreadySeenByPlayer(u16 passedSpecies)
 
     species = (Random() % (NUM_SPECIES - 1)) + 1;
     initSpecies = species;
-    while (GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), 0) != 1 || species == passedSpecies)
+    while (GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), FLAG_GET_SEEN) != TRUE || species == passedSpecies)
     {
-        if (species == 1)
+        if (species == SPECIES_NONE + 1)
         {
             species = NUM_SPECIES - 1;
         }
@@ -3469,7 +3472,7 @@ void ChangeBoxPokemonNickname(void)
 
 void ChangeBoxPokemonNickname_CB(void)
 {
-    SetBoxMonNickFromAnyBox(gSpecialVar_MonBoxId, gSpecialVar_MonBoxPos, gStringVar2);
+    SetBoxMonNickAt(gSpecialVar_MonBoxId, gSpecialVar_MonBoxPos, gStringVar2);
     CB2_ReturnToFieldContinueScriptPlayMapMusic();
 }
 
@@ -3537,7 +3540,7 @@ u8 CheckForBigMovieOrEmergencyNewsOnTV(void)
             return 0;
         }
     }
-    if (FlagGet(FLAG_SYS_TV_LATI) == TRUE)
+    if (FlagGet(FLAG_SYS_TV_LATIAS_LATIOS) == TRUE)
     {
         return 1;
     }
@@ -3601,9 +3604,9 @@ void GetMomOrDadStringForTVMessage(void)
 
 void sub_80F01B8(void)
 {
-    VarSet(VAR_0x40BC, 0);
+    VarSet(VAR_BRAVO_TRAINER_BATTLE_TOWER_ON, 0);
     RemoveEventObjectByLocalIdAndMap(5, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup);
-    FlagSet(0x396);
+    FlagSet(FLAG_HIDE_BATTLE_TOWER_REPORTER);
 }
 
 void ReceiveTvShowsData(void *src, u32 size, u8 masterIdx)
@@ -4376,7 +4379,7 @@ void SetTvShowInactive(u8 showIdx)
 
 static void sub_80F0B24(u16 species, u8 showIdx)
 {
-    if (GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), 0) == 0)
+    if (!GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), FLAG_GET_SEEN))
     {
         gSaveBlock1Ptr->tvShows[showIdx].common.active = FALSE;
     }
@@ -6140,7 +6143,7 @@ void DoTVShowInSearchOfTrainers(void)
             {
                 sTVShowState = 5;
             }
-            else if (gSaveBlock1Ptr->gabbyAndTyData.playerUsedAnItem)
+            else if (gSaveBlock1Ptr->gabbyAndTyData.playerUsedHealingItem)
             {
                 sTVShowState = 6;
             }
@@ -6263,7 +6266,9 @@ static void DoTVShowTodaysRivalTrainer(void)
                 case MAPSEC_DYNAMIC:
                     switch (show->rivalTrainer.mapLayoutId)
                     {
-                        case 0x115 ... 0x117:
+                        case LAYOUT_SS_TIDAL_CORRIDOR:
+                        case LAYOUT_SS_TIDAL_LOWER_DECK:
+                        case LAYOUT_SS_TIDAL_ROOMS:
                             sTVShowState = 10;
                             break;
                         default:
@@ -6462,7 +6467,9 @@ static void DoTVShowHoennTreasureInvestigators(void)
             {
                 switch (show->treasureInvestigators.mapLayoutId)
                 {
-                    case 0x115 ... 0x117:
+                    case LAYOUT_SS_TIDAL_CORRIDOR:
+                    case LAYOUT_SS_TIDAL_LOWER_DECK:
+                    case LAYOUT_SS_TIDAL_ROOMS:
                         sTVShowState = 2;
                         break;
                     default:
@@ -7344,7 +7351,7 @@ static void DoTVShowWhatsNo1InHoennToday(void)
     ShowFieldMessage(sTVWhatsNo1InHoennTodayTextGroup[state]);
 }
 
-u8 sub_80F5180(TVShow *show)
+u8 TVShowGetFlagCount(TVShow *show)
 {
     u8 i;
     u8 tot;
@@ -7359,7 +7366,7 @@ u8 sub_80F5180(TVShow *show)
     return tot;
 }
 
-u8 sub_80F51AC(TVShow *show, u8 a1)
+u8 TVShowGetStateForFlagNumber(TVShow *show, u8 a1)
 {
     u8 i;
     u8 tot;
@@ -7393,7 +7400,7 @@ static void DoTVShowSecretBaseSecrets(void)
         case 0:
             TVShowConvertInternationalString(gStringVar1, show->secretBaseSecrets.baseOwnersName, show->secretBaseSecrets.baseOwnersNameLanguage);
             TVShowConvertInternationalString(gStringVar2, show->secretBaseSecrets.playerName, show->secretBaseSecrets.language);
-            bitCount = sub_80F5180(show);
+            bitCount = TVShowGetFlagCount(show);
             if (bitCount == 0)
             {
                 sTVShowState = 8;
@@ -7402,12 +7409,12 @@ static void DoTVShowSecretBaseSecrets(void)
             {
                 show->secretBaseSecrets.savedState = 1;
                 sTVSecretBaseSecretsRandomValues[0] = Random() % bitCount;
-                sTVShowState = sub_80F51AC(show, sTVSecretBaseSecretsRandomValues[0]);
+                sTVShowState = TVShowGetStateForFlagNumber(show, sTVSecretBaseSecretsRandomValues[0]);
             }
             break;
         case 1:
             TVShowConvertInternationalString(gStringVar2, show->secretBaseSecrets.playerName, show->secretBaseSecrets.language);
-            bitCount = sub_80F5180(show);
+            bitCount = TVShowGetFlagCount(show);
             switch (bitCount)
             {
                 case 1:
@@ -7417,11 +7424,11 @@ static void DoTVShowSecretBaseSecrets(void)
                     show->secretBaseSecrets.savedState = 2;
                     if (sTVSecretBaseSecretsRandomValues[0] == 0)
                     {
-                        sTVShowState = sub_80F51AC(show, 1);
+                        sTVShowState = TVShowGetStateForFlagNumber(show, 1);
                     }
                     else
                     {
-                        sTVShowState = sub_80F51AC(show, 0);
+                        sTVShowState = TVShowGetStateForFlagNumber(show, 0);
                     }
                     break;
                 default:
@@ -7434,13 +7441,13 @@ static void DoTVShowSecretBaseSecrets(void)
                         }
                     }
                     show->secretBaseSecrets.savedState = 2;
-                    sTVShowState = sub_80F51AC(show, sTVSecretBaseSecretsRandomValues[1]);
+                    sTVShowState = TVShowGetStateForFlagNumber(show, sTVSecretBaseSecretsRandomValues[1]);
                     break;
             }
             break;
         case 2:
             TVShowConvertInternationalString(gStringVar2, show->secretBaseSecrets.playerName, show->secretBaseSecrets.language);
-            bitCount = sub_80F5180(show);
+            bitCount = TVShowGetFlagCount(show);
             if (bitCount == 2)
             {
                 sTVShowState = 9;
@@ -7456,7 +7463,7 @@ static void DoTVShowSecretBaseSecrets(void)
                     }
                 }
                 show->secretBaseSecrets.savedState = 3;
-                sTVShowState = sub_80F51AC(show, sTVSecretBaseSecretsRandomValues[2]);
+                sTVShowState = TVShowGetStateForFlagNumber(show, sTVSecretBaseSecretsRandomValues[2]);
             }
             break;
         case 3:

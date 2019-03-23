@@ -1,17 +1,17 @@
 UnionRoom_MapScripts:: @ 823D1A6
-	map_script 5, UnionRoom_MapScript1_23D1B1
-	map_script 3, UnionRoom_MapScript1_23D1E5
+	map_script MAP_SCRIPT_ON_RESUME, UnionRoom_MapScript1_23D1B1
+	map_script MAP_SCRIPT_ON_TRANSITION, UnionRoom_MapScript1_23D1E5
 	.byte 0
 
 UnionRoom_MapScript1_23D1B1: @ 823D1B1
-	setflag FLAG_0x2BF
-	setflag FLAG_0x2C0
-	setflag FLAG_0x2C1
-	setflag FLAG_0x2C2
-	setflag FLAG_0x2C3
-	setflag FLAG_0x2C4
-	setflag FLAG_0x2C5
-	setflag FLAG_0x2C6
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_1
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_2
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_3
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_4
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_5
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_6
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_7
+	setflag FLAG_HIDE_UNION_ROOM_PLAYER_8
 	removeobject 9
 	removeobject 8
 	removeobject 7

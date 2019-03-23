@@ -1,6 +1,7 @@
 #include "global.h"
 #include "constants/trainers.h"
 #include "battle.h"
+#include "constants/battle_setup.h"
 #include "battle_setup.h"
 #include "battle_transition.h"
 #include "main.h"
@@ -23,17 +24,27 @@
 #include "window.h"
 #include "event_object_movement.h"
 #include "event_scripts.h"
+#include "tv.h"
 #include "trainer_see.h"
 #include "field_message_box.h"
 #include "sound.h"
 #include "strings.h"
+#include "trainer_hill.h"
 #include "secret_base.h"
 #include "string_util.h"
 #include "overworld.h"
 #include "field_weather.h"
+#include "battle_tower.h"
 #include "gym_leader_rematch.h"
+#include "battle_pike.h"
+#include "battle_pyramid.h"
+#include "fldeff.h"
+#include "fldeff_misc.h"
+#include "field_control_avatar.h"
+#include "mirage_tower.h"
 #include "constants/map_types.h"
 #include "constants/battle_frontier.h"
+#include "field_screen_effect.h"
 
 enum
 {
@@ -51,31 +62,6 @@ struct TrainerBattleParameter
     void *varPtr;
     u8 ptrType;
 };
-
-extern bool8 InBattlePyramid(void);
-extern bool8 InBattlePike(void);
-extern bool32 InTrainerHill(void);
-extern bool32 FieldPoisonEffectIsRunning(void);
-extern void prev_quest_postbuffer_cursor_backup_reset(void);
-extern void ResetPoisonStepCounter(void);
-extern void sub_81BE72C(void);
-extern void sub_808BCF4(void);
-extern void sub_80EECC8(void);
-extern void sub_80AF6F0(void);
-extern u16 sub_81A9AA8(u8 localId);
-extern u16 sub_81D6180(u8 localId);
-extern bool8 GetBattlePyramidTrainerFlag(u8 eventObjId);
-extern bool8 GetTrainerHillTrainerFlag(u8 eventObjId);
-extern bool8 sub_81D5C18(void);
-extern void sub_816306C(u8 a0);
-extern void sub_8163048(u8 a0);
-extern void sub_81A9B04(void);
-extern void sub_81D639C(void);
-extern void sub_81D6384(void);
-extern void sub_81D61E8(void);
-extern void sub_80982B8(void);
-extern void sub_81A9EDC(u16 a0);
-extern void sub_81D572C(u8 a0, u16 arg1);
 
 // this file's functions
 static void DoBattlePikeWildBattle(void);
@@ -310,7 +296,7 @@ const struct RematchTrainer gRematchTable[REMATCH_TABLE_ENTRIES] =
     {{TRAINER_TRENT_1, TRAINER_TRENT_2, TRAINER_TRENT_3, TRAINER_TRENT_4, TRAINER_TRENT_5}, 0x0, 0x1b},
     {{TRAINER_SAWYER_1, TRAINER_SAWYER_2, TRAINER_SAWYER_3, TRAINER_SAWYER_4, TRAINER_SAWYER_5}, 0x18, 0xc},
     {{TRAINER_KIRA_AND_DAN_1, TRAINER_KIRA_AND_DAN_2, TRAINER_KIRA_AND_DAN_3, TRAINER_KIRA_AND_DAN_4, TRAINER_KIRA_AND_DAN_5}, 0x18, 0x3e},
-    {{TRAINER_WALLY_3, 0x292, 0x293, 0x294, 0x294}, 0x18, 0x2b},
+    {{TRAINER_WALLY_3, TRAINER_WALLY_4, TRAINER_WALLY_5, TRAINER_WALLY_6, TRAINER_WALLY_6}, 0x18, 0x2b},
     {{TRAINER_ROXANNE_1, TRAINER_ROXANNE_2, TRAINER_ROXANNE_3, TRAINER_ROXANNE_4, TRAINER_ROXANNE_5}, 0x0, 0x3},
     {{TRAINER_BRAWLY_1, TRAINER_BRAWLY_2, TRAINER_BRAWLY_3, TRAINER_BRAWLY_4, TRAINER_BRAWLY_5}, 0x0, 0xb},
     {{TRAINER_WATTSON_1, TRAINER_WATTSON_2, TRAINER_WATTSON_3, TRAINER_WATTSON_4, TRAINER_WATTSON_5}, 0x0, 0x2},
@@ -342,20 +328,20 @@ static void Task_BattleStart(u8 taskId)
     switch (tState)
     {
     case 0:
-        if (!FieldPoisonEffectIsRunning()) // is poison not active?
+        if (!FldEffPoison_IsActive()) // is poison not active?
         {
             BattleTransition_StartOnField(tTransition);
-            sub_81BE72C();
+            ClearMirageTowerPulseBlendEffect();
             tState++; // go to case 1.
         }
         break;
     case 1:
         if (IsBattleTransitionDone() == TRUE)
         {
-            overworld_free_bg_tilemaps();
+            CleanupOverworldWindowsAndTilemaps();
             SetMainCallback2(CB2_InitBattle);
-            prev_quest_postbuffer_cursor_backup_reset();
-            ResetPoisonStepCounter();
+            RestartWildEncounterImmunitySteps();
+            ClearPoisonStepCounter();
             DestroyTask(taskId);
         }
         break;
@@ -642,7 +628,7 @@ u8 BattleSetup_GetTerrainId(void)
     case MAP_TYPE_ROUTE:
         break;
     case MAP_TYPE_UNDERGROUND:
-        if (MetatileBehavior_IsMB_0B(tileBehavior))
+        if (MetatileBehavior_IsIndoorEncounter(tileBehavior))
             return BATTLE_TERRAIN_BUILDING;
         if (MetatileBehavior_IsSurfableWaterOrUnderwater(tileBehavior))
             return BATTLE_TERRAIN_POND;
@@ -652,7 +638,7 @@ u8 BattleSetup_GetTerrainId(void)
         return BATTLE_TERRAIN_BUILDING;
     case MAP_TYPE_UNDERWATER:
         return BATTLE_TERRAIN_UNDERWATER;
-    case MAP_TYPE_6:
+    case MAP_TYPE_OCEAN_ROUTE:
         if (MetatileBehavior_IsSurfableWaterOrUnderwater(tileBehavior))
             return BATTLE_TERRAIN_WATER;
         return BATTLE_TERRAIN_PLAIN;
@@ -665,7 +651,7 @@ u8 BattleSetup_GetTerrainId(void)
         return BATTLE_TERRAIN_MOUNTAIN;
     if (TestPlayerAvatarFlags(PLAYER_AVATAR_FLAG_SURFING))
     {
-        if (MetatileBehavior_GetBridgeSth(tileBehavior))
+        if (MetatileBehavior_GetBridgeType(tileBehavior))
             return BATTLE_TERRAIN_POND;
         if (MetatileBehavior_IsBridge(tileBehavior) == TRUE)
             return BATTLE_TERRAIN_WATER;
@@ -885,8 +871,8 @@ u8 sub_80B100C(s32 arg0)
             return sUnknown_0854FE98[Random() % ARRAY_COUNT(sUnknown_0854FE98)];
     }
 
-    var = gSaveBlock2Ptr->frontier.field_CB4[gSaveBlock2Ptr->frontier.field_CB2 * 2 + 0]
-        + gSaveBlock2Ptr->frontier.field_CB4[gSaveBlock2Ptr->frontier.field_CB2 * 2 + 1];
+    var = gSaveBlock2Ptr->frontier.trainerIds[gSaveBlock2Ptr->frontier.curChallengeBattleNum * 2 + 0]
+        + gSaveBlock2Ptr->frontier.trainerIds[gSaveBlock2Ptr->frontier.curChallengeBattleNum * 2 + 1];
 
     return sUnknown_0854FE98[var % ARRAY_COUNT(sUnknown_0854FE98)];
 }
@@ -921,8 +907,8 @@ static void CB2_StartFirstBattle(void)
         gMain.savedCallback = CB2_EndFirstBattle;
         FreeAllWindowBuffers();
         SetMainCallback2(CB2_InitBattle);
-        prev_quest_postbuffer_cursor_backup_reset();
-        ResetPoisonStepCounter();
+        RestartWildEncounterImmunitySteps();
+        ClearPoisonStepCounter();
         IncrementGameStat(GAME_STAT_TOTAL_BATTLES);
         IncrementGameStat(GAME_STAT_WILD_BATTLES);
         sub_80EECC8();
@@ -1090,9 +1076,9 @@ const u8 *BattleSetup_ConfigureTrainerBattle(const u8 *data)
 
     switch (sTrainerBattleMode)
     {
-    case TRAINER_BATTLE_NORMAL_NO_INTRO_TEXT:
+    case TRAINER_BATTLE_SINGLE_NO_INTRO_TEXT:
         TrainerBattleLoadArgs(sOrdinaryNoIntroBattleParams, data);
-        return EventScript_2713C2;
+        return EventScript_DoTainerBattle;
     case TRAINER_BATTLE_DOUBLE:
         TrainerBattleLoadArgs(sDoubleBattleParams, data);
         SetMapVarsToTrainer();
@@ -1107,11 +1093,11 @@ const u8 *BattleSetup_ConfigureTrainerBattle(const u8 *data)
         {
             TrainerBattleLoadArgs(sTrainerBContinueScriptBattleParams, data);
         }
-        return EventScript_271362;
+        return EventScript_TryDoNormalTrainerBattle;
     case TRAINER_BATTLE_CONTINUE_SCRIPT_NO_MUSIC:
         TrainerBattleLoadArgs(sContinueScriptBattleParams, data);
         SetMapVarsToTrainer();
-        return EventScript_271362;
+        return EventScript_TryDoNormalTrainerBattle;
     case TRAINER_BATTLE_CONTINUE_SCRIPT_DOUBLE:
     case TRAINER_BATTLE_CONTINUE_SCRIPT_DOUBLE_NO_MUSIC:
         TrainerBattleLoadArgs(sContinueScriptDoubleBattleParams, data);
@@ -1126,20 +1112,20 @@ const u8 *BattleSetup_ConfigureTrainerBattle(const u8 *data)
         TrainerBattleLoadArgs(sOrdinaryBattleParams, data);
         SetMapVarsToTrainer();
         gTrainerBattleOpponent_A = GetRematchTrainerId(gTrainerBattleOpponent_A);
-        return EventScript_2713D1;
-    case TRAINER_BATTLE_9:
+        return EventScript_TryDoRematchBattle;
+    case TRAINER_BATTLE_PYRAMID:
         if (gApproachingTrainerId == 0)
         {
             TrainerBattleLoadArgs(sOrdinaryBattleParams, data);
             SetMapVarsToTrainer();
-            gTrainerBattleOpponent_A = sub_81A9AA8(gSpecialVar_LastTalked);
+            gTrainerBattleOpponent_A = LocalIdToPyramidTrainerId(gSpecialVar_LastTalked);
         }
         else
         {
             TrainerBattleLoadArgs(sTrainerBOrdinaryBattleParams, data);
-            gTrainerBattleOpponent_B = sub_81A9AA8(gSpecialVar_LastTalked);
+            gTrainerBattleOpponent_B = LocalIdToPyramidTrainerId(gSpecialVar_LastTalked);
         }
-        return EventScript_271362;
+        return EventScript_TryDoNormalTrainerBattle;
     case TRAINER_BATTLE_SET_TRAINER_A:
         TrainerBattleLoadArgs(sOrdinaryBattleParams, data);
         return NULL;
@@ -1151,14 +1137,14 @@ const u8 *BattleSetup_ConfigureTrainerBattle(const u8 *data)
         {
             TrainerBattleLoadArgs(sOrdinaryBattleParams, data);
             SetMapVarsToTrainer();
-            gTrainerBattleOpponent_A = sub_81D6180(gSpecialVar_LastTalked);
+            gTrainerBattleOpponent_A = LocalIdToHillTrainerId(gSpecialVar_LastTalked);
         }
         else
         {
             TrainerBattleLoadArgs(sTrainerBOrdinaryBattleParams, data);
-            gTrainerBattleOpponent_B = sub_81D6180(gSpecialVar_LastTalked);
+            gTrainerBattleOpponent_B = LocalIdToHillTrainerId(gSpecialVar_LastTalked);
         }
-        return EventScript_271362;
+        return EventScript_TryDoNormalTrainerBattle;
     default:
         if (gApproachingTrainerId == 0)
         {
@@ -1169,7 +1155,7 @@ const u8 *BattleSetup_ConfigureTrainerBattle(const u8 *data)
         {
             TrainerBattleLoadArgs(sTrainerBOrdinaryBattleParams, data);
         }
-        return EventScript_271362;
+        return EventScript_TryDoNormalTrainerBattle;
     }
 }
 
@@ -1201,7 +1187,7 @@ bool32 GetTrainerFlagFromScriptPointer(const u8 *data)
     return FlagGet(FLAG_TRAINER_FLAG_START + flag);
 }
 
-void sub_80B16D8(void)
+void SetUpTrainerMovement(void)
 {
     struct EventObject *eventObject = &gEventObjects[gSelectedEventObject];
 
@@ -1218,7 +1204,7 @@ bool8 GetTrainerFlag(void)
     if (InBattlePyramid())
         return GetBattlePyramidTrainerFlag(gSelectedEventObject);
     else if (InTrainerHill())
-        return GetTrainerHillTrainerFlag(gSelectedEventObject);
+        return GetHillTrainerFlag(gSelectedEventObject);
     else
         return FlagGet(GetTrainerAFlag());
 }
@@ -1264,7 +1250,7 @@ void BattleSetup_StartTrainerBattle(void)
 
         if (gNoOfApproachingTrainers == 2)
         {
-            sub_816306C(1);
+            FillFrontierTrainersParties(1);
             ZeroMonData(&gEnemyParty[1]);
             ZeroMonData(&gEnemyParty[2]);
             ZeroMonData(&gEnemyParty[4]);
@@ -1272,23 +1258,23 @@ void BattleSetup_StartTrainerBattle(void)
         }
         else
         {
-            sub_8163048(1);
+            FillFrontierTrainerParty(1);
             ZeroMonData(&gEnemyParty[1]);
             ZeroMonData(&gEnemyParty[2]);
         }
 
-        sub_81A9B04();
+        MarkApproachingPyramidTrainersAsBattled();
     }
     else if (sub_81D5C18())
     {
-        gBattleTypeFlags |= BATTLE_TYPE_x4000000;
+        gBattleTypeFlags |= BATTLE_TYPE_TRAINER_HILL;
 
         if (gNoOfApproachingTrainers == 2)
-            sub_81D639C();
+            FillHillTrainersParties();
         else
-            sub_81D6384();
+            FillHillTrainerParty();
 
-        sub_81D61E8();
+        SetHillTrainerFlag();
     }
 
     sNoOfPossibleTrainerRetScripts = gNoOfApproachingTrainers;
@@ -1361,18 +1347,18 @@ void ShowTrainerIntroSpeech(void)
     if (InBattlePyramid())
     {
         if (gNoOfApproachingTrainers == 0 || gNoOfApproachingTrainers == 1)
-            sub_81A9EDC(sub_81A9AA8(gSpecialVar_LastTalked));
+            CopyPyramidTrainerSpeechBefore(LocalIdToPyramidTrainerId(gSpecialVar_LastTalked));
         else
-            sub_81A9EDC(sub_81A9AA8(gEventObjects[gApproachingTrainers[gApproachingTrainerId].eventObjectId].localId));
+            CopyPyramidTrainerSpeechBefore(LocalIdToPyramidTrainerId(gEventObjects[gApproachingTrainers[gApproachingTrainerId].eventObjectId].localId));
 
         sub_80982B8();
     }
     else if (sub_81D5C18())
     {
         if (gNoOfApproachingTrainers == 0 || gNoOfApproachingTrainers == 1)
-            sub_81D572C(2, sub_81D6180(gSpecialVar_LastTalked));
+            CopyTrainerHillTrainerText(2, LocalIdToHillTrainerId(gSpecialVar_LastTalked));
         else
-            sub_81D572C(2, sub_81D6180(gEventObjects[gApproachingTrainers[gApproachingTrainerId].eventObjectId].localId));
+            CopyTrainerHillTrainerText(2, LocalIdToHillTrainerId(gEventObjects[gApproachingTrainers[gApproachingTrainerId].eventObjectId].localId));
 
         sub_80982B8();
     }
@@ -1560,7 +1546,7 @@ static bool32 sub_80B1D94(s32 rematchTableId)
     if (rematchTableId >= REMATCH_ELITE_FOUR_ENTRIES)
         return TRUE;
     else if (rematchTableId == REMATCH_WALLY_ENTRY)
-        return (FlagGet(FLAG_0x07E) == FALSE);
+        return (FlagGet(FLAG_DEFEATED_WALLY_VICTORY_ROAD) == FALSE);
     else
         return FALSE;
 }

@@ -1,8 +1,6 @@
 #ifndef GUARD_MAIN_H
 #define GUARD_MAIN_H
 
-#include "global.h"
-
 typedef void (*MainCallback)(void);
 typedef void (*IntrCallback)(void);
 typedef void (*IntrFunc)(void);
@@ -53,7 +51,7 @@ extern bool8 gSoftResetDisabled;
 extern IntrFunc gIntrTable[];
 extern u8 gLinkVSyncDisabled;
 extern u32 IntrMain_Buffer[];
-extern u8 gPcmDmaCounter;
+extern s8 gPcmDmaCounter;
 
 void AgbMain(void);
 void SetMainCallback2(MainCallback callback);
@@ -63,10 +61,14 @@ void SetHBlankCallback(IntrCallback callback);
 void SetVCountCallback(IntrCallback callback);
 void SetSerialCallback(IntrCallback callback);
 void InitFlashTimer(void);
+void SetTrainerHillVBlankCounter(u32 *var);
+void ClearTrainerHillVBlankCounter(void);
 void DoSoftReset(void);
 void ClearPokemonCrySongs(void);
 void RestoreSerialTimer3IntrHandlers(void);
 void StartTimer1(void);
 void SeedRngAndSetTrainerId(void);
+u16 GetGeneratedTrainerIdLower(void);
+
 
 #endif // GUARD_MAIN_H

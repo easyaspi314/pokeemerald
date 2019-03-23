@@ -1,5 +1,5 @@
 BattleFrontier_BattleDomeCorridor_MapScripts:: @ 824B0FE
-	map_script 2, BattleFrontier_BattleDomeCorridor_MapScript2_24B104
+	map_script MAP_SCRIPT_ON_FRAME_TABLE, BattleFrontier_BattleDomeCorridor_MapScript2_24B104
 	.byte 0
 
 BattleFrontier_BattleDomeCorridor_MapScript2_24B104: @ 824B104
@@ -11,16 +11,16 @@ BattleFrontier_BattleDomeCorridor_EventScript_24B10E:: @ 824B10E
 	setvar VAR_TEMP_0, 1
 	setvar VAR_0x8004, 1
 	setvar VAR_0x8005, 1
-	special sub_81A1780
+	special CallFrontierUtilFunc
 	compare VAR_RESULT, 1
-	goto_eq BattleFrontier_BattleDomeCorridor_EventScript_24B161
+	goto_if_eq BattleFrontier_BattleDomeCorridor_EventScript_24B161
 	applymovement 1, BattleFrontier_BattleDomeCorridor_Movement_24B1B2
-	applymovement 255, BattleFrontier_BattleDomeCorridor_Movement_24B1A1
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleDomeCorridor_Movement_24B1A1
 	waitmovement 0
 	opendoor 13, 3
 	waitdooranim
 	applymovement 1, BattleFrontier_BattleDomeCorridor_Movement_24B1BE
-	applymovement 255, BattleFrontier_BattleDomeCorridor_Movement_24B1AE
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleDomeCorridor_Movement_24B1AE
 	waitmovement 0
 	closedoor 13, 3
 	waitdooranim
@@ -28,12 +28,12 @@ BattleFrontier_BattleDomeCorridor_EventScript_24B10E:: @ 824B10E
 
 BattleFrontier_BattleDomeCorridor_EventScript_24B161:: @ 824B161
 	applymovement 1, BattleFrontier_BattleDomeCorridor_Movement_24B1D6
-	applymovement 255, BattleFrontier_BattleDomeCorridor_Movement_24B1C1
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleDomeCorridor_Movement_24B1C1
 	waitmovement 0
 	opendoor 37, 3
 	waitdooranim
 	applymovement 1, BattleFrontier_BattleDomeCorridor_Movement_24B1E6
-	applymovement 255, BattleFrontier_BattleDomeCorridor_Movement_24B1D2
+	applymovement EVENT_OBJ_ID_PLAYER, BattleFrontier_BattleDomeCorridor_Movement_24B1D2
 	waitmovement 0
 	closedoor 37, 3
 	waitdooranim

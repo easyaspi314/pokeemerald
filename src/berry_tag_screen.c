@@ -21,7 +21,7 @@
 #include "string_util.h"
 #include "strings.h"
 #include "bg.h"
-#include "malloc.h"
+#include "alloc.h"
 #include "scanline_effect.h"
 #include "gpu_regs.h"
 #include "graphics.h"
@@ -102,7 +102,7 @@ static const u8 sTextColors[2][3] =
 static const struct WindowTemplate sWindowTemplates[] =
 {
     { // WIN_BERRY_NAME
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 11,
         .tilemapTop = 4,
         .width = 8,
@@ -111,7 +111,7 @@ static const struct WindowTemplate sWindowTemplates[] =
         .baseBlock = 69,
     },
     { // WIN_SIZE_FIRM
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 11,
         .tilemapTop = 7,
         .width = 18,
@@ -120,7 +120,7 @@ static const struct WindowTemplate sWindowTemplates[] =
         .baseBlock = 85,
     },
     { // WIN_DESC
-        .priority = 1,
+        .bg = 1,
         .tilemapLeft = 4,
         .tilemapTop = 14,
         .width = 25,
@@ -129,7 +129,7 @@ static const struct WindowTemplate sWindowTemplates[] =
         .baseBlock = 157,
     },
     { // WIN_BERRY_TAG
-        .priority = 0,
+        .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 0,
         .width = 8,
@@ -349,11 +349,11 @@ static bool8 LoadBerryTagGfx(void)
         sBerryTag->gfxState++;
         break;
     case 5:
-        LoadCompressedObjectPic(&gUnknown_0857FDEC);
+        LoadCompressedSpriteSheet(&gUnknown_0857FDEC);
         sBerryTag->gfxState++;
         break;
     default:
-        LoadCompressedObjectPalette(&gUnknown_0857FDF4);
+        LoadCompressedSpritePalette(&gUnknown_0857FDF4);
         return TRUE; // done
     }
 
@@ -381,7 +381,7 @@ static void PrintTextInBerryTagScreen(u8 windowId, const u8 *text, u8 x, u8 y, s
 static void AddBerryTagTextToBg0(void)
 {
     memcpy(GetBgTilemapBuffer(0), sBerryTag->tilemapBuffers[2], sizeof(sBerryTag->tilemapBuffers[2]));
-    FillWindowPixelBuffer(WIN_BERRY_TAG, 0xFF);
+    FillWindowPixelBuffer(WIN_BERRY_TAG, PIXEL_FILL(15));
     PrintTextInBerryTagScreen(WIN_BERRY_TAG, gText_BerryTag, GetStringCenterAlignXOffset(1, gText_BerryTag, 0x40), 1, 0, 1);
     PutWindowTilemap(WIN_BERRY_TAG);
     schedule_bg_copy_tilemap_to_vram(0);
@@ -598,7 +598,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
         switch (data[0])
         {
         case 0x30:
-            FillWindowPixelBuffer(0, 0);
+            FillWindowPixelBuffer(0, PIXEL_FILL(0));
             break;
         case 0x40:
             PrintBerryNumberAndName();
@@ -608,7 +608,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
             CreateBerrySprite();
             break;
         case 0x60:
-            FillWindowPixelBuffer(1, 0);
+            FillWindowPixelBuffer(1, PIXEL_FILL(0));
             break;
         case 0x70:
             PrintBerrySize();
@@ -620,7 +620,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
             SetFlavorCirclesVisiblity();
             break;
         case 0xA0:
-            FillWindowPixelBuffer(2, 0);
+            FillWindowPixelBuffer(2, PIXEL_FILL(0));
             break;
         case 0xB0:
             PrintBerryDescription1();
@@ -635,7 +635,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
         switch (data[0])
         {
         case 0x30:
-            FillWindowPixelBuffer(2, 0);
+            FillWindowPixelBuffer(2, PIXEL_FILL(0));
             break;
         case 0x40:
             PrintBerryDescription2();
@@ -647,7 +647,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
             SetFlavorCirclesVisiblity();
             break;
         case 0x70:
-            FillWindowPixelBuffer(1, 0);
+            FillWindowPixelBuffer(1, PIXEL_FILL(0));
             break;
         case 0x80:
             PrintBerryFirmness();
@@ -660,7 +660,7 @@ static void Task_DisplayAnotherBerry(u8 taskId)
             CreateBerrySprite();
             break;
         case 0xB0:
-            FillWindowPixelBuffer(0, 0);
+            FillWindowPixelBuffer(0, PIXEL_FILL(0));
             break;
         case 0xC0:
             PrintBerryNumberAndName();

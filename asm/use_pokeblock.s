@@ -900,7 +900,7 @@ sub_8166D44: @ 8166D44
 	thumb_func_start sub_8166DE4
 sub_8166DE4: @ 8166DE4
 	push {r4,lr}
-	bl Menu_ProcessInputNoWrap_
+	bl Menu_ProcessInputNoWrapClearOnChoose
 	lsls r0, 24
 	lsrs r4, r0, 24
 	asrs r1, r0, 24
@@ -3273,7 +3273,7 @@ sub_8168248: @ 8168248
 	orrs r0, r1
 	str r0, [sp, 0x4]
 	mov r0, sp
-	bl LoadCompressedObjectPic
+	bl LoadCompressedSpriteSheet
 	add r0, sp, 0x8
 	bl LoadSpritePalette
 	add sp, 0x10

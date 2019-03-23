@@ -1,25 +1,28 @@
 #include "global.h"
+#include "battle.h"
 #include "battle_transition.h"
-#include "unk_transition.h"
-#include "main.h"
-#include "overworld.h"
-#include "task.h"
-#include "palette.h"
-#include "trig.h"
-#include "field_effect.h"
+#include "bg.h"
+#include "decompress.h"
+#include "event_object_movement.h"
 #include "field_camera.h"
+#include "field_effect.h"
+#include "field_weather.h"
+#include "gpu_regs.h"
+#include "main.h"
+#include "alloc.h"
+#include "overworld.h"
+#include "palette.h"
 #include "random.h"
-#include "sprite.h"
+#include "scanline_effect.h"
 #include "sound.h"
+#include "sprite.h"
+#include "task.h"
+#include "trig.h"
+#include "unk_transition.h"
+#include "util.h"
+#include "constants/field_effects.h"
 #include "constants/songs.h"
 #include "constants/trainers.h"
-#include "field_camera.h"
-#include "scanline_effect.h"
-#include "malloc.h"
-#include "gpu_regs.h"
-#include "decompress.h"
-#include "bg.h"
-#include "blend_palette.h"
 
 struct TransitionData
 {
@@ -55,13 +58,6 @@ struct StructRectangularSpiral
 
 typedef bool8 (*TransitionStateFunc)(struct Task *task);
 typedef bool8 (*TransitionSpriteCallback)(struct Sprite *sprite);
-
-extern u16 gBattle_BG0_X;
-extern u16 gBattle_BG0_Y;
-
-extern const struct OamData gEventObjectBaseOam_32x32;
-
-extern void sub_80AC3D0(void);
 
 // this file's functions
 static void LaunchBattleTransitionTask(u8 transitionId);
@@ -614,32 +610,32 @@ static const s16 gUnknown_085C8CF2[] = {4, 517, -1};
 
 static const s16 *const gUnknown_085C8CF8[] =
 {
-	gUnknown_085C8C90,
-	gUnknown_085C8CA4,
-	gUnknown_085C8C98,
-	gUnknown_085C8C9E,
-	gUnknown_085C8CEA,
-	gUnknown_085C8CE4,
-	gUnknown_085C8CF2,
-	gUnknown_085C8CDE
+    gUnknown_085C8C90,
+    gUnknown_085C8CA4,
+    gUnknown_085C8C98,
+    gUnknown_085C8C9E,
+    gUnknown_085C8CEA,
+    gUnknown_085C8CE4,
+    gUnknown_085C8CF2,
+    gUnknown_085C8CDE
 };
 
 static const s16 *const gUnknown_085C8D18[] =
 {
-	gUnknown_085C8CBC,
-	gUnknown_085C8CB0,
-	gUnknown_085C8CB6,
-	gUnknown_085C8CAA,
-	gUnknown_085C8CCA,
-	gUnknown_085C8CD8,
-	gUnknown_085C8CC4,
-	gUnknown_085C8CD2
+    gUnknown_085C8CBC,
+    gUnknown_085C8CB0,
+    gUnknown_085C8CB6,
+    gUnknown_085C8CAA,
+    gUnknown_085C8CCA,
+    gUnknown_085C8CD8,
+    gUnknown_085C8CC4,
+    gUnknown_085C8CD2
 };
 
 static const s16 *const *const gUnknown_085C8D38[] =
 {
-	gUnknown_085C8CF8,
-	gUnknown_085C8D18
+    gUnknown_085C8CF8,
+    gUnknown_085C8D18
 };
 
 static const TransitionStateFunc sPhase2_Groudon_Funcs[] =
@@ -767,10 +763,10 @@ static const struct OamData gOamData_85C8E80 =
     .objMode = 0,
     .mosaic = 0,
     .bpp = 0,
-    .shape = 0,
+    .shape = SPRITE_SHAPE(64x64),
     .x = 0,
     .matrixNum = 0,
-    .size = 3,
+    .size = SPRITE_SIZE(64x64),
     .tileNum = 0,
     .priority = 0,
     .paletteNum = 0,
@@ -983,7 +979,7 @@ static void Task_BattleTransitionMain(u8 taskId)
 
 static bool8 Transition_Phase1(struct Task *task)
 {
-    sub_80AC3D0();
+    SetWeatherScreenFadeOut();
     CpuCopy32(gPlttBufferFaded, gPlttBufferUnfaded, 0x400);
     if (sPhase1_Tasks[task->tTransitionId] != NULL)
     {
